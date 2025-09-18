@@ -1,0 +1,232 @@
+﻿@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Custom fonts are now imported via Next.js font optimization */
+
+:root {
+  --font-size: 16px;
+  --background: #FDFBF7;
+  --foreground: #333333;
+  --card: #ffffff;
+  --card-foreground: #333333;
+  --popover: #ffffff;
+  --popover-foreground: #333333;
+  --primary: #20c997;
+  --primary-foreground: #ffffff;
+  --secondary: #5BC0EB;
+  --secondary-foreground: #ffffff;
+  --muted: #f8f8f8;
+  --muted-foreground: #666666;
+  --accent: #FFD166;
+  --accent-foreground: #333333;
+  --destructive: #FF6B6B;
+  --destructive-foreground: #ffffff;
+  --success: #06D6A0;
+  --success-foreground: #ffffff;
+  --border: rgba(51, 51, 51, 0.1);
+  --input: transparent;
+  --input-background: #ffffff;
+  --switch-background: #e0e0e0;
+  --font-weight-medium: 500;
+  --font-weight-normal: 400;
+  --ring: #20c997;
+  --chart-1: #20c997;
+  --chart-2: #5BC0EB;
+  --chart-3: #FFD166;
+  --chart-4: #FF6B6B;
+  --chart-5: #06D6A0;
+  --radius: 0.75rem;
+  --sidebar: #FDFBF7;
+  --sidebar-foreground: #333333;
+  --sidebar-primary: #20c997;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #f8f8f8;
+  --sidebar-accent-foreground: #333333;
+  --sidebar-border: rgba(51, 51, 51, 0.1);
+  --sidebar-ring: #20c997;
+
+  /* Spacing system */
+  --space-1: 0.25rem; /* 4px */
+  --space-2: 0.5rem;  /* 8px */
+  --space-3: 0.75rem; /* 12px */
+  --space-4: 1rem;    /* 16px */
+  --space-5: 1.25rem; /* 20px */
+  --space-6: 1.5rem;  /* 24px */
+  --space-8: 2rem;    /* 32px */
+  --space-10: 2.5rem; /* 40px */
+  --space-12: 3rem;   /* 48px */
+
+  /* Typography */
+  --font-quicksand: 'Quicksand', sans-serif;
+  --font-merriweather: 'Merriweather', serif;
+
+  /* Font sizes for hierarchy */
+  --text-h1: 2rem; /* 32px */
+  --text-h2: 1.5rem; /* 24px */
+  --text-body: 1.125rem; /* 18px */
+  --text-ui: 1rem; /* 16px */
+}
+
+.dark {
+  --background: oklch(0.145 0 0);
+  --foreground: oklch(0.985 0 0);
+  --card: oklch(0.145 0 0);
+  --card-foreground: oklch(0.985 0 0);
+  --popover: oklch(0.145 0 0);
+  --popover-foreground: oklch(0.985 0 0);
+  --primary: oklch(0.985 0 0);
+  --primary-foreground: oklch(0.205 0 0);
+  --secondary: oklch(0.269 0 0);
+  --secondary-foreground: oklch(0.985 0 0);
+  --muted: oklch(0.269 0 0);
+  --muted-foreground: oklch(0.708 0 0);
+  --accent: oklch(0.269 0 0);
+  --accent-foreground: oklch(0.985 0 0);
+  --destructive: oklch(0.396 0.141 25.723);
+  --destructive-foreground: oklch(0.637 0.237 25.331);
+  --border: oklch(0.269 0 0);
+  --input: oklch(0.269 0 0);
+  --ring: oklch(0.439 0 0);
+  --font-weight-medium: 500;
+  --font-weight-normal: 400;
+  --chart-1: oklch(0.488 0.243 264.376);
+  --chart-2: oklch(0.696 0.17 162.48);
+  --chart-3: oklch(0.769 0.188 70.08);
+  --chart-4: oklch(0.627 0.265 303.9);
+  --chart-5: oklch(0.645 0.246 16.439);
+  --sidebar: oklch(0.205 0 0);
+  --sidebar-foreground: oklch(0.985 0 0);
+  --sidebar-primary: oklch(0.488 0.243 264.376);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.269 0 0);
+  --sidebar-accent-foreground: oklch(0.985 0 0);
+  --sidebar-border: oklch(0.269 0 0);
+  --sidebar-ring: oklch(0.439 0 0);
+}
+
+/* Base styles */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  font-size: var(--font-size);
+}
+
+body {
+  background-color: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-merriweather);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Typography */
+/* Headings use Quicksand Bold */
+h1, h2, h3, h4, h5, h6, .logo {
+  font-family: var(--font-quicksand);
+  font-weight: 700;
+}
+
+h1 {
+  font-size: var(--text-h1);
+  line-height: 1.3;
+}
+
+h2 {
+  font-size: var(--text-h2);
+  line-height: 1.4;
+}
+
+h3 {
+  font-size: 1.25rem;
+  line-height: 1.4;
+}
+
+h4 {
+  font-size: var(--text-body);
+  line-height: 1.5;
+}
+
+/* Body text uses Merriweather */
+p, span, div {
+  font-family: var(--font-merriweather);
+  font-weight: 400;
+}
+
+p {
+  font-size: var(--text-body);
+  line-height: 1.6;
+}
+
+/* Buttons and UI elements use Quicksand */
+button, .ui-text {
+  font-family: var(--font-quicksand);
+  font-weight: 600;
+  font-size: var(--text-ui);
+  line-height: 1.5;
+}
+
+label {
+  font-family: var(--font-quicksand);
+  font-size: var(--text-ui);
+  font-weight: 500;
+  line-height: 1.5;
+}
+
+input {
+  font-family: var(--font-merriweather);
+  font-size: var(--text-ui);
+  font-weight: 400;
+  line-height: 1.5;
+}
+
+/* Confetti animation for celebration */
+@keyframes confettiFall {
+  0% {
+    transform: translateY(-20px) translateX(0px) rotate(0deg);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(calc(100vh + 50px)) translateX(var(--horizontal-drift, 0px)) rotate(720deg);                                                          
+    opacity: 0;
+  }
+}
+
+.confetti-fall {
+  animation: confettiFall linear forwards;
+}
+
+/* Welcome arrow animations */
+@keyframes gentlePulseLeft {
+  0%, 100% {
+    transform: translateX(0px) scale(1);
+    opacity: 0.6;
+  }
+  50% {
+    transform: translateX(-6px) scale(1.1);
+    opacity: 1;
+  }
+}
+
+@keyframes gentlePulseRight {
+  0%, 100% {
+    transform: translateX(0px) scale(1);
+    opacity: 0.6;
+  }
+  50% {
+    transform: translateX(6px) scale(1.1);
+    opacity: 1;
+  }
+}
+
+.arrow-pulse-left {
+  animation: gentlePulseLeft 4s ease-in-out infinite;
+}
+
+.arrow-pulse-right {
+  animation: gentlePulseRight 4s ease-in-out infinite 2s;
+}
