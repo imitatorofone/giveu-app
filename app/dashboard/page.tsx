@@ -65,6 +65,7 @@ export default function MemberDashboard() {
         const { data, error } = await supabase
           .from('needs')
           .select('*')
+          .eq('status', 'active')
           .order('created_at', { ascending: false });
         
         if (error) {
@@ -72,7 +73,6 @@ export default function MemberDashboard() {
           setOpportunities([]);
         } else {
           console.log('Found needs:', data?.length || 0);
-          console.log('Raw needs data:', data);
           
           if (data && data.length > 0) {
             const transformedOpportunities: Opportunity[] = data.map((need: any) => ({

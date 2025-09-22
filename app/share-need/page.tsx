@@ -1,41 +1,17 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '../../lib/supabaseClient';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Session } from '@supabase/supabase-js';
 import { Icon } from '../../icons/index';
-import { ArrowLeft, MapPin, Users, Calendar, Clock, AlertCircle, CheckCircle, FileText, Plus, Timer, RotateCcw, Sun, Cloud, Moon, Wrench, Heart, Lightbulb, Shield, BookOpen, Palette, Crown, Eye, Zap, Compass, X } from 'lucide-react';
+import { ArrowLeft, MapPin, Users, Calendar, Clock, AlertCircle, CheckCircle, FileText, Plus, Timer, RotateCcw, Sun, Cloud, Moon, Wrench, Heart, Lightbulb, Shield, BookOpen, Palette, Crown, Eye, Zap, Compass, X, ChevronDown } from 'lucide-react';
 import toast, { Toaster } from 'react-hot-toast';
 import Footer from '../../components/Footer';
 
 const brand = '#20c997';
 
-// NEW: safe session state (no throwy getUser on first paint)
-function useSupabaseSession() {
-  const [session, setSession] = useState<Session | null>(null);
-  const [authChecked, setAuthChecked] = useState(false);
-
-  useEffect(() => {
-    let unsub: (() => void) | undefined;
-
-    (async () => {
-      const { data } = await supabase.auth.getSession();
-      setSession(data.session ?? null);
-      setAuthChecked(true);
-
-      const { data: sub } = supabase.auth.onAuthStateChange((_evt, s) => {
-        setSession(s);
-      });
-      unsub = () => sub.subscription.unsubscribe();
-    })();
-
-    return () => { unsub?.(); };
-  }, []);
-
-  return { session, authChecked };
-}
 
 const primaryGiftings = [
   { id: 'hands-on', name: 'Hands-On Skills', icon: Wrench, skills: ['Carpentry', 'Repairs', 'Gardening', 'Sewing', 'Decorating', 'Setup/Tear Down', 'Cooking', 'Automotive', 'Painting'] },
@@ -51,38 +27,72 @@ const primaryGiftings = [
 ];
 
 export default function ShareNeedScreen() {
-  const { session, authChecked } = useSupabaseSession();
   const [currentStep, setCurrentStep] = useState(0);
   const [showPreview, setShowPreview] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [isLeaderUser, setIsLeaderUser] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showSubmissionModal, setShowSubmissionModal] = useState(false);
+  const [canContinueState, setCanContinueState] = useState(false);
   const router = useRouter();
   const searchParams = useSearchParams();
   const isModal = searchParams?.get('modal') === '1';
   const totalSteps = 3;
 
+
   // Handle success modal OK button
   const handleSuccessOk = () => {
     setShowSuccessModal(false);
+    // Clear saved form data when navigating away
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('share-need-form-data');
+    }
     router.push('/dashboard'); // Navigate back to ways to serve page
   };
 
-  const [formData, setFormData] = useState({
-    title: '',
-    urgency: 'specific',
-    specificDate: '',
-    specificTime: '',
-    timePreference: '', // Only used for "Needs Help Soon"
-    ongoingStartDate: '',
-    ongoingStartTime: '',
-    ongoingSchedule: 'weekly', // weekly, monthly, quarterly
-    notes: '',
-    giftingsNeeded: [] as string[],
-    location: '',
-    customLocation: '',
-    city: ''
+  // Initialize form data with persistence across HMR
+  const getInitialFormData = () => {
+    const defaultData = {
+      title: '',
+      description: '',
+      urgency: 'specific' as const,
+      specificDate: '',
+      specificTime: '',
+      timePreference: '', // Only used for "Needs Help Soon"
+      ongoingStartDate: '',
+      ongoingStartTime: '',
+      ongoingSchedule: 'weekly' as const, // weekly, monthly, quarterly
+      notes: '',
+      giftingsNeeded: [] as string[],
+      location: '',
+      customLocation: '',
+      city: ''
+    };
+
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('share-need-form-data');
+      if (saved) {
+        try {
+          const parsedData = JSON.parse(saved);
+          // Ensure description field exists (for backward compatibility)
+          return { ...defaultData, ...parsedData, description: parsedData.description || '' };
+        } catch (e) {
+          console.log('Failed to parse saved form data, using defaults');
+        }
+      }
+    }
+    return defaultData;
+  };
+
+  const [formData, setFormData] = useState(getInitialFormData);
+  const isUpdatingRef = useRef(false);
+  const titleInputRef = useRef<HTMLInputElement>(null);
+  const descriptionInputRef = useRef<HTMLTextAreaElement>(null);
+  const notesInputRef = useRef<HTMLTextAreaElement>(null);
+
+  // Diagnostic: Track component re-renders
+  useEffect(() => {
+    console.log('🔄 COMPONENT RE-RENDERED');
   });
 
   const [expandedGiftings, setExpandedGiftings] = useState(new Set());
@@ -115,20 +125,25 @@ export default function ShareNeedScreen() {
     fetchCities()
   }, []);
 
-  const updateFormData = (field: string, value: string) => {
-    setFormData(prev => {
+  const updateFormData = useCallback((field: string, value: string) => {
+    console.log('🔄 UPDATE FORM DATA:', field, '=', value);
+    setFormData((prev: any) => {
+      // Only update if the value actually changed
+      if (prev[field as keyof typeof prev] === value) {
+        console.log('⚠️ Value unchanged, skipping update');
+        return prev;
+      }
       const updated = { ...prev, [field]: value };
-      console.log('FORM DATA UPDATE:', field, '=', value);
-      console.log('CURRENT FORM DATA:', updated);
+      console.log('✅ FORM DATA UPDATED:', updated);
       return updated;
     });
-  };
+  }, []);
 
   const toggleGifting = (gifting: string) => {
-    setFormData(prev => ({
+    setFormData((prev: any) => ({
       ...prev,
       giftingsNeeded: prev.giftingsNeeded.includes(gifting)
-        ? prev.giftingsNeeded.filter(g => g !== gifting)
+        ? prev.giftingsNeeded.filter((g: any) => g !== gifting)
         : [...prev.giftingsNeeded, gifting]
     }));
   };
@@ -148,13 +163,13 @@ export default function ShareNeedScreen() {
   const canContinue = () => {
     switch (currentStep) {
       case 0: 
-        const basicValid = formData.title.trim() !== '' && formData.urgency !== '';
+        const basicValid = formData.title?.trim().length >= 5 && (formData.description || '').trim().length >= 20 && formData.urgency !== '';
         const specificValid = formData.urgency !== 'specific' || (formData.specificDate && formData.specificTime);
         const ongoingValid = formData.urgency !== 'ongoing' || (formData.ongoingStartDate && formData.ongoingStartTime);
         const asapValid = formData.urgency !== 'asap' || formData.timePreference !== '';
         return basicValid && specificValid && ongoingValid && asapValid;
       case 1: 
-        return formData.city !== '' && peopleNeeded !== '' && (peopleNeeded !== '5+' || customCount !== '');
+        return formData.city !== '' && peopleNeeded !== '' && (peopleNeeded !== '10+' || customCount !== '');
       case 2: 
         return formData.giftingsNeeded.length > 0;
       default: 
@@ -179,110 +194,53 @@ export default function ShareNeedScreen() {
   };
 
   const handleSubmit = async () => {
+    console.log('🔘 Share This Need button clicked!');
     console.log('🔘 Starting submission process...');
+    
+    // Get fresh session directly from Supabase
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
     console.log('👤 Current session:', session);
     
-    // Require login only at submit time
     if (!session) {
-      toast.error('Please sign in to submit your need.');
-      // Optional: remember progress in localStorage here
-      router.push('/login?redirect=/share-need'); 
+      toast.error('Please sign in to submit a need');
+      router.push('/dashboard');
       return;
     }
 
-    const userId = session.user.id;
-
-    // Step 1: Show loading state immediately
-    console.log('⏳ Setting loading state...');
     setIsSubmitting(true);
+    console.log('📤 Submitting need with data:', formData);
 
-    // Step 3: Simulate form submission with delay
-    console.log('📝 Starting form submission...');
-    
-    // Add a small delay to make the loading state visible
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
     try {
-      // Check if user is a leader
-      const isLeader = session.user.email === 'imitatorofone@gmail.com';
-      console.log('👑 Is leader:', isLeader);
-      setIsLeaderUser(isLeader);
-      
-      // Create need data
-      const needData = {
-        id: crypto.randomUUID(),
-        title: formData.title,
-        description: formData.notes || formData.title,
-        giftings_needed: formData.giftingsNeeded,
-        people_needed: peopleNeeded === '5+' ? parseInt(customCount) || 5 : parseInt(peopleNeeded) || 1,
-        is_estimate: peopleNeeded === '5+',
-        location: formData.city,
-        city: formData.city,
-        urgency: formData.urgency,
-        time_preference: formData.timePreference,
-        specific_date: formData.specificDate || null,
-        specific_time: formData.specificTime || null,
-        ongoing_start_date: formData.ongoingStartDate || null,
-        ongoing_start_time: formData.ongoingStartTime || null,
-        ongoing_schedule: formData.ongoingSchedule,
-        status: isLeader ? 'approved' : 'pending',
-        created_at: new Date().toISOString(),
-        created_by: userId,
-        is_leader_need: isLeader
-      };
-
-      // DEBUG: Log form submission data
-      console.log('=== FORM SUBMISSION DEBUG ===');
-      console.log('Form data values:');
-      console.log('- specificDate:', formData.specificDate);
-      console.log('- specificTime:', formData.specificTime);
-      console.log('- ongoingStartDate:', formData.ongoingStartDate);
-      console.log('- ongoingStartTime:', formData.ongoingStartTime);
-      console.log('- urgency:', formData.urgency);
-      console.log('- timePreference:', formData.timePreference);
-      console.log('- city:', formData.city);
-      console.log('- peopleNeeded:', peopleNeeded);
-      console.log('- customCount:', customCount);
-      console.log('SUBMITTING NEED DATA:', needData);
-
-      // For ongoing needs, include the schedule info in the description
-      if (formData.urgency === 'ongoing') {
-        needData.description = `${needData.description}\n\nOngoing Schedule: Starting ${formData.ongoingStartDate} at ${formData.ongoingStartTime}, repeats ${formData.ongoingSchedule}`;
-      }
-
-      // Try to insert into needs table
-      let { data, error } = await supabase
+      const { data, error } = await supabase
         .from('needs')
-        .insert(needData);
+        .insert([{
+          title: formData.title,
+          description: formData.description || formData.notes || formData.title,
+          urgency: formData.urgency,
+          city: formData.city,
+          giftings_needed: formData.giftingsNeeded || [],
+          created_by: session.user.id,
+          status: 'pending'
+        }])
+        .select();
 
-      console.log('📊 Database response:', { data, error });
+      console.log('✅ Insert response:', { data, error });
 
-      // Handle errors gracefully
-      if (error && error.message && error.message.includes('Could not find the table')) {
-        console.log('📋 Table not found, treating as success');
-      } else if (error) {
-        console.log('⚠️ Database error, but continuing with success flow');
+      if (error) throw error;
+
+      // Clear saved form data on successful submission
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('share-need-form-data');
       }
 
-      console.log('✅ Form submission completed successfully!');
-      
-    } catch (error) {
-      console.error('🚨 Error in form submission:', error);
-      // Continue with success flow for better UX
-    }
-
-    // Step 2: Show success modal
-    console.log('🎉 Showing success modal...');
-    setIsSubmitting(false);
-    setShowSubmissionModal(true);
-
-    // Step 3: Auto-close modal and redirect after 2.5 seconds
-    console.log('⏰ Setting up auto-close and redirect in 2.5 seconds...');
-    setTimeout(() => {
-      console.log('🔄 Closing modal and redirecting...');
-      setShowSubmissionModal(false);
+      toast.success('Need submitted for leadership review!');
       router.push('/dashboard');
-    }, 2500);
+    } catch (err: any) {
+      console.error('❌ Submit error:', err);
+      toast.error(`Failed to submit: ${err.message}`);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const renderStep = () => {
@@ -320,33 +278,82 @@ export default function ShareNeedScreen() {
               Share a clear, encouraging description of how others can help
             </p>
 
-            <div style={{ marginBottom: 'var(--space-6)' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
+              <div>
               <label style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', marginBottom: 'var(--space-2)', fontWeight: 500 }}>
                 <FileText size={16} strokeWidth={1.5} color="#20c997" />
-                Description:
+                Title <span style={{ color: '#ef4444' }}>*</span>
               </label>
-              <textarea
+              <input
+                ref={titleInputRef}
+                type="text"
                 value={formData.title}
-                onChange={(e) => updateFormData('title', e.target.value)}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                  if (isUpdatingRef.current) {
+                    return;
+                  }
+                  const value = e.target.value;
+                  const cursorPos = e.target.selectionStart; // Save cursor position BEFORE state update
+                  
+                  console.log('📝 DIRECT TITLE UPDATE:', value);
+                  isUpdatingRef.current = true;
+                  setFormData((prev: any) => {
+                    isUpdatingRef.current = false;
+                    return { ...prev, title: value };
+                  });
+                  
+                  // Restore cursor position after React re-renders
+                  setTimeout(() => {
+                    if (titleInputRef.current && cursorPos !== null) {
+                      titleInputRef.current.setSelectionRange(cursorPos, cursorPos);
+                    }
+                  }, 0);
+                }}
                 placeholder="Help with moving furniture, meal prep for family, tutoring kids…"
-                style={{ ...inputStyle, minHeight: 120, resize: 'vertical' }}
+                style={{ ...inputStyle, padding: '16px 20px' }}
               />
-            </div>
+              </div>
 
-            <div style={{ marginBottom: 'var(--space-6)' }}>
+              <div>
               <label style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', marginBottom: 'var(--space-2)', fontWeight: 500 }}>
                 <Plus size={16} strokeWidth={1.5} color="#20c997" />
-                Additional details (optional):
+                Description <span style={{ color: '#ef4444' }}>*</span>
               </label>
+              <p style={{ fontSize: '12px', color: '#6b7280', marginBottom: '8px' }}>
+                A short, clear summary of what's needed
+              </p>
               <textarea
-                value={formData.notes}
-                onChange={(e) => updateFormData('notes', e.target.value)}
-                placeholder="Bring gloves and tools… Meals should be nut-free… Any special instructions…"
-                style={{ ...inputStyle, minHeight: 80, resize: 'vertical' }}
+                ref={descriptionInputRef}
+                value={formData.description}
+                onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => {
+                  if (isUpdatingRef.current) {
+                    return;
+                  }
+                  const value = e.target.value;
+                  const cursorPos = e.target.selectionStart; // Save cursor position BEFORE state update
+                  
+                  console.log('📝 DIRECT DESCRIPTION UPDATE:', value);
+                  isUpdatingRef.current = true;
+                  setFormData((prev: any) => {
+                    isUpdatingRef.current = false;
+                    return { ...prev, description: value };
+                  });
+                  
+                  // Restore cursor position after React re-renders
+                  setTimeout(() => {
+                    if (descriptionInputRef.current && cursorPos !== null) {
+                      descriptionInputRef.current.setSelectionRange(cursorPos, cursorPos);
+                    }
+                  }, 0);
+                }}
+                placeholder="Help load, transport, and distribute groceries at mobile food pantry locations throughout the city."
+                style={{ ...inputStyle, minHeight: 140, resize: 'vertical', padding: '16px 20px' }}
+                rows={7}
               />
+              </div>
             </div>
 
-            <div style={{ borderTop: '1px solid #e5e7eb', paddingTop: 'var(--space-6)' }}>
+            <div style={{ borderTop: '1px solid #e5e7eb', paddingTop: 'var(--space-6)', marginTop: '24px' }}>
               <h3 style={{ fontSize: 20, marginBottom: 'var(--space-4)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
                 <Clock size={20} strokeWidth={1.5} color="#20c997" />
                 When is this needed?
@@ -372,23 +379,39 @@ export default function ShareNeedScreen() {
               </div>
 
               {formData.urgency === 'specific' && (
-                <div style={{ marginTop: 'var(--space-6)', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16 }}>
+                <div style={{ marginTop: 'var(--space-6)', display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 16 }}>
                   <div>
-                    <label style={{ display: 'block', marginBottom: 'var(--space-2)', fontWeight: 500 }}>Date:</label>
+                    <label style={{ display: 'block', marginBottom: '8px', fontWeight: 500, fontSize: '14px', color: '#374151' }}>Date</label>
                     <input
                       type="date"
                       value={formData.specificDate}
                       onChange={(e) => updateFormData('specificDate', e.target.value)}
-                      style={inputStyle}
+                      style={{
+                        width: '100%',
+                        padding: '12px 16px',
+                        border: '1px solid #d1d5db',
+                        borderRadius: '8px',
+                        fontSize: '16px',
+                        outline: 'none',
+                        transition: 'border-color 0.2s'
+                      }}
                     />
                   </div>
                   <div>
-                    <label style={{ display: 'block', marginBottom: 'var(--space-2)', fontWeight: 500 }}>Time:</label>
+                    <label style={{ display: 'block', marginBottom: '8px', fontWeight: 500, fontSize: '14px', color: '#374151' }}>Time</label>
                     <input
                       type="time"
                       value={formData.specificTime}
                       onChange={(e) => updateFormData('specificTime', e.target.value)}
-                      style={inputStyle}
+                      style={{
+                        width: '100%',
+                        padding: '12px 16px',
+                        border: '1px solid #d1d5db',
+                        borderRadius: '8px',
+                        fontSize: '16px',
+                        outline: 'none',
+                        transition: 'border-color 0.2s'
+                      }}
                     />
                   </div>
                 </div>
@@ -429,9 +452,6 @@ export default function ShareNeedScreen() {
                       </select>
                     </div>
                   </div>
-                  <p style={{ fontSize: 14, color: '#666666' }}>
-                    We'll automatically match people based on the start time you choose
-                  </p>
                 </div>
               )}
 
@@ -475,7 +495,8 @@ export default function ShareNeedScreen() {
               Let people know where to meet and how many helpers you need
             </p>
 
-            <div style={{ marginBottom: 'var(--space-6)' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+              <div>
               <label style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', marginBottom: 'var(--space-2)', fontWeight: 600, fontFamily: 'var(--font-quicksand)', color: '#333333' }}>
                 <MapPin size={16} strokeWidth={1.5} color="#20c997" />
                 Location:
@@ -494,9 +515,9 @@ export default function ShareNeedScreen() {
                   ))}
                 </select>
               )}
-            </div>
+              </div>
 
-            <div style={{ borderTop: '1px solid var(--gray-200)', paddingTop: 'var(--space-6)' }}>
+              <div>
               <h3 style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', fontSize: 'var(--text-lg)', marginBottom: 'var(--space-4)', fontWeight: 700, fontFamily: 'var(--font-quicksand)', color: '#333333' }}>
                 <Users size={18} strokeWidth={1.5} color="#20c997" />
                 How many people are needed?
@@ -508,7 +529,7 @@ export default function ShareNeedScreen() {
                   const value = e.target.value
                   setPeopleNeeded(value)
                   
-                  if (value === '5+') {
+                  if (value === '10+') {
                     setShowCustomInput(true)
                   } else {
                     setShowCustomInput(false)
@@ -517,12 +538,11 @@ export default function ShareNeedScreen() {
                 }}
                 style={inputStyle}
               >
-                <option value="">Select number needed...</option>
-                <option value="1">1 person</option>
-                <option value="2">2 people</option>
-                <option value="3">3 people</option>
-                <option value="4">4 people</option>
-                <option value="5+">5+ people</option>
+                <option value="">Select number of helpers</option>
+                <option value="1-2">1-2 people</option>
+                <option value="3-5">3-5 people</option>
+                <option value="6-10">6-10 people</option>
+                <option value="10+">10+ people</option>
               </select>
 
               {/* Custom input appears when 5+ is selected */}
@@ -545,6 +565,7 @@ export default function ShareNeedScreen() {
                   </p>
                 </div>
               )}
+              </div>
             </div>
           </div>
         );
@@ -560,7 +581,7 @@ export default function ShareNeedScreen() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
               {primaryGiftings.map((gifting) => {
                 const isExpanded = expandedGiftings.has(gifting.id);
-                const hasSelectedSkills = gifting.skills.some(skill => formData.giftingsNeeded.includes(skill));
+                const selectedInCategory = gifting.skills.filter(skill => formData.giftingsNeeded.includes(skill));
                 
                 return (
                   <div key={gifting.id} style={{ border: '1px solid #e5e7eb', borderRadius: 8, overflow: 'hidden' }}>
@@ -570,34 +591,54 @@ export default function ShareNeedScreen() {
                         width: '100%',
                         padding: '16px',
                         border: 'none',
-                        backgroundColor: hasSelectedSkills ? '#f0fdfa' : 'white',
-                        color: hasSelectedSkills ? '#20c997' : '#333333',
+                        backgroundColor: 'white',
                         cursor: 'pointer',
                         textAlign: 'left',
                         display: 'flex',
                         justifyContent: 'space-between',
                         alignItems: 'center',
-                        fontWeight: hasSelectedSkills ? 500 : 400
+                        transition: 'background-color 0.2s'
                       }}
+                      onMouseEnter={(e) => (e.target as HTMLElement).style.backgroundColor = '#f9fafb'}
+                      onMouseLeave={(e) => (e.target as HTMLElement).style.backgroundColor = 'white'}
                     >
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                         <gifting.icon size={20} strokeWidth={1.5} color="#20c997" />
-                        <span>{gifting.name}</span>
+                        <span style={{ fontWeight: 500, color: '#111827' }}>{gifting.name}</span>
+                        
+                        {/* Skill counter badge */}
+                        {selectedInCategory.length > 0 && (
+                          <span style={{
+                            fontSize: '12px',
+                            backgroundColor: '#20c997',
+                            color: 'white',
+                            padding: '2px 8px',
+                            borderRadius: '12px',
+                            fontWeight: 500
+                          }}>
+                            {selectedInCategory.length}
+                          </span>
+                        )}
                       </div>
-                      <span style={{ fontSize: 18 }}>
-                        {isExpanded ? '−' : '+'}
-                      </span>
+                      
+                      {/* Chevron icon */}
+                      <div style={{
+                        transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)',
+                        transition: 'transform 0.2s'
+                      }}>
+                        <ChevronDown size={20} color="#9ca3af" />
+                      </div>
                     </button>
                     
                     {isExpanded && (
                       <div style={{ 
                         padding: '16px', 
-                        backgroundColor: '#f9fafb',
-                        borderTop: '1px solid #e5e7eb'
+                        paddingTop: 0,
+                        borderTop: '1px solid #f3f4f6'
                       }}>
                         <div style={{ 
                           display: 'grid', 
-                          gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', 
+                          gridTemplateColumns: 'repeat(3, 1fr)', 
                           gap: 8 
                         }}>
                           {gifting.skills.map((skill) => {
@@ -608,14 +649,26 @@ export default function ShareNeedScreen() {
                                 onClick={() => toggleGifting(skill)}
                                 style={{
                                   padding: '8px 12px',
-                                  border: '1px solid #d1d5db',
-                                  borderRadius: 6,
+                                  border: '1px solid',
+                                  borderRadius: '9999px', // rounded-full
                                   cursor: 'pointer',
-                                  backgroundColor: isSelected ? '#2dd4bf' : 'white',
-                                  color: isSelected ? 'white' : '#333333',
-                                  fontWeight: isSelected ? 500 : 400,
+                                  backgroundColor: isSelected ? '#20c997' : 'white',
+                                  color: isSelected ? 'white' : '#374151',
+                                  fontWeight: 500,
                                   textAlign: 'center',
-                                  fontSize: 14
+                                  fontSize: '14px',
+                                  borderColor: isSelected ? '#20c997' : '#d1d5db',
+                                  transition: 'all 0.2s'
+                                }}
+                                onMouseEnter={(e) => {
+                                  if (!isSelected) {
+                                    (e.target as HTMLElement).style.backgroundColor = '#f9fafb';
+                                  }
+                                }}
+                                onMouseLeave={(e) => {
+                                  if (!isSelected) {
+                                    (e.target as HTMLElement).style.backgroundColor = 'white';
+                                  }
                                 }}
                               >
                                 {skill}
@@ -630,9 +683,30 @@ export default function ShareNeedScreen() {
               })}
             </div>
 
-            <p style={{ textAlign: 'center', marginTop: 16, color: '#666666' }}>
-              Selected: {formData.giftingsNeeded.length} skill{formData.giftingsNeeded.length !== 1 ? 's' : ''}
-            </p>
+            {/* Selected Skills Display */}
+            {formData.giftingsNeeded.length > 0 && (
+              <div style={{ marginTop: 16 }}>
+                <h4 style={{ fontSize: 16, fontWeight: 600, marginBottom: 12, color: '#333333' }}>
+                  Selected Skills ({formData.giftingsNeeded.length}):
+                </h4>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
+                  {formData.giftingsNeeded.map((skill: any) => (
+                    <span key={skill} style={{
+                      padding: '8px 12px',
+                      borderRadius: '9999px', // rounded-full
+                      fontSize: '14px',
+                      fontWeight: 500,
+                      backgroundColor: '#20c997',
+                      color: 'white',
+                      border: '1px solid #20c997',
+                      textAlign: 'center'
+                    }}>
+                      {skill}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         );
 
@@ -656,204 +730,126 @@ export default function ShareNeedScreen() {
     return 'Specific date/time';
   };
 
-  // Wait only until we know whether a session exists; don't require login to view the wizard
-  if (!authChecked) return null;
+
+  // Save form data to localStorage to persist across HMR
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('share-need-form-data', JSON.stringify(formData));
+    }
+  }, [formData]);
+
+  // Update canContinue state to prevent hydration mismatch
+  useEffect(() => {
+    setCanContinueState(canContinue());
+  }, [formData, currentStep, peopleNeeded, customCount]);
+
+
 
   if (showPreview) {
     return (
       <div style={{ 
         minHeight: '100vh', 
         backgroundColor: '#FDFBF7',
-        padding: 'var(--space-6)' 
+        padding: '24px 16px' 
       }}>
-        <div style={{ maxWidth: 600, margin: '0 auto', paddingTop: 'var(--space-8)' }}>
-          <div style={{ marginBottom: 'var(--space-8)' }}>
+        <div style={{ maxWidth: '768px', margin: '0 auto' }}>
+          {/* Header */}
+          <div style={{ marginBottom: '24px' }}>
             <button 
               onClick={handlePrevious}
               style={{ 
                 background: 'none', 
                 border: 'none', 
-                fontSize: 'var(--text-base)', 
+                fontSize: '14px', 
                 cursor: 'pointer',
-                marginBottom: 'var(--space-4)',
-                color: 'var(--gray-600)',
+                marginBottom: '8px',
+                color: '#6b7280',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px',
                 transition: 'color 0.2s ease'
               }}
             >
-              ← Back
+              <ArrowLeft size={16} />
+              Back
             </button>
-            <h2 style={{ fontSize: '28px', marginBottom: '8px', fontWeight: '600', color: '#1f2937' }}>Preview Your Need</h2>
-            <p style={{ color: '#6b7280', fontSize: '16px', margin: 0 }}>Review how this will appear to volunteers, then submit for approval</p>
+            <h2 style={{ fontSize: '24px', marginBottom: '4px', fontWeight: 'bold', color: '#111827' }}>Preview Your Need</h2>
+            <p style={{ color: '#6b7280', fontSize: '14px', margin: 0 }}>Review how this will appear to volunteers, then submit for approval</p>
           </div>
 
-          {/* Clean card preview */}
+          {/* Need Card - matches Dashboard style exactly */}
           <div style={{
-            display: 'flex',
-            justifyContent: 'center',
-            margin: '40px 0'
+            backgroundColor: 'white',
+            borderRadius: '12px',
+            border: '1px solid #e5e7eb',
+            boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+            padding: '24px',
+            marginBottom: '24px'
           }}>
-            <div style={{
-              backgroundColor: 'white',
-              border: '1px solid #e5e7eb',
-              borderRadius: '6px',
-              padding: '20px',
-              boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
-              maxWidth: '400px',
-              width: '100%'
-            }}>
-            {/* Title */}
             <h3 style={{
-              fontSize: '18px',
-              fontWeight: '500',
-              color: '#1f2937',
-              margin: '0 0 20px 0'
+              fontSize: '20px',
+              fontWeight: 'bold',
+              color: '#111827',
+              marginBottom: '16px'
             }}>
               {formData.title}
             </h3>
 
-            {/* Three Column Grid */}
             <div style={{
-              display: 'grid',
-              gridTemplateColumns: '1fr 1fr 1fr',
-              gap: '16px',
-              marginBottom: '20px',
-              textAlign: 'center'
+              display: 'flex',
+              alignItems: 'center',
+              gap: '24px',
+              fontSize: '14px',
+              color: '#6b7280',
+              marginBottom: '16px'
             }}>
-              {/* Date Column */}
-              <div>
-                <div style={{
-                  width: '28px',
-                  height: '28px',
-                  backgroundColor: '#f3f4f6',
-                  borderRadius: '50%',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  margin: '0 auto 8px',
-                  border: '1px solid #e5e7eb'
-                }}>
-                  <svg width="14" height="14" fill="none" stroke="#6b7280" viewBox="0 0 24 24" strokeWidth="1.5">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5a2.25 2.25 0 002.25-2.25m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5a2.25 2.25 0 012.25 2.25v7.5m-18 0h18" />
-                  </svg>
-                </div>
-                <div style={{ fontSize: '12px', color: '#6b7280' }}>
-                  <div>{formData.urgency === 'ongoing' ? 'Ongoing starting' : 'This Saturday'}</div>
-                  <div>{formData.urgency === 'ongoing' ? formData.ongoingStartDate : '2-5pm'}</div>
-                </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Calendar size={16} />
+                <span>{formData.urgency === 'asap' ? 'As Soon As Possible' : formData.urgency === 'ongoing' ? 'Ongoing' : `${formData.specificDate} ${formData.specificTime}`}</span>
               </div>
-
-              {/* Location Column */}
-              <div>
-                <div style={{
-                  width: '28px',
-                  height: '28px',
-                  backgroundColor: '#f3f4f6',
-                  borderRadius: '50%',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  margin: '0 auto 8px',
-                  border: '1px solid #e5e7eb'
-                }}>
-                  <svg width="14" height="14" fill="none" stroke="#6b7280" viewBox="0 0 24 24" strokeWidth="1.5">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z" />
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25s-7.5-4.108-7.5-11.25a7.5 7.5 0 1115 0z" />
-                  </svg>
-                </div>
-                <div style={{ fontSize: '12px', color: '#6b7280' }}>
-                  <div>{formData.city || 'Church'}</div>
-                  <div>Location</div>
-                </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <MapPin size={16} />
+                <span>{formData.city || 'Location'}</span>
               </div>
-
-              {/* People Column */}
-              <div>
-                <div style={{
-                  width: '28px',
-                  height: '28px',
-                  backgroundColor: '#f3f4f6',
-                  borderRadius: '50%',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  margin: '0 auto 8px',
-                  border: '1px solid #e5e7eb'
-                }}>
-                  <svg width="14" height="14" fill="none" stroke="#6b7280" viewBox="0 0 24 24" strokeWidth="1.5">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z" />
-                  </svg>
-                </div>
-                <div style={{ fontSize: '12px', color: '#6b7280' }}>
-                  <div>0 committed</div>
-                  <div>{peopleNeeded === '5+' ? customCount + '+' : peopleNeeded} needed</div>
-                </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Users size={16} />
+                <span>{peopleNeeded === '10+' ? customCount + '+' : peopleNeeded} needed</span>
               </div>
             </div>
 
-            {/* Description */}
             <p style={{
-              fontSize: '14px',
               color: '#374151',
-              lineHeight: '1.5',
-              margin: '0 0 20px 0'
+              marginBottom: '16px',
+              lineHeight: '1.5'
             }}>
-              {formData.notes || formData.title}
+              {formData.description || formData.notes || formData.title}
             </p>
 
-            {/* Skills Tags */}
-            <div style={{ marginBottom: '20px' }}>
+            {/* Skills - solid green with white text */}
+            {formData.giftingsNeeded && formData.giftingsNeeded.length > 0 && (
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                {formData.giftingsNeeded.slice(0, 3).map((skill, index) => (
+                {formData.giftingsNeeded.map((skill: any) => (
                   <span
-                    key={index}
+                    key={skill}
                     style={{
-                      backgroundColor: '#dcfce7',
-                      color: '#166534',
-                      border: '1px solid #bbf7d0',
-                      padding: '4px 12px',
-                      borderRadius: '16px',
+                      padding: '6px 12px',
+                      borderRadius: '9999px',
                       fontSize: '12px',
-                      fontWeight: '500'
+                      fontWeight: '500',
+                      backgroundColor: '#20c997',
+                      color: 'white'
                     }}
                   >
                     {skill}
                   </span>
                 ))}
-                {formData.giftingsNeeded.length > 3 && (
-                  <span style={{
-                    backgroundColor: '#f3f4f6',
-                    color: '#6b7280',
-                    border: '1px solid #d1d5db',
-                    padding: '4px 12px',
-                    borderRadius: '16px',
-                    fontSize: '12px'
-                  }}>
-                    +{formData.giftingsNeeded.length - 3}
-                  </span>
-                )}
               </div>
-            </div>
-
-            {/* I Can Help Button */}
-            <button style={{
-              width: '100%',
-              padding: '12px',
-              backgroundColor: '#10b981',
-              color: 'white',
-              border: 'none',
-              borderRadius: '6px',
-              fontSize: '14px',
-              fontWeight: '600',
-              cursor: 'default'
-            }}>
-              I Can Help
-            </button>
-            </div>
+            )}
           </div>
 
-          {/* Submit section */}
-          <div style={{ textAlign: 'center', marginTop: '40px' }}>
-            <button 
+          {/* Action Buttons - outside the card */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            <button
               onClick={() => {
                 console.log('🔘 Share This Need button clicked!');
                 handleSubmit();
@@ -861,25 +857,25 @@ export default function ShareNeedScreen() {
               disabled={isSubmitting}
               style={{
                 width: '100%',
-                maxWidth: '400px',
+                padding: '12px',
+                borderRadius: '8px',
                 backgroundColor: isSubmitting ? '#9ca3af' : '#20c997',
                 color: 'white',
                 border: 'none',
-                padding: '16px',
-                borderRadius: 8,
-                fontSize: 16,
-                fontWeight: 600,
+                fontSize: '16px',
+                fontWeight: '600',
                 cursor: isSubmitting ? 'not-allowed' : 'pointer',
-                marginBottom: '12px',
-                transition: 'background-color 0.2s'
+                transition: 'opacity 0.2s',
+                opacity: isSubmitting ? 0.6 : 1
               }}
             >
               {isSubmitting ? 'Submitting...' : 'Share This Need'}
             </button>
             <p style={{ 
-              fontSize: '14px', 
+              fontSize: '12px', 
               color: '#6b7280',
-              margin: 0
+              margin: 0,
+              textAlign: 'center'
             }}>
               Leaders will review before posting
             </p>
@@ -890,7 +886,7 @@ export default function ShareNeedScreen() {
   }
 
   // 👇 Put this just above your `return ( ... )`
-  const WizardBody = () => (
+  const wizardContent = (
     <>
       {/* Progress */}
       <div style={{ marginBottom: 'var(--space-8)' }}>
@@ -927,24 +923,8 @@ export default function ShareNeedScreen() {
           <ArrowLeft size={16} strokeWidth={1.5} />
           Back
         </button>
-        <h1 style={{ fontSize: 'var(--text-2xl)', marginBottom: 'var(--space-2)', fontWeight: 'var(--font-bold)', color: '#333333' }}>Share a Need</h1>
-        <p style={{ color: '#666666', fontSize: 'var(--text-base)' }}>Help your community connect and serve together</p>
       </div>
 
-      {/* Optional banner for unsigned-in users */}
-      {authChecked && !session && (
-        <div style={{
-          borderRadius: '8px',
-          border: '1px solid #fbbf24',
-          backgroundColor: '#fef3c7',
-          color: '#92400e',
-          padding: '12px 16px',
-          marginBottom: '16px',
-          fontSize: '14px'
-        }}>
-          You can fill this out now — you'll sign in when you submit.
-        </div>
-      )}
 
       {renderStep()}
 
@@ -965,22 +945,24 @@ export default function ShareNeedScreen() {
         
         <button 
           onClick={handleNext}
-          disabled={!canContinue()}
+          disabled={!canContinueState}
           style={{ 
-            backgroundColor: canContinue() ? '#20c997' : '#d1d5db', 
+            backgroundColor: canContinueState ? '#20c997' : '#d1d5db', 
             color: 'white', 
             border: 'none', 
-            padding: '12px 20px', 
+            padding: '16px 24px', 
             borderRadius: 8, 
-            cursor: canContinue() ? 'pointer' : 'not-allowed',
-            fontWeight: 600
+            cursor: canContinueState ? 'pointer' : 'not-allowed', 
+            fontWeight: 600, 
+            fontSize: '16px', 
+            boxShadow: canContinueState ? '0 2px 4px rgba(32, 201, 151, 0.2)' : 'none'
           }}
         >
           {currentStep === totalSteps - 1 ? 'Preview' : 'Next Step'} →
         </button>
       </div>
 
-      <p style={{ textAlign: 'center', color: '#666666', marginTop: 'var(--space-6)' }}>
+      <p style={{ textAlign: 'center', color: '#666666', marginTop: 'var(--space-12)' }}>
         Making it easy for your church family to step in and help
       </p>
 
@@ -1128,7 +1110,7 @@ export default function ShareNeedScreen() {
         {/* modal content */}
         <main className="px-4 sm:px-6 py-6 overflow-y-auto h-[calc(100%-3.5rem)]">
           <div style={{ maxWidth: 600, margin: '0 auto' }}>
-            <WizardBody />
+            {wizardContent}
           </div>
         </main>
       </div>
@@ -1148,7 +1130,7 @@ export default function ShareNeedScreen() {
 
       <main className="max-w-3xl mx-auto px-4 py-6">
         <div style={{ maxWidth: 600, margin: '0 auto' }}>
-          <WizardBody />
+          {wizardContent}
         </div>
       </main>
 

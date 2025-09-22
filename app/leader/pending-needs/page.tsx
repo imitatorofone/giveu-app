@@ -33,7 +33,7 @@ export default function PendingNeedsPage() {
     try {
       const { error } = await supabase
         .from('needs')
-        .update({ status: 'approved' })
+        .update({ status: 'active' })
         .eq('id', needId);
 
       if (error) throw error;

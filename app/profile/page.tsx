@@ -35,39 +35,45 @@ export default function ProfilePage() {
 
   // Load user data on component mount
   useEffect(() => {
-    loadUserProfile();
-  }, []);
-
-  const loadUserProfile = async () => {
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      setUser(user);
+    async function loadProfile() {
+      const { data: { session } } = await supabase.auth.getSession();
+      console.log('Profile session:', session);
       
-      const { data: profileData } = await supabase
+      if (!session?.user) {
+        console.error('No session found');
+        setLoading(false);
+        return;
+      }
+
+      setUser(session.user);
+
+      const { data: profile, error } = await supabase
         .from('profiles')
         .select('*')
-        .eq('id', user.id)
+        .eq('id', session.user.id)
         .single();
 
-      if (profileData) {
+      console.log('Profile data:', { profile, error });
+
+      if (profile) {
         setProfile({
-          full_name: profileData.full_name || '',
-          email: profileData.email || user.email,
-          city: profileData.city || '',
-          phone: profileData.phone || '',
-          age: profileData.age || '',
-          availability: profileData.availability || [],
-          gift_selections: profileData.gift_selections || []
+          full_name: profile.full_name || '',
+          email: profile.email || session.user.email,
+          city: profile.city || '',
+          phone: profile.phone || '',
+          age: profile.age || '',
+          availability: profile.availability || [],
+          gift_selections: profile.gift_selections || []
         });
+      } else if (error) {
+        console.error('Error loading profile:', error);
       }
-    } catch (error) {
-      console.error('Error loading profile:', error);
-    } finally {
+      
       setLoading(false);
     }
-  };
+
+    loadProfile();
+  }, []);
 
   const handleSaveProfile = async () => {
     setSaving(true);
@@ -509,28 +515,23 @@ function GiftSelectionSection({ selectedGifts, isEditing, onChange }) {
           <h4 style={{ fontSize: '14px', fontWeight: '600', color: '#374151', marginBottom: '12px', fontFamily: 'Quicksand, sans-serif' }}>Selected Skills</h4>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
             {selectedGifts.map((gift) => (
-              <button
+              <span
                 key={gift}
-                onClick={() => toggleGift(gift)}
-                disabled={!isEditing}
                 style={{
                   padding: '6px 12px',
-                  borderRadius: '16px',
+                  borderRadius: '9999px',
                   fontSize: '12px',
                   fontFamily: quicksandFont,
                   fontWeight: '500',
                   border: '1px solid #20c997',
                   backgroundColor: '#20c997',
                   color: 'white',
-                  cursor: isEditing ? 'pointer' : 'default',
-                  opacity: 1,
-                  transition: 'opacity 0.2s'
+                  textAlign: 'center',
+                  display: 'inline-block'
                 }}
-                title={isEditing ? 'Click to remove' : ''}
               >
                 {gift}
-                {isEditing && ' ×'}
-              </button>
+              </span>
             ))}
           </div>
         </div>
@@ -604,7 +605,7 @@ function GiftSelectionSection({ selectedGifts, isEditing, onChange }) {
                             onClick={() => toggleGift(tag)}
                             style={{
                               padding: '8px 12px',
-                              borderRadius: '6px',
+                              borderRadius: '9999px',
                               border: `1px solid ${isSelected ? '#20c997' : '#d1d5db'}`,
                               backgroundColor: isSelected ? '#20c997' : 'white',
                               color: isSelected ? 'white' : '#374151',
@@ -612,7 +613,7 @@ function GiftSelectionSection({ selectedGifts, isEditing, onChange }) {
                               fontFamily: quicksandFont,
                               fontWeight: '500',
                               cursor: 'pointer',
-                              textAlign: 'left'
+                              textAlign: 'center'
                             }}
                           >
                             {tag}
