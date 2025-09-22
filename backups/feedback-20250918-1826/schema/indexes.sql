@@ -1,0 +1,12 @@
+CREATE INDEX idx_feedback_votes_feedback_id ON public.feedback_votes USING btree (feedback_id);
+CREATE INDEX idx_feedback_votes_user_id ON public.feedback_votes USING btree (user_id);
+CREATE INDEX idx_needs_required_tags ON public.needs USING gin (required_tags);
+CREATE INDEX idx_needs_status ON public.needs USING btree (approval_status);
+CREATE INDEX idx_profiles_gift_selections ON public.profiles USING gin (gift_selections);
+CREATE UNIQUE INDEX feedback_attachments_pkey ON public.feedback_attachments USING btree (id);
+CREATE UNIQUE INDEX feedback_items_pkey ON public.feedback_items USING btree (id);
+CREATE UNIQUE INDEX feedback_votes_feedback_id_user_id_key ON public.feedback_votes USING btree (feedback_id, user_id);
+CREATE UNIQUE INDEX feedback_votes_pkey ON public.feedback_votes USING btree (id);
+CREATE UNIQUE INDEX feedback_votes_user_day_unique ON public.feedback_votes USING btree (user_id, vote_day);
+CREATE UNIQUE INDEX needs_pkey ON public.needs USING btree (id);
+CREATE UNIQUE INDEX profiles_pkey ON public.profiles USING btree (id);

@@ -63,7 +63,7 @@ export default function Footer() {
         </button>
         
         <button 
-          onClick={() => window.location.href = '/share-need?modal=1'}
+          onClick={() => window.location.href = '/share-need'}
           style={{
             display: 'flex',
             flexDirection: 'column',

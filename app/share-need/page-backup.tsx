@@ -1155,4 +1155,412 @@ export default function ShareNeedScreen() {
       <Footer />
     </div>
   );
+    <>
+      {isModal ? (
+        <div
+          className="fixed inset-0 z-50 flex items-stretch justify-center"
+          role="dialog"
+          aria-modal="true"
+        >
+          {/* Backdrop */}
+          <div
+            className="absolute inset-0 bg-black/40"
+            onClick={() => router.back()}
+          />
+
+          {/* Sheet */}
+          <div className="relative z-10 w-full h-full sm:h-[92vh] sm:mt-6 sm:mb-6 sm:max-w-3xl sm:rounded-2xl bg-white shadow-xl overflow-hidden">
+            {/* Modal header (compact, no global header/footer) */}
+            <div className="sticky top-0 bg-white/90 backdrop-blur border-b">
+              <div className="px-4 h-14 flex items-center justify-between">
+                <h1 className="text-base font-semibold text-gray-900">Share a Need</h1>
+                <button
+                  onClick={() => router.back()}
+                  aria-label="Close"
+                  className="p-2 rounded-md hover:bg-gray-100"
+                >
+                  <X className="w-5 h-5 text-gray-500" />
+                </button>
+              </div>
+            </div>
+
+            {/* Your existing main content goes here */}
+            <main className="px-4 sm:px-6 py-6 overflow-y-auto h-[calc(100%-3.5rem)]">
+              <div style={{ maxWidth: 600, margin: '0 auto', paddingTop: 32 }}>
+        {/* Progress */}
+        <div style={{ marginBottom: 'var(--space-8)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 'var(--space-2)' }}>
+            <span>Step {currentStep + 1} of {totalSteps}</span>
+            <span>{Math.round(((currentStep + 1) / totalSteps) * 100)}% complete</span>
+          </div>
+          <div style={{ width: '100%', height: 8, backgroundColor: '#e5e7eb', borderRadius: 4 }}>
+            <div style={{ 
+              width: `${((currentStep + 1) / totalSteps) * 100}%`, 
+              height: '100%', 
+              backgroundColor: '#20c997', 
+              borderRadius: 4 
+            }}></div>
+          </div>
+        </div>
+
+        {/* Header */}
+        <div style={{ marginBottom: 'var(--space-8)' }}>
+          <button 
+            onClick={currentStep === 0 ? () => router.push('/dashboard') : handlePrevious}
+            style={{ 
+              background: 'none', 
+              border: 'none', 
+              cursor: 'pointer',
+              marginBottom: 'var(--space-4)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 'var(--space-2)',
+              color: '#666666',
+              transition: 'color 0.2s ease'
+            }}
+          >
+            <ArrowLeft size={16} strokeWidth={1.5} />
+            Back
+          </button>
+          <h1 style={{ fontSize: 'var(--text-2xl)', marginBottom: 'var(--space-2)', fontWeight: 'var(--font-bold)', color: '#333333' }}>Share a Need</h1>
+          <p style={{ color: '#666666', fontSize: 'var(--text-base)' }}>Help your community connect and serve together</p>
+        </div>
+
+        {/* Optional banner for unsigned-in users */}
+        {authChecked && !session && (
+          <div style={{
+            borderRadius: '8px',
+            border: '1px solid #fbbf24',
+            backgroundColor: '#fef3c7',
+            color: '#92400e',
+            padding: '12px 16px',
+            marginBottom: '16px',
+            fontSize: '14px'
+          }}>
+            You can fill this out now — you'll sign in when you submit.
+          </div>
+        )}
+
+        {renderStep()}
+
+        {/* Navigation */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <button 
+            onClick={currentStep === 0 ? () => router.push('/dashboard') : handlePrevious}
+            style={{ 
+              backgroundColor: '#f3f4f6', 
+              border: '1px solid #d1d5db', 
+              padding: '12px 20px', 
+              borderRadius: 8, 
+              cursor: 'pointer' 
+            }}
+          >
+            ← {currentStep === 0 ? 'Back' : 'Previous'}
+          </button>
+          
+          <button 
+            onClick={handleNext}
+            disabled={!canContinue()}
+            style={{
+              backgroundColor: canContinue() ? '#4ECDC4' : '#e5e7eb',
+              color: canContinue() ? 'white' : '#9ca3af',
+              border: 'none',
+              padding: '12px 20px',
+              borderRadius: 8,
+              cursor: canContinue() ? 'pointer' : 'not-allowed',
+              fontWeight: 600
+            }}
+          >
+            {currentStep === totalSteps - 1 ? 'Preview' : 'Next Step'} →
+          </button>
+        </div>
+
+        <p style={{ textAlign: 'center', color: '#666666', marginTop: 'var(--space-6)' }}>
+          Making it easy for your church family to step in and help
+        </p>
+      </div>
+
+      {/* Even More Elegant Success Modal */}
+      {showSuccessModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl p-8 max-w-lg w-full shadow-2xl transform animate-in">
+            <div className="text-center">
+              {/* Animated Success Icon */}
+              <div className="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-green-100 mb-6 animate-pulse">
+                <svg className="h-8 w-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
+                </svg>
+              </div>
+              
+              <h2 className="text-xl font-bold text-gray-900 mb-3">
+                🎉 Need Successfully Submitted!
+              </h2>
+              
+              <div className="text-left bg-gray-50 rounded-lg p-4 mb-6">
+                <h4 className="font-semibold text-gray-800 mb-2">"{formData.title}"</h4>
+                <div className="space-y-1 text-sm text-gray-600">
+                  <p>📍 Location: {formData.city}</p>
+                  <p>👥 People needed: {peopleNeeded === '5+' ? customCount || '5+' : peopleNeeded}</p>
+                  <p>⏱️ Timeline: {formData.urgency === 'ongoing' ? 'Ongoing opportunity' : 'One-time need'}</p>
+                </div>
+              </div>
+              
+              <p className="text-sm text-gray-600 mb-6">
+                Your request for "{formData.title}" has been submitted and will be reviewed by church leadership. Once approved, it will appear on the Ways to Serve board for volunteers to see.
+              </p>
+              
+              <button
+                onClick={handleSuccessOk}
+                className="w-full bg-emerald-600 text-white py-3 px-6 rounded-lg font-semibold hover:bg-emerald-700 transition-all duration-200 shadow-lg hover:shadow-xl"
+              >
+                Return to Ways to Serve
+              </button>
+            </div>
+          </div>
+            </main>
+          </div>
+        </div>
+      ) : (
+        // Non-modal fallback: full page with global header + footer
+        <div style={{ 
+          minHeight: '100vh', 
+          backgroundColor: '#FDFBF7',
+          padding: 20 
+        }}>
+          <div style={{ maxWidth: 600, margin: '0 auto', paddingTop: 32 }}>
+            {/* Progress */}
+            <div style={{ marginBottom: 'var(--space-8)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 'var(--space-2)' }}>
+                <span>Step {currentStep + 1} of {totalSteps}</span>
+                <span>{Math.round(((currentStep + 1) / totalSteps) * 100)}% complete</span>
+              </div>
+              <div style={{ width: '100%', height: 8, backgroundColor: '#e5e7eb', borderRadius: 4 }}>
+                <div style={{ 
+                  width: `${((currentStep + 1) / totalSteps) * 100}%`, 
+                  height: '100%', 
+                  backgroundColor: '#20c997', 
+                  borderRadius: 4 
+                }}></div>
+              </div>
+            </div>
+
+            {/* Header */}
+            <div style={{ marginBottom: 'var(--space-8)' }}>
+              <button 
+                onClick={currentStep === 0 ? () => router.push('/dashboard') : handlePrevious}
+                style={{ 
+                  background: 'none', 
+                  border: 'none', 
+                  cursor: 'pointer',
+                  marginBottom: 'var(--space-4)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 'var(--space-2)',
+                  color: '#666666',
+                  transition: 'color 0.2s ease'
+                }}
+              >
+                <ArrowLeft size={16} strokeWidth={1.5} />
+                Back
+              </button>
+              <h1 style={{ fontSize: 'var(--text-2xl)', marginBottom: 'var(--space-2)', fontWeight: 'var(--font-bold)', color: '#333333' }}>Share a Need</h1>
+              <p style={{ color: '#666666', fontSize: 'var(--text-base)' }}>Help your community connect and serve together</p>
+            </div>
+
+            {/* Optional banner for unsigned-in users */}
+            {authChecked && !session && (
+              <div style={{
+                borderRadius: '8px',
+                border: '1px solid #fbbf24',
+                backgroundColor: '#fef3c7',
+                color: '#92400e',
+                padding: '12px 16px',
+                marginBottom: '16px',
+                fontSize: '14px'
+              }}>
+                You can fill this out now — you'll sign in when you submit.
+              </div>
+            )}
+
+            {renderStep()}
+
+            {/* Navigation */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <button 
+                onClick={currentStep === 0 ? () => router.push('/dashboard') : handlePrevious}
+                style={{ 
+                  backgroundColor: '#f3f4f6', 
+                  border: '1px solid #d1d5db', 
+                  padding: '12px 20px', 
+                  borderRadius: 8, 
+                  cursor: 'pointer' 
+                }}
+              >
+                ← {currentStep === 0 ? 'Back' : 'Previous'}
+              </button>
+              
+              <button 
+                onClick={handleNext}
+                disabled={!isStepValid(currentStep)}
+                style={{ 
+                  backgroundColor: isStepValid(currentStep) ? '#20c997' : '#d1d5db', 
+                  color: 'white', 
+                  border: 'none', 
+                  padding: '12px 20px', 
+                  borderRadius: 8, 
+                  cursor: isStepValid(currentStep) ? 'pointer' : 'not-allowed' 
+                }}
+              >
+                {currentStep === totalSteps - 1 ? 'Preview' : 'Next'} →
+              </button>
+            </div>
+          </div>
+          
+          {/* show global footer only when not modal */}
+          <Footer />
+        </div>
+      )}
+      
+      {/* Toast notifications */}
+      <Toaster 
+        position="top-center"
+        toastOptions={{
+          duration: 4000,
+          style: {
+            background: '#10b981',
+            color: 'white',
+            fontWeight: '500',
+          },
+        }}
+      />
+
+      {/* Success Submission Modal */}
+      {showSubmissionModal && (
+        <div style={{
+          position: 'fixed',
+          inset: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000,
+          backdropFilter: 'blur(4px)'
+        }}>
+          <div style={{
+            backgroundColor: 'white',
+            borderRadius: '16px',
+            padding: '48px 32px',
+            maxWidth: '480px',
+            width: '90%',
+            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
+            textAlign: 'center',
+            transform: 'scale(1)',
+            animation: 'modalAppear 0.3s ease-out'
+          }}>
+            {/* Success Icon */}
+            <div style={{
+              width: '80px',
+              height: '80px',
+              backgroundColor: '#dcfce7',
+              borderRadius: '50%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              margin: '0 auto 24px',
+              border: '3px solid #10b981'
+            }}>
+              <svg width="40" height="40" fill="none" stroke="#10b981" viewBox="0 0 24 24" strokeWidth="3">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+              </svg>
+            </div>
+            
+            {/* Success Message */}
+            <h2 style={{
+              fontSize: '28px',
+              fontWeight: '600',
+              color: '#1f2937',
+              margin: '0 0 16px 0',
+              lineHeight: '1.2'
+            }}>
+              Thank you!
+            </h2>
+            
+            <p style={{
+              fontSize: '18px',
+              color: '#6b7280',
+              margin: '0 0 8px 0',
+              lineHeight: '1.5'
+            }}>
+              Your need will be shared with the community soon
+            </p>
+            
+            <p style={{
+              fontSize: '14px',
+              color: '#9ca3af',
+              margin: 0,
+              lineHeight: '1.4'
+            }}>
+              Leaders will review and approve it within 24 hours
+            </p>
+            
+            {/* Subtle loading indicator */}
+            <div style={{
+              marginTop: '32px',
+              display: 'flex',
+              justifyContent: 'center',
+              alignItems: 'center',
+              gap: '8px'
+            }}>
+              <div style={{
+                width: '8px',
+                height: '8px',
+                backgroundColor: '#10b981',
+                borderRadius: '50%',
+                animation: 'pulse 1.5s infinite'
+              }}></div>
+              <div style={{
+                width: '8px',
+                height: '8px',
+                backgroundColor: '#10b981',
+                borderRadius: '50%',
+                animation: 'pulse 1.5s infinite 0.2s'
+              }}></div>
+              <div style={{
+                width: '8px',
+                height: '8px',
+                backgroundColor: '#10b981',
+                borderRadius: '50%',
+                animation: 'pulse 1.5s infinite 0.4s'
+              }}></div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* CSS Animations */}
+      <style jsx>{`
+        @keyframes modalAppear {
+          from {
+            opacity: 0;
+            transform: scale(0.9) translateY(-20px);
+          }
+          to {
+            opacity: 1;
+            transform: scale(1) translateY(0);
+          }
+        }
+        
+        @keyframes pulse {
+          0%, 100% {
+            opacity: 0.4;
+            transform: scale(1);
+          }
+          50% {
+            opacity: 1;
+            transform: scale(1.2);
+          }
+        }
+      `}</style>
+    </>
+  );
 }

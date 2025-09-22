@@ -1,0 +1,4 @@
+Bucket: feedback-attachments
+Policies were created via UI:
+- public SELECT on bucket_id='feedback-attachments'
+- authenticated INSERT on bucket_id='feedback-attachments'

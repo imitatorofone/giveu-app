@@ -2,13 +2,11 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabaseClient';
-import { useRouter, useSearchParams } from 'next/navigation';
-import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { Session } from '@supabase/supabase-js';
 import { Icon } from '../../icons/index';
-import { ArrowLeft, MapPin, Users, Calendar, Clock, AlertCircle, CheckCircle, FileText, Plus, Timer, RotateCcw, Sun, Cloud, Moon, Wrench, Heart, Lightbulb, Shield, BookOpen, Palette, Crown, Eye, Zap, Compass, X } from 'lucide-react';
+import { ArrowLeft, MapPin, Users, Calendar, Clock, AlertCircle, CheckCircle, FileText, Plus, Timer, RotateCcw, Sun, Cloud, Moon, Wrench, Heart, Lightbulb, Shield, BookOpen, Palette, Crown, Eye, Zap, Compass } from 'lucide-react';
 import toast, { Toaster } from 'react-hot-toast';
-import Footer from '../../components/Footer';
 
 const brand = '#20c997';
 
@@ -59,8 +57,6 @@ export default function ShareNeedScreen() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showSubmissionModal, setShowSubmissionModal] = useState(false);
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const isModal = searchParams?.get('modal') === '1';
   const totalSteps = 3;
 
   // Handle success modal OK button
@@ -656,8 +652,7 @@ export default function ShareNeedScreen() {
     return 'Specific date/time';
   };
 
-  // Wait only until we know whether a session exists; don't require login to view the wizard
-  if (!authChecked) return null;
+  if (!user) return <div>Loading...</div>;
 
   if (showPreview) {
     return (
@@ -889,113 +884,105 @@ export default function ShareNeedScreen() {
     );
   }
 
-  // 👇 Put this just above your `return ( ... )`
-  const WizardBody = () => (
-    <>
-      {/* Progress */}
-      <div style={{ marginBottom: 'var(--space-8)' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 'var(--space-2)' }}>
-          <span>Step {currentStep + 1} of {totalSteps}</span>
-          <span>{Math.round(((currentStep + 1) / totalSteps) * 100)}% complete</span>
+  return (
+    <div style={{ 
+      minHeight: '100vh', 
+      backgroundColor: '#FDFBF7',
+      padding: 20 
+    }}>
+      <div style={{ maxWidth: 600, margin: '0 auto', paddingTop: 32 }}>
+        {/* Progress */}
+        <div style={{ marginBottom: 'var(--space-8)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 'var(--space-2)' }}>
+            <span>Step {currentStep + 1} of {totalSteps}</span>
+            <span>{Math.round(((currentStep + 1) / totalSteps) * 100)}% complete</span>
+          </div>
+          <div style={{ width: '100%', height: 8, backgroundColor: '#e5e7eb', borderRadius: 4 }}>
+            <div style={{ 
+              width: `${((currentStep + 1) / totalSteps) * 100}%`, 
+              height: '100%', 
+              backgroundColor: '#20c997', 
+              borderRadius: 4 
+            }}></div>
+          </div>
         </div>
-        <div style={{ width: '100%', height: 8, backgroundColor: '#e5e7eb', borderRadius: 4 }}>
-          <div style={{ 
-            width: `${((currentStep + 1) / totalSteps) * 100}%`, 
-            height: '100%', 
-            backgroundColor: '#20c997', 
-            borderRadius: 4 
-          }}></div>
+
+        {/* Header */}
+        <div style={{ marginBottom: 'var(--space-8)' }}>
+          <button 
+            onClick={currentStep === 0 ? () => router.push('/dashboard') : handlePrevious}
+            style={{ 
+              background: 'none', 
+              border: 'none', 
+              cursor: 'pointer',
+              marginBottom: 'var(--space-4)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 'var(--space-2)',
+              color: '#666666',
+              transition: 'color 0.2s ease'
+            }}
+          >
+            <ArrowLeft size={16} strokeWidth={1.5} />
+            Back
+          </button>
+          <h1 style={{ fontSize: 'var(--text-2xl)', marginBottom: 'var(--space-2)', fontWeight: 'var(--font-bold)', color: '#333333' }}>Share a Need</h1>
+          <p style={{ color: '#666666', fontSize: 'var(--text-base)' }}>Help your community connect and serve together</p>
         </div>
-      </div>
 
-      {/* Header */}
-      <div style={{ marginBottom: 'var(--space-8)' }}>
-        <button 
-          onClick={currentStep === 0 ? () => router.push('/dashboard') : handlePrevious}
-          style={{ 
-            background: 'none', 
-            border: 'none', 
-            cursor: 'pointer',
-            marginBottom: 'var(--space-4)',
-            display: 'flex',
-            alignItems: 'center',
-            gap: 'var(--space-2)',
-            color: '#666666',
-            transition: 'color 0.2s ease'
-          }}
-        >
-          <ArrowLeft size={16} strokeWidth={1.5} />
-          Back
-        </button>
-        <h1 style={{ fontSize: 'var(--text-2xl)', marginBottom: 'var(--space-2)', fontWeight: 'var(--font-bold)', color: '#333333' }}>Share a Need</h1>
-        <p style={{ color: '#666666', fontSize: 'var(--text-base)' }}>Help your community connect and serve together</p>
-      </div>
+        {/* Optional banner for unsigned-in users */}
+        {authChecked && !session && (
+          <div style={{
+            borderRadius: '8px',
+            border: '1px solid #fbbf24',
+            backgroundColor: '#fef3c7',
+            color: '#92400e',
+            padding: '12px 16px',
+            marginBottom: '16px',
+            fontSize: '14px'
+          }}>
+            You can fill this out now — you'll sign in when you submit.
+          </div>
+        )}
 
-      {/* Optional banner for unsigned-in users */}
-      {authChecked && !session && (
-        <div style={{
-          borderRadius: '8px',
-          border: '1px solid #fbbf24',
-          backgroundColor: '#fef3c7',
-          color: '#92400e',
-          padding: '12px 16px',
-          marginBottom: '16px',
-          fontSize: '14px'
-        }}>
-          You can fill this out now — you'll sign in when you submit.
+        {renderStep()}
+
+        {/* Navigation */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <button 
+            onClick={currentStep === 0 ? () => router.push('/dashboard') : handlePrevious}
+            style={{ 
+              backgroundColor: '#f3f4f6', 
+              border: '1px solid #d1d5db', 
+              padding: '12px 20px', 
+              borderRadius: 8, 
+              cursor: 'pointer' 
+            }}
+          >
+            ← {currentStep === 0 ? 'Back' : 'Previous'}
+          </button>
+          
+          <button 
+            onClick={handleNext}
+            disabled={!canContinue()}
+            style={{
+              backgroundColor: canContinue() ? '#4ECDC4' : '#e5e7eb',
+              color: canContinue() ? 'white' : '#9ca3af',
+              border: 'none',
+              padding: '12px 20px',
+              borderRadius: 8,
+              cursor: canContinue() ? 'pointer' : 'not-allowed',
+              fontWeight: 600
+            }}
+          >
+            {currentStep === totalSteps - 1 ? 'Preview' : 'Next Step'} →
+          </button>
         </div>
-      )}
 
-      {renderStep()}
-
-      {/* Navigation */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <button 
-          onClick={currentStep === 0 ? () => router.push('/dashboard') : handlePrevious}
-          style={{ 
-            backgroundColor: '#f3f4f6', 
-            border: '1px solid #d1d5db', 
-            padding: '12px 20px', 
-            borderRadius: 8, 
-            cursor: 'pointer' 
-          }}
-        >
-          ← {currentStep === 0 ? 'Back' : 'Previous'}
-        </button>
-        
-        <button 
-          onClick={handleNext}
-          disabled={!canContinue()}
-          style={{ 
-            backgroundColor: canContinue() ? '#20c997' : '#d1d5db', 
-            color: 'white', 
-            border: 'none', 
-            padding: '12px 20px', 
-            borderRadius: 8, 
-            cursor: canContinue() ? 'pointer' : 'not-allowed',
-            fontWeight: 600
-          }}
-        >
-          {currentStep === totalSteps - 1 ? 'Preview' : 'Next Step'} →
-        </button>
+        <p style={{ textAlign: 'center', color: '#666666', marginTop: 'var(--space-6)' }}>
+          Making it easy for your church family to step in and help
+        </p>
       </div>
-
-      <p style={{ textAlign: 'center', color: '#666666', marginTop: 'var(--space-6)' }}>
-        Making it easy for your church family to step in and help
-      </p>
-
-      {/* Toast notifications */}
-      <Toaster 
-        position="top-center"
-        toastOptions={{
-          duration: 4000,
-          style: {
-            background: '#10b981',
-            color: 'white',
-            fontWeight: '500',
-          },
-        }}
-      />
 
       {/* Even More Elegant Success Modal */}
       {showSuccessModal && (
@@ -1014,14 +1001,17 @@ export default function ShareNeedScreen() {
               </h2>
               
               <div className="text-left bg-gray-50 rounded-lg p-4 mb-6">
-                <h3 className="font-semibold text-gray-900 mb-2">What happens next?</h3>
-                <ul className="text-sm text-gray-600 space-y-1">
-                  <li>• Your need will be reviewed by church leadership</li>
-                  <li>• Once approved, it will appear on the Ways to Serve board</li>
-                  <li>• Volunteers can then sign up to help</li>
-                  <li>• You'll be notified when someone commits to help</li>
-                </ul>
+                <h4 className="font-semibold text-gray-800 mb-2">"{formData.title}"</h4>
+                <div className="space-y-1 text-sm text-gray-600">
+                  <p>📍 Location: {formData.city}</p>
+                  <p>👥 People needed: {peopleNeeded === '5+' ? customCount || '5+' : peopleNeeded}</p>
+                  <p>⏱️ Timeline: {formData.urgency === 'ongoing' ? 'Ongoing opportunity' : 'One-time need'}</p>
+                </div>
               </div>
+              
+              <p className="text-sm text-gray-600 mb-6">
+                Your request for "{formData.title}" has been submitted and will be reviewed by church leadership. Once approved, it will appear on the Ways to Serve board for volunteers to see.
+              </p>
               
               <button
                 onClick={handleSuccessOk}
@@ -1033,6 +1023,19 @@ export default function ShareNeedScreen() {
           </div>
         </div>
       )}
+      
+      {/* Toast notifications */}
+      <Toaster 
+        position="top-center"
+        toastOptions={{
+          duration: 4000,
+          style: {
+            background: '#10b981',
+            color: 'white',
+            fontWeight: '500',
+          },
+        }}
+      />
 
       {/* Success Submission Modal */}
       {showSubmissionModal && (
@@ -1044,115 +1047,123 @@ export default function ShareNeedScreen() {
           alignItems: 'center',
           justifyContent: 'center',
           zIndex: 1000,
-          padding: '20px'
+          backdropFilter: 'blur(4px)'
         }}>
           <div style={{
             backgroundColor: 'white',
             borderRadius: '16px',
-            padding: '32px',
-            maxWidth: '500px',
-            width: '100%',
+            padding: '48px 32px',
+            maxWidth: '480px',
+            width: '90%',
+            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
             textAlign: 'center',
-            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)'
+            transform: 'scale(1)',
+            animation: 'modalAppear 0.3s ease-out'
           }}>
+            {/* Success Icon */}
             <div style={{
-              width: '64px',
-              height: '64px',
-              backgroundColor: '#d1fae5',
+              width: '80px',
+              height: '80px',
+              backgroundColor: '#dcfce7',
               borderRadius: '50%',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              margin: '0 auto 24px auto'
+              margin: '0 auto 24px',
+              border: '3px solid #10b981'
             }}>
-              <CheckCircle size={32} color="#10b981" />
+              <svg width="40" height="40" fill="none" stroke="#10b981" viewBox="0 0 24 24" strokeWidth="3">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+              </svg>
             </div>
             
+            {/* Success Message */}
             <h2 style={{
-              fontSize: '24px',
-              fontWeight: 'bold',
-              color: '#111827',
-              marginBottom: '16px'
+              fontSize: '28px',
+              fontWeight: '600',
+              color: '#1f2937',
+              margin: '0 0 16px 0',
+              lineHeight: '1.2'
             }}>
-              Need Submitted Successfully!
+              Thank you!
             </h2>
             
             <p style={{
+              fontSize: '18px',
               color: '#6b7280',
-              marginBottom: '24px',
-              lineHeight: '1.6'
+              margin: '0 0 8px 0',
+              lineHeight: '1.5'
             }}>
-              Your request for "{formData.title}" has been submitted and will be reviewed by church leadership. Once approved, it will appear on the Ways to Serve board for volunteers to see.
+              Your need will be shared with the community soon
             </p>
             
-            <button
-              onClick={handleSuccessOk}
-              style={{
+            <p style={{
+              fontSize: '14px',
+              color: '#9ca3af',
+              margin: 0,
+              lineHeight: '1.4'
+            }}>
+              Leaders will review and approve it within 24 hours
+            </p>
+            
+            {/* Subtle loading indicator */}
+            <div style={{
+              marginTop: '32px',
+              display: 'flex',
+              justifyContent: 'center',
+              alignItems: 'center',
+              gap: '8px'
+            }}>
+              <div style={{
+                width: '8px',
+                height: '8px',
                 backgroundColor: '#10b981',
-                color: 'white',
-                border: 'none',
-                padding: '12px 24px',
-                borderRadius: '8px',
-                fontSize: '16px',
-                fontWeight: '600',
-                cursor: 'pointer',
-                width: '100%'
-              }}
-            >
-              Return to Ways to Serve
-            </button>
+                borderRadius: '50%',
+                animation: 'pulse 1.5s infinite'
+              }}></div>
+              <div style={{
+                width: '8px',
+                height: '8px',
+                backgroundColor: '#10b981',
+                borderRadius: '50%',
+                animation: 'pulse 1.5s infinite 0.2s'
+              }}></div>
+              <div style={{
+                width: '8px',
+                height: '8px',
+                backgroundColor: '#10b981',
+                borderRadius: '50%',
+                animation: 'pulse 1.5s infinite 0.4s'
+              }}></div>
+            </div>
           </div>
         </div>
       )}
-    </>
-  );
 
-  return isModal ? (
-    // ===== MODAL PRESENTATION =====
-    <div className="fixed inset-0 z-50 flex items-stretch justify-center" role="dialog" aria-modal="true">
-      {/* backdrop */}
-      <div className="absolute inset-0 bg-black/40" onClick={() => router.back()} />
-
-      {/* sheet */}
-      <div className="relative z-10 w-full h-full sm:h-[92vh] sm:mt-6 sm:mb-6 sm:max-w-3xl sm:rounded-2xl bg-white shadow-xl overflow-hidden">
-        {/* modal header */}
-        <div className="sticky top-0 bg-white/90 backdrop-blur border-b">
-          <div className="px-4 h-14 flex items-center justify-between">
-            <h1 className="text-base font-semibold text-gray-900">Share a Need</h1>
-            <button onClick={() => router.back()} aria-label="Close" className="p-2 rounded-md hover:bg-gray-100">
-              <X className="w-5 h-5 text-gray-500" />
-            </button>
-          </div>
-        </div>
-
-        {/* modal content */}
-        <main className="px-4 sm:px-6 py-6 overflow-y-auto h-[calc(100%-3.5rem)]">
-          <div style={{ maxWidth: 600, margin: '0 auto' }}>
-            <WizardBody />
-          </div>
-        </main>
-      </div>
-    </div>
-  ) : (
-    // ===== FULL PAGE PRESENTATION =====
-    <div className="min-h-screen bg-[#FAFAF7] pb-24">
-      {/* your existing page header, if any */}
-      <header className="sticky top-0 z-20 bg-white/90 backdrop-blur border-b">
-        <div className="max-w-3xl mx-auto px-4 h-14 flex items-center gap-3">
-          <Link href="/dashboard" className="text-sm text-gray-500 hover:text-gray-700 flex items-center gap-1">
-            <ArrowLeft className="w-4 h-4" /> Back
-          </Link>
-          <h1 className="text-lg font-semibold text-gray-900">Share a Need</h1>
-        </div>
-      </header>
-
-      <main className="max-w-3xl mx-auto px-4 py-6">
-        <div style={{ maxWidth: 600, margin: '0 auto' }}>
-          <WizardBody />
-        </div>
-      </main>
-
-      <Footer />
+      {/* CSS Animations */}
+      <style jsx>{`
+        @keyframes modalAppear {
+          from {
+            opacity: 0;
+            transform: scale(0.9) translateY(-20px);
+          }
+          to {
+            opacity: 1;
+            transform: scale(1) translateY(0);
+          }
+        }
+        
+        @keyframes pulse {
+          0%, 100% {
+            opacity: 0.4;
+            transform: scale(1);
+          }
+          50% {
+            opacity: 1;
+            transform: scale(1.2);
+          }
+        }
+      `}</style>
     </div>
   );
 }

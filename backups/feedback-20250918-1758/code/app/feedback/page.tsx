@@ -249,7 +249,7 @@ export default function FeedbackListPage() {
     // If you already used today's vote, don't call the RPC again
     if (votedTodayId) {
       const votedTitle = items.find(x => x.id === votedTodayId)?.title ?? 'another item';
-      toast("You have already used today's vote on \"" + cleanTitle(votedTitle) + "\". Try again tomorrow.", { icon: '🔁' });
+      toast("You've already used today's vote on \"" + cleanTitle(votedTitle) + "\". Try again tomorrow.", { icon: '🔁' });
       return;
     }
 
@@ -277,7 +277,7 @@ export default function FeedbackListPage() {
         if (serverCount !== null) {
           setItems(prev => prev.map(it => (it.id === id ? { ...it, votes_count: serverCount } : it)));
         }
-        toast("You have already used today's vote on \"" + cleanTitle(votedTitle) + "\".", { icon: '🔁' });
+        toast("You've already used today's vote on \"" + cleanTitle(votedTitle) + "\".", { icon: '🔁' });
       }
     } catch (e: any) {
       console.error('upvote error →', e?.message || e);
@@ -483,14 +483,14 @@ export default function FeedbackListPage() {
                       voted
                         ? "You already voted today"
                         : dailyLocked
-                          ? "You have used your daily vote"
+                          ? "You've used your daily vote"
                           : "Upvote"
                     }
                     title={
                       voted
                         ? "You can vote again tomorrow"
                         : dailyLocked
-                          ? "You have used your daily vote"
+                          ? "You've used your daily vote"
                           : "Upvote"
                     }
                     className={`group flex flex-col items-center justify-center w-12 md:w-14 h-14 md:h-16
