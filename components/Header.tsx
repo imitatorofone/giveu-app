@@ -21,24 +21,17 @@ export default function Header() {
         maxWidth: '1200px',
         margin: '0 auto'
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <img 
-            src="/logo.svg" 
-            alt="ENGAGE" 
-            style={{ 
-              width: '32px', 
-              height: '32px',
-              objectFit: 'contain',
-              borderRadius: '8px'
-            }}
-            onError={(e) => console.log('Logo failed to load:', e)}
-          />
+        <div style={{ display: 'flex', alignItems: 'center' }}>
           <span style={{ 
             fontWeight: '700', 
             fontSize: '18px', 
-            color: '#1e293b',
-            fontFamily: quicksandFont 
-          }}>ENGAGE</span>
+            color: 'white',
+            fontFamily: quicksandFont,
+            backgroundColor: '#20c997',
+            padding: '4px 16px',
+            borderRadius: '20px',
+            display: 'inline-block'
+          }}>giveU</span>
         </div>
         
         <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>

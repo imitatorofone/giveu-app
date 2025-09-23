@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { 
   Calendar, Clock, MapPin, Users, User, Bell, 
-  Heart, CalendarDays, Plus, UserCircle, MessageCircle 
+  Heart, CalendarDays, Plus, UserCircle, MessageCircle, AlertCircle, Check 
 } from 'lucide-react';
 import { supabase } from '../../lib/supabaseClient'; // Use your shared client
 import { GIFT_CATEGORIES } from '../../constants/giftCategories.js';
@@ -26,7 +26,93 @@ interface Opportunity {
   needed: number;
   categories: string[];
   tags: string[];
+  urgency?: string;
+  specific_date?: string;
+  specific_time?: string;
+  ongoing_start_date?: string;
+  ongoing_start_time?: string;
+  recurring_pattern?: string;
+  time_preference?: string;
+  ongoing_schedule?: string;
 }
+
+// Helper functions for date/time formatting
+const formatDate = (dateString: string): string => {
+  if (!dateString) return '';
+  try {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', { 
+      month: 'short', 
+      day: 'numeric', 
+      year: 'numeric' 
+    });
+  } catch {
+    return dateString;
+  }
+};
+
+const formatTime = (timeString: string): string => {
+  if (!timeString) return '';
+  try {
+    // Handle both 24hr and 12hr formats
+    if (timeString.includes(':')) {
+      const [hours, minutes] = timeString.split(':');
+      const hour = parseInt(hours);
+      const ampm = hour >= 12 ? 'PM' : 'AM';
+      const displayHour = hour % 12 || 12;
+      // Remove seconds if present and format minutes properly
+      const cleanMinutes = minutes.split('.')[0]; // Remove any decimal seconds
+      return `${displayHour}:${cleanMinutes} ${ampm}`;
+    }
+    return timeString;
+  } catch {
+    return timeString;
+  }
+};
+
+const formatDateDisplay = (need: any): { date: string; time: string } => {
+  if (need.urgency === 'asap') {
+    const timePreference = need.time_preference || 'Urgent';
+    return { date: 'As Soon As Possible', time: timePreference };
+  } else if (need.urgency === 'ongoing') {
+    // For ongoing needs, show the recurring pattern
+    if (need.recurring_pattern) {
+      const pattern = need.recurring_pattern.charAt(0).toUpperCase() + need.recurring_pattern.slice(1);
+      return { date: `Ongoing - ${pattern}`, time: '' };
+    }
+    return { date: 'Ongoing', time: '' };
+  } else if (need.urgency === 'specific' && need.specific_date) {
+    const dateStr = formatDate(need.specific_date);
+    const timeStr = need.specific_time ? formatTime(need.specific_time) : '';
+    return { date: dateStr, time: timeStr };
+  } else {
+    // For flexible needs, show timeframe preference if available
+    const fallbackDate = need.specific_date || need.event_date || need.ongoing_start_date || 'Flexible';
+    const timePreference = need.time_preference || 'Any time';
+    return { date: fallbackDate, time: timePreference };
+  }
+};
+
+const formatOngoingSchedule = (need: any): string => {
+  if (need.urgency !== 'ongoing') return '';
+  
+  const parts = [];
+  
+  if (need.ongoing_start_date) {
+    parts.push(`Starts ${formatDate(need.ongoing_start_date)}`);
+  }
+  
+  if (need.ongoing_start_time) {
+    parts.push(`at ${formatTime(need.ongoing_start_time)}`);
+  }
+  
+  if (need.recurring_pattern) {
+    const pattern = need.recurring_pattern.charAt(0).toUpperCase() + need.recurring_pattern.slice(1);
+    parts.push(`(${pattern})`);
+  }
+  
+  return parts.join(' ');
+};
 
 export default function MemberDashboard() {
   const [activeFilter, setActiveFilter] = useState('All');
@@ -35,6 +121,7 @@ export default function MemberDashboard() {
   const [sortOpen, setSortOpen] = useState(false);
   const [selectedSort, setSelectedSort] = useState('Best Match');
   const [userGifts, setUserGifts] = useState<string[]>([]);
+  const [userCommitments, setUserCommitments] = useState<string[]>([]);
 
   // Helper function for dynamic tag coloring
   const getTagColor = (tag: string) => {
@@ -64,7 +151,10 @@ export default function MemberDashboard() {
       
       const { data, error } = await supabase
         .from('needs')
-        .select('*')
+        .select(`
+          *,
+          commitments(count)
+        `)
         .eq('status', 'active')
         .order('created_at', { ascending: false });
       
@@ -73,22 +163,41 @@ export default function MemberDashboard() {
         setOpportunities([]);
       } else {
         console.log('Found needs:', data?.length || 0);
+        console.log('Sample need with commitments:', data?.[0]);
         
         if (data && data.length > 0) {
-          const transformedOpportunities: Opportunity[] = data.map((need: any) => ({
-            id: need.id,
-            title: need.title || `Need in ${need.location || 'Community'}`,
-            description: need.description || 'Community assistance needed.',
-            location: need.location || need.geographic_location || need.city || 'Location TBD',
-            date: need.specific_date || need.event_date || need.ongoing_start_date || 'Flexible',
-            time: need.specific_time || need.ongoing_start_time || need.time_preference || 'Flexible',
-            committed: need.current_responses || 0,
-            needed: need.people_needed || 1,
-            categories: need.giftings_needed && need.giftings_needed.length > 0 ? need.giftings_needed : ['Care'],
-            tags: need.giftings_needed && need.giftings_needed.length > 0 
-              ? need.giftings_needed.map((gift: string) => `${gift} ✓`) 
-              : ['Care ✓']
-          }));
+          const transformedOpportunities: Opportunity[] = data.map((need: any) => {
+            // Clean up description by removing appended schedule information
+            let cleanDescription = need.description || 'Community assistance needed.';
+            if (cleanDescription.includes('Ongoing Schedule:')) {
+              cleanDescription = cleanDescription.split('Ongoing Schedule:')[0].trim();
+            }
+            
+            const dateTimeDisplay = formatDateDisplay(need);
+            
+            return {
+              id: need.id,
+              title: need.title || `Need in ${need.location || 'Community'}`,
+              description: cleanDescription,
+              location: need.location || need.geographic_location || need.city || 'Location TBD',
+              date: dateTimeDisplay.date,
+              time: dateTimeDisplay.time,
+              committed: need.commitments?.[0]?.count || 0,
+              needed: need.people_needed || 1,
+              categories: need.giftings_needed && need.giftings_needed.length > 0 ? need.giftings_needed : ['Care'],
+              tags: need.giftings_needed && need.giftings_needed.length > 0 
+                ? need.giftings_needed.map((gift: string) => `${gift} ✓`) 
+                : ['Care ✓'],
+              urgency: need.urgency,
+              specific_date: need.specific_date,
+              specific_time: need.specific_time,
+              ongoing_start_date: need.ongoing_start_date,
+              ongoing_start_time: need.ongoing_start_time,
+              recurring_pattern: need.recurring_pattern,
+              time_preference: need.time_preference,
+              ongoing_schedule: formatOngoingSchedule(need)
+            };
+          });
           
           console.log('Transformed opportunities:', transformedOpportunities);
           setOpportunities(transformedOpportunities);
@@ -106,6 +215,23 @@ export default function MemberDashboard() {
   useEffect(() => {
     fetchNeeds();
   }, []);
+
+  // Close sort dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (sortOpen) {
+        const target = event.target as HTMLElement;
+        if (!target.closest('[data-sort-dropdown]')) {
+          setSortOpen(false);
+        }
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [sortOpen]);
 
   // Add this useEffect to fetch real user gifts
   useEffect(() => {
@@ -130,6 +256,31 @@ export default function MemberDashboard() {
     }
 
     fetchUserGifts();
+  }, []);
+
+  // Fetch user commitments when component loads
+  useEffect(() => {
+    async function fetchUserCommitments() {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session?.user) return;
+
+        const { data: commitments } = await supabase
+          .from('commitments')
+          .select('need_id')
+          .eq('user_id', session.user.id)
+          .eq('status', 'confirmed');
+
+        if (commitments) {
+          setUserCommitments(commitments.map(c => c.need_id));
+          console.log('User commitments loaded:', commitments.map(c => c.need_id));
+        }
+      } catch (error) {
+        console.error('Error fetching user commitments:', error);
+      }
+    }
+
+    fetchUserCommitments();
   }, []);
 
   const categories = [
@@ -204,7 +355,64 @@ export default function MemberDashboard() {
     activeFilter === 'All' || opp.categories.some(cat => cat === activeFilter)
   );
 
+  // Sort the filtered opportunities based on selectedSort
+  const sortedOpportunities = [...filteredOpportunities].sort((a, b) => {
+    switch (selectedSort) {
+      case 'Best Match':
+        // Sort by gift matching - opportunities with more matching tags first
+        const aMatches = a.tags.filter(tag => {
+          const tagName = tag.replace(' ✓', '');
+          return userGifts.some(gift => 
+            gift.toLowerCase().includes(tagName.toLowerCase()) ||
+            tagName.toLowerCase().includes(gift.toLowerCase())
+          );
+        }).length;
+        const bMatches = b.tags.filter(tag => {
+          const tagName = tag.replace(' ✓', '');
+          return userGifts.some(gift => 
+            gift.toLowerCase().includes(tagName.toLowerCase()) ||
+            tagName.toLowerCase().includes(gift.toLowerCase())
+          );
+        }).length;
+        return bMatches - aMatches;
+      
+      case 'Newest':
+        // Sort by creation date (assuming newer needs have higher IDs or we can add created_at)
+        return parseInt(b.id) - parseInt(a.id);
+      
+      case 'Date':
+        // Sort by urgency and date
+        const urgencyOrder = { 'asap': 0, 'specific': 1, 'ongoing': 2 };
+        const aUrgency = urgencyOrder[a.urgency as keyof typeof urgencyOrder] ?? 3;
+        const bUrgency = urgencyOrder[b.urgency as keyof typeof urgencyOrder] ?? 3;
+        
+        if (aUrgency !== bUrgency) {
+          return aUrgency - bUrgency;
+        }
+        
+        // If same urgency, sort by date (specific dates first, then ongoing, then flexible)
+        if (a.urgency === 'specific' && b.urgency === 'specific') {
+          const aDate = new Date(a.specific_date || '');
+          const bDate = new Date(b.specific_date || '');
+          return aDate.getTime() - bDate.getTime();
+        }
+        
+        return 0;
+      
+      case 'Most Needed':
+        // Sort by how many more people are needed
+        const aNeeded = a.needed - a.committed;
+        const bNeeded = b.needed - b.committed;
+        return bNeeded - aNeeded;
+      
+      default:
+        return 0;
+    }
+  });
+
   const handleICanHelp = async (needId: string) => {
+    console.log('🔘 I Can Help clicked for need:', needId);
+    
     const { data: { session } } = await supabase.auth.getSession();
     
     if (!session?.user) {
@@ -212,20 +420,36 @@ export default function MemberDashboard() {
       return;
     }
 
+    console.log('✅ User session found:', session.user.id);
+
     // Check if already committed
-    const { data: existing } = await supabase
+    const { data: existing, error: checkError } = await supabase
       .from('commitments')
       .select('id')
       .eq('need_id', needId)
       .eq('user_id', session.user.id)
-      .single();
+      .maybeSingle();
+
+    if (checkError) {
+      console.error('Error checking existing commitment:', checkError);
+      toast.error('Error checking your commitment status');
+      return;
+    }
 
     if (existing) {
-      toast('You already signed up for this!');
+      toast('You\'re already signed up for this!', {
+        icon: 'ℹ️',
+        style: {
+          background: '#3b82f6',
+          color: 'white',
+        },
+      });
       return;
     }
 
     // Create commitment
+    console.log('📝 Creating commitment for need:', needId, 'user:', session.user.id);
+    
     const { error } = await supabase
       .from('commitments')
       .insert({
@@ -235,15 +459,26 @@ export default function MemberDashboard() {
       });
 
     if (error) {
-      console.error('Commitment error:', error);
+      console.error('❌ Commitment error:', error);
       toast.error('Failed to sign up');
     } else {
+      console.log('✅ Successfully committed to need');
       toast.success('You\'re signed up to help!');
       
-      // Update volunteer count
-      await supabase.rpc('increment_volunteer_count', { need_id: needId });
+      // Add the new commitment to state immediately for UI feedback
+      setUserCommitments(prev => [...prev, needId]);
       
-      // Refresh the needs list
+      // Update volunteer count via RPC
+      console.log('📊 Updating volunteer count...');
+      const { error: rpcError } = await supabase.rpc('increment_volunteer_count', { need_id: needId });
+      
+      if (rpcError) {
+        console.error('❌ RPC error:', rpcError);
+        // Don't show error to user, just log it
+      }
+      
+      // Refresh the needs list to show updated volunteer counts
+      console.log('🔄 Refreshing needs list...');
       fetchNeeds();
     }
   };
@@ -351,7 +586,7 @@ export default function MemberDashboard() {
             fontFamily: 'Merriweather, serif',
             fontSize: '14px'
           }}>
-            {filteredOpportunities.length} opportunities • {filteredOpportunities.filter(opp => 
+            {sortedOpportunities.length} opportunities • {sortedOpportunities.filter(opp => 
               opp.tags.some(tag => {
                 const tagName = tag.replace(' ✓', '');
                 return userGifts.some(gift => 
@@ -372,7 +607,7 @@ export default function MemberDashboard() {
             </span>
             
             {/* Custom Dropdown */}
-            <div style={{ position: 'relative' }}>
+            <div style={{ position: 'relative' }} data-sort-dropdown>
               <button
                 onClick={() => setSortOpen(!sortOpen)}
                 style={{
@@ -450,7 +685,7 @@ export default function MemberDashboard() {
           gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))',
           gap: '20px'
         }}>
-          {filteredOpportunities.map((opportunity) => (
+          {sortedOpportunities.map((opportunity) => (
             <div key={opportunity.id} style={{ 
               backgroundColor: 'white',
               borderRadius: '12px',
@@ -468,43 +703,93 @@ export default function MemberDashboard() {
                   marginBottom: '16px',
                   color: '#1e293b',
                   lineHeight: '1.3',
-                  fontFamily: quicksandFont
+                  fontFamily: quicksandFont,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px'
                 }}>
                   {opportunity.title}
+                  {opportunity.urgency === 'asap' && (
+                    <AlertCircle size={20} color="#dc2626" />
+                  )}
                 </h3>
                 
                 {/* Metadata Row - 3 columns horizontal layout */}
                 <div style={{ 
                   display: 'flex',
                   justifyContent: 'space-between',
-                  alignItems: 'center',
+                  alignItems: 'flex-start',
                   marginBottom: '16px',
                   fontSize: '14px',
                   color: '#64748b',
                   borderBottom: '1px solid #f1f5f9',
-                  paddingBottom: '12px'
+                  paddingBottom: '12px',
+                  minHeight: '44px'
                 }}>
                   {/* Column 1 - Date */}
-                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1 }}>
-                    <Calendar size={16} style={{ marginBottom: '4px', color: '#64748b' }} />
-                    <div style={{ fontSize: '12px', textAlign: 'center', lineHeight: '1.2' }}>
-                      {opportunity.date}
+                  <div style={{ 
+                    display: 'flex', 
+                    flexDirection: 'column',
+                    alignItems: 'center', 
+                    flex: 1,
+                    minHeight: '44px'
+                  }}>
+                    <Calendar size={16} style={{ 
+                      marginBottom: '4px', 
+                      color: '#64748b',
+                      flexShrink: 0
+                    }} />
+                    <div style={{ fontSize: '12px', lineHeight: '1.2', textAlign: 'center' }}>
+                      <div>{opportunity.date}</div>
+                      {opportunity.time && (
+                        <div style={{ 
+                          color: '#9ca3af', 
+                          fontSize: '11px', 
+                          marginTop: '2px',
+                          fontWeight: '400'
+                        }}>
+                          {opportunity.time}
+                        </div>
+                      )}
                     </div>
                   </div>
                   
                   {/* Column 2 - Location */}
-                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1 }}>
-                    <MapPin size={16} style={{ marginBottom: '4px', color: '#64748b' }} />
-                    <div style={{ fontSize: '12px', textAlign: 'center', lineHeight: '1.2' }}>
+                  <div style={{ 
+                    display: 'flex', 
+                    flexDirection: 'column',
+                    alignItems: 'center', 
+                    flex: 1,
+                    minHeight: '44px'
+                  }}>
+                    <MapPin size={16} style={{ 
+                      marginBottom: '4px', 
+                      color: '#64748b',
+                      flexShrink: 0
+                    }} />
+                    <div style={{ fontSize: '12px', lineHeight: '1.2', textAlign: 'center' }}>
                       {opportunity.location}
                     </div>
                   </div>
                   
                   {/* Column 3 - People */}
-                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1 }}>
-                    <Users size={16} style={{ marginBottom: '4px', color: '#64748b' }} />
-                    <div style={{ fontSize: '12px', textAlign: 'center', lineHeight: '1.2' }}>
-                      {opportunity.committed} committed<br/>{opportunity.needed}+ needed
+                  <div style={{ 
+                    display: 'flex', 
+                    flexDirection: 'column',
+                    alignItems: 'center', 
+                    flex: 1,
+                    minHeight: '44px'
+                  }}>
+                    <Users size={16} style={{ 
+                      marginBottom: '4px', 
+                      color: '#64748b',
+                      flexShrink: 0
+                    }} />
+                    <div style={{ fontSize: '12px', lineHeight: '1.2', textAlign: 'center' }}>
+                      <div>{opportunity.committed} committed</div>
+                      <div style={{ color: '#9ca3af', fontSize: '11px', marginTop: '2px' }}>
+                        {opportunity.needed}+ needed
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -527,6 +812,7 @@ export default function MemberDashboard() {
                 }}>
                   {opportunity.description}
                 </p>
+
 
                 {/* Tags - Dynamic color and checkmarks with Quicksand font */}
                 <div style={{ 
@@ -564,23 +850,40 @@ export default function MemberDashboard() {
                 borderTop: '1px solid #f1f5f9',
                 backgroundColor: '#fafbfc'
               }}>
-                <button 
-                  onClick={() => handleICanHelp(opportunity.id)}
-                  style={{ 
-                    width: '100%',
-                    backgroundColor: '#20c997',
-                    color: 'white',
-                    padding: '12px 0',
-                    borderRadius: '8px',
-                    border: 'none',
-                    fontWeight: '600',
-                    cursor: 'pointer',
-                    fontSize: '15px',
-                    transition: 'all 0.2s'
-                  }}
-                >
-                  I Can Help
-                </button>
+                {(() => {
+                  const isCommitted = userCommitments.includes(opportunity.id);
+                  return (
+                    <button 
+                      onClick={() => !isCommitted && handleICanHelp(opportunity.id)}
+                      disabled={isCommitted}
+                      style={{ 
+                        width: '100%',
+                        backgroundColor: isCommitted ? 'white' : '#20c997',
+                        color: isCommitted ? '#20c997' : 'white',
+                        padding: '12px 0',
+                        borderRadius: '8px',
+                        border: '2px solid #20c997',
+                        fontWeight: '600',
+                        cursor: isCommitted ? 'default' : 'pointer',
+                        fontSize: '15px',
+                        transition: 'all 0.2s',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '8px'
+                      }}
+                    >
+                      {isCommitted ? (
+                        <>
+                          You're Helping
+                          <Check size={16} />
+                        </>
+                      ) : (
+                        'I Can Help'
+                      )}
+                    </button>
+                  );
+                })()}
               </div>
             </div>
           ))}

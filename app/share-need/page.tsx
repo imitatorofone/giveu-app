@@ -211,17 +211,40 @@ export default function ShareNeedScreen() {
     console.log('📤 Submitting need with data:', formData);
 
     try {
+      // Prepare the data object with all relevant fields
+      const needData: any = {
+        title: formData.title,
+        description: formData.description || formData.notes || formData.title,
+        urgency: formData.urgency,
+        city: formData.city,
+        giftings_needed: formData.giftingsNeeded || [],
+        created_by: session.user.id,
+        status: 'pending'
+      };
+
+      // Add urgency-specific fields
+      if (formData.urgency === 'specific') {
+        needData.specific_date = formData.specificDate;
+        needData.specific_time = formData.specificTime;
+      } else if (formData.urgency === 'ongoing') {
+        needData.ongoing_start_date = formData.ongoingStartDate;
+        needData.ongoing_start_time = formData.ongoingStartTime;
+        needData.recurring_pattern = formData.ongoingSchedule;
+      } else if (formData.urgency === 'asap') {
+        needData.time_preference = formData.timePreference;
+      }
+
+      // Add location and people fields
+      if (formData.location) {
+        needData.location = formData.location;
+      }
+      if (formData.peopleNeeded) {
+        needData.people_needed = parseInt(formData.peopleNeeded);
+      }
+
       const { data, error } = await supabase
         .from('needs')
-        .insert([{
-          title: formData.title,
-          description: formData.description || formData.notes || formData.title,
-          urgency: formData.urgency,
-          city: formData.city,
-          giftings_needed: formData.giftingsNeeded || [],
-          created_by: session.user.id,
-          status: 'pending'
-        }])
+        .insert([needData])
         .select();
 
       console.log('✅ Insert response:', { data, error });

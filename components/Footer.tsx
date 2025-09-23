@@ -40,7 +40,9 @@ export default function Footer() {
           </span>
         </button>
         
-          <button style={{
+        <button 
+          onClick={() => window.location.href = '/commitments'}
+          style={{
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
