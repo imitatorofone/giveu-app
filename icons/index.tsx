@@ -235,33 +235,33 @@ export function GiftingCategory({
     <div
       onClick={onClick}
       className={`
-        p-4 rounded-lg border-2 cursor-pointer transition-all duration-200
+        p-4 rounded-xl border-2 cursor-pointer transition-all duration-200
         ${selected 
-          ? `${bgColor} ${borderColor} ring-2 ring-offset-2 ring-blue-500` 
-          : 'border-gray-200 hover:border-gray-300 bg-white'
+          ? 'border-[#20c997] bg-[#20c997]' 
+          : 'border-gray-300 hover:border-[#20c997] bg-white'
         }
       `}
     >
       <div className="flex items-center gap-3">
         <div className={`
           w-10 h-10 rounded-lg flex items-center justify-center
-          ${selected ? bgColor : 'bg-gray-50'}
+          ${selected ? 'bg-white' : 'bg-gray-50'}
         `}>
           <IconComponent 
             size={ICON_CONFIG.size.md}
             strokeWidth={ICON_CONFIG.strokeWidth}
-            className={selected ? color : 'text-gray-600'}
+            className={selected ? 'text-[#20c997]' : 'text-[#20c997]'}
           />
         </div>
         
         <div className="flex-1">
-          <h3 className={`font-medium text-sm ${selected ? color : 'text-gray-900'}`}>
+          <h3 className={`font-medium text-sm ${selected ? 'text-white' : 'text-gray-900'}`}>
             {category.split('-').map(word => 
               word.charAt(0).toUpperCase() + word.slice(1)
             ).join(' & ')}
           </h3>
           {showDescription && (
-            <p className="text-xs text-gray-500 mt-1">
+            <p className={`text-xs mt-1 ${selected ? 'text-white opacity-90' : 'text-gray-500'}`}>
               {description}
             </p>
           )}

@@ -4,9 +4,20 @@ import { useEffect, useState } from 'react';
 import { supabase } from '../../../lib/supabaseClient';
 import { useRouter } from 'next/navigation';
 import { CheckCircle, ArrowRight, Heart, Users, Calendar } from 'lucide-react';
+import Image from 'next/image';
+
+// Survey-wide design constants
+const SURVEY_GREEN = '#20c997';
+const SURVEY_CARD = 'max-w-2xl mx-auto bg-white rounded-xl shadow-sm border-2 border-gray-100 p-8';
+const SURVEY_BUTTON = 'w-full py-3 bg-[#20c997] text-white rounded-lg font-semibold hover:opacity-90';
+const SURVEY_PROGRESS = 'h-2 bg-gray-200 rounded-full mb-6';
+const SELECTED_STYLE = 'bg-[#20c997] text-white border-[#20c997]';
+const UNSELECTED_STYLE = 'bg-white border-gray-300 text-gray-700 hover:border-[#20c997]';
 
 export default function SurveyComplete() {
   const [user, setUser] = useState<any>(null);
+  const [userSkills, setUserSkills] = useState<string[]>([]);
+  const [userFirstName, setUserFirstName] = useState<string>('');
   const [showContent, setShowContent] = useState(true);
   const [showConfetti, setShowConfetti] = useState(true);
   const [fadeOutConfetti, setFadeOutConfetti] = useState(false);
@@ -22,6 +33,28 @@ export default function SurveyComplete() {
         return;
       }
       setUser(data.user);
+
+      // Get user's profile data including name and skills
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('full_name, gift_selections')
+        .eq('id', data.user.id)
+        .single();
+
+      if (profile) {
+        // Set first name from profile
+        if (profile.full_name) {
+          const firstName = profile.full_name.split(' ')[0];
+          setUserFirstName(firstName);
+        }
+        
+        // Set skills
+        if (profile.gift_selections) {
+          // Remove duplicates and ensure unique skills
+          const uniqueSkills = [...new Set(profile.gift_selections)];
+          setUserSkills(uniqueSkills);
+        }
+      }
     };
     getUser();
 
@@ -62,16 +95,7 @@ export default function SurveyComplete() {
   if (!user) return <div>Loading...</div>;
 
   return (
-    <main style={{ 
-      maxWidth: 600, 
-      margin: '40px auto', 
-      fontFamily: 'var(--font-family)', 
-      textAlign: 'center',
-      position: 'relative',
-      minHeight: '80vh',
-      backgroundColor: '#FDFBF7',
-      padding: 'var(--space-6)'
-    }}>
+    <main className="min-h-screen bg-gray-50 py-12 px-4">
       {/* Confetti Animation */}
       {showConfetti && (
         <div style={{
@@ -124,13 +148,13 @@ export default function SurveyComplete() {
           <div style={{
             width: 120,
             height: 120,
-            backgroundColor: '#2BB3A3',
+            backgroundColor: SURVEY_GREEN,
             borderRadius: '50%',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             animation: 'pulse 1.5s ease-in-out',
-            boxShadow: 'var(--shadow-xl)'
+            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)'
           }}>
             <CheckCircle size={60} color="white" strokeWidth={1.5} style={{
               animation: 'checkmark 0.8s ease-in-out 0.5s both'
@@ -146,80 +170,84 @@ export default function SurveyComplete() {
           transition: 'opacity 3s ease-in',
           pointerEvents: fadeInContent ? 'auto' : 'none'
         }}>
-          {/* Gift box icon */}
-          <div style={{ 
-            width: 100, 
-            height: 100, 
-            backgroundColor: '#2BB3A3', 
-            borderRadius: 25, 
-            display: 'flex', 
-            alignItems: 'center', 
-            justifyContent: 'center', 
-            margin: '0 auto var(--space-10)',
-            boxShadow: 'var(--shadow-xl)'
-          }}>
-            <Heart size={50} color="white" strokeWidth={1.5} />
-          </div>
-          
-          <div style={{ 
-            backgroundColor: 'white', 
-            border: '1px solid var(--gray-200)', 
-            borderRadius: 'var(--radius-xl)', 
-            padding: 'var(--space-10)', 
-            margin: '0 0 var(--space-10)',
-            boxShadow: 'var(--shadow-xl)'
-          }}>
-            <h1 style={{ fontSize: 'var(--text-4xl)', fontWeight: 'var(--font-bold)', margin: '0 0 var(--space-4)', color: '#333333' }}>
-              You're now ready to serve! 🎉
-            </h1>
+          <div className={SURVEY_CARD}>
+            {/* giveU logo - centered with proper margin */}
+            <div className="flex justify-center mb-6">
+              <div style={{ 
+                width: 100, 
+                height: 100, 
+                backgroundColor: SURVEY_GREEN, 
+                borderRadius: 25, 
+                display: 'flex', 
+                alignItems: 'center', 
+                justifyContent: 'center',
+                boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)'
+              }}>
+                <Image 
+                  src="/logo.svg" 
+                  alt="giveU Logo" 
+                  width={100} 
+                  height={100}
+                  style={{ 
+                    borderRadius: 25,
+                    objectFit: 'cover',
+                    width: '100px',
+                    height: '100px'
+                  }}
+                />
+              </div>
+            </div>
             
-            <p style={{ color: '#666666', fontSize: 'var(--text-lg)', lineHeight: 1.5, marginBottom: 'var(--space-8)' }}>
-              Leadership has now recognized your gifts and will help you put them into action. Together, we'll use these gifts to serve His kingdom.
-            </p>
+            {/* Title section with proper spacing */}
+            <div className="text-center mb-6">
+              <h1 className="text-2xl font-bold text-gray-900 mb-3">
+                Welcome to giveU{userFirstName ? `, ${userFirstName}` : ''}! 🎉
+              </h1>
+              
+              <p className="text-gray-600 mb-6">
+                You're now ready to serve! Leadership has recognized your gifts and will help you put them into action.
+              </p>
+            </div>
+
+            {/* User's Selected Skills */}
+            {userSkills.length > 0 && (
+              <div className="mb-8">
+                <h3 className="text-sm text-gray-500 mb-4 text-center">
+                  Your Gifts & Skills
+                </h3>
+                <div className="flex flex-wrap gap-3 justify-center">
+                  {userSkills.map((skill, index) => (
+                    <span
+                      key={index}
+                      className="px-4 py-2 bg-[#20c997] text-white rounded-full text-sm font-medium"
+                    >
+                      {skill}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* What happens next section */}
-            <div style={{ 
-              backgroundColor: '#f0fdfa', 
-              border: '1px solid #2BB3A3', 
-              borderRadius: 'var(--radius-lg)', 
-              padding: 'var(--space-6)', 
-              marginBottom: 'var(--space-8)'
-            }}>
-              <h3 style={{ color: '#2BB3A3', margin: '0 0 var(--space-4)', fontSize: 'var(--text-lg)', fontWeight: 'var(--font-semibold)', textAlign: 'center' }}>
+            <div className="bg-white border border-gray-200 rounded-lg p-6 mb-6">
+              <h3 className="text-lg font-semibold text-[#20c997] mb-3 text-center">
                 What happens next?
               </h3>
-              <ul style={{ margin: 0, paddingLeft: 20, color: '#666666', textAlign: 'left' }}>
-                <li style={{ marginBottom: 'var(--space-2)' }}>• You'll see personalized ways to serve</li>
-                <li style={{ marginBottom: 'var(--space-2)' }}>• You can share needs in the community</li>
+              <ul className="space-y-2 text-gray-600 text-left">
+                <li>• You'll see personalized ways to serve</li>
+                <li>• You can share needs in the community</li>
                 <li>• Journey together with your church family</li>
               </ul>
             </div>
 
             {/* Action button */}
-            <div style={{ display: 'flex', justifyContent: 'center' }}>
-              <button 
-                onClick={handleGetStarted}
-                style={{
-                  backgroundColor: '#2BB3A3',
-                  color: 'white',
-                  padding: 'var(--space-4) var(--space-8)',
-                  borderRadius: 'var(--radius-lg)',
-                  border: 'none',
-                  fontSize: 'var(--text-base)',
-                  fontWeight: 'var(--font-semibold)',
-                  cursor: 'pointer',
-                  boxShadow: 'var(--shadow-lg)',
-                  minWidth: 180,
-                  transition: 'background-color 0.2s ease',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 'var(--space-2)'
-                }}
-              >
-                Let's Get Started
-                <ArrowRight size={18} strokeWidth={1.5} />
-              </button>
-            </div>
+            <button 
+              onClick={handleGetStarted}
+              className={`${SURVEY_BUTTON} flex items-center justify-center gap-2`}
+            >
+              Explore Ways to Serve
+              <ArrowRight size={18} strokeWidth={1.5} />
+            </button>
           </div>
         </div>
       )}

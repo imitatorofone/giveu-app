@@ -9,6 +9,7 @@ import { supabase } from '../../lib/supabaseClient'; // Use your shared client
 import { GIFT_CATEGORIES } from '../../constants/giftCategories.js';
 import Footer from '../../components/Footer';
 import Header from '../../components/Header';
+import toast from 'react-hot-toast';
 
 // Brand typography
 const quicksandFont = 'Quicksand, -apple-system, BlinkMacSystemFont, sans-serif';
@@ -57,52 +58,52 @@ export default function MemberDashboard() {
     };
   };
 
-  useEffect(() => {
-    async function fetchNeeds() {
-      try {
-        console.log('Fetching real needs from database...');
-        
-        const { data, error } = await supabase
-          .from('needs')
-          .select('*')
-          .eq('status', 'active')
-          .order('created_at', { ascending: false });
-        
-        if (error) {
-          console.log('Database error:', error);
-          setOpportunities([]);
-        } else {
-          console.log('Found needs:', data?.length || 0);
-          
-          if (data && data.length > 0) {
-            const transformedOpportunities: Opportunity[] = data.map((need: any) => ({
-              id: need.id,
-              title: need.title || `Need in ${need.location || 'Community'}`,
-              description: need.description || 'Community assistance needed.',
-              location: need.location || need.geographic_location || need.city || 'Location TBD',
-              date: need.specific_date || need.event_date || need.ongoing_start_date || 'Flexible',
-              time: need.specific_time || need.ongoing_start_time || need.time_preference || 'Flexible',
-              committed: need.current_responses || 0,
-              needed: need.people_needed || 1,
-              categories: need.giftings_needed && need.giftings_needed.length > 0 ? need.giftings_needed : ['Care'],
-              tags: need.giftings_needed && need.giftings_needed.length > 0 
-                ? need.giftings_needed.map((gift: string) => `${gift} ✓`) 
-                : ['Care ✓']
-            }));
-            
-            console.log('Transformed opportunities:', transformedOpportunities);
-            setOpportunities(transformedOpportunities);
-          } else {
-            setOpportunities([]);
-          }
-        }
-      } catch (err) {
-        console.log('Connection error:', err);
+  const fetchNeeds = async () => {
+    try {
+      console.log('Fetching real needs from database...');
+      
+      const { data, error } = await supabase
+        .from('needs')
+        .select('*')
+        .eq('status', 'active')
+        .order('created_at', { ascending: false });
+      
+      if (error) {
+        console.log('Database error:', error);
         setOpportunities([]);
+      } else {
+        console.log('Found needs:', data?.length || 0);
+        
+        if (data && data.length > 0) {
+          const transformedOpportunities: Opportunity[] = data.map((need: any) => ({
+            id: need.id,
+            title: need.title || `Need in ${need.location || 'Community'}`,
+            description: need.description || 'Community assistance needed.',
+            location: need.location || need.geographic_location || need.city || 'Location TBD',
+            date: need.specific_date || need.event_date || need.ongoing_start_date || 'Flexible',
+            time: need.specific_time || need.ongoing_start_time || need.time_preference || 'Flexible',
+            committed: need.current_responses || 0,
+            needed: need.people_needed || 1,
+            categories: need.giftings_needed && need.giftings_needed.length > 0 ? need.giftings_needed : ['Care'],
+            tags: need.giftings_needed && need.giftings_needed.length > 0 
+              ? need.giftings_needed.map((gift: string) => `${gift} ✓`) 
+              : ['Care ✓']
+          }));
+          
+          console.log('Transformed opportunities:', transformedOpportunities);
+          setOpportunities(transformedOpportunities);
+        } else {
+          setOpportunities([]);
+        }
       }
-      setLoading(false);
+    } catch (err) {
+      console.log('Connection error:', err);
+      setOpportunities([]);
     }
+    setLoading(false);
+  };
 
+  useEffect(() => {
     fetchNeeds();
   }, []);
 
@@ -202,6 +203,50 @@ export default function MemberDashboard() {
   const filteredOpportunities = opportunities.filter(opp => 
     activeFilter === 'All' || opp.categories.some(cat => cat === activeFilter)
   );
+
+  const handleICanHelp = async (needId: string) => {
+    const { data: { session } } = await supabase.auth.getSession();
+    
+    if (!session?.user) {
+      toast.error('Please sign in to help');
+      return;
+    }
+
+    // Check if already committed
+    const { data: existing } = await supabase
+      .from('commitments')
+      .select('id')
+      .eq('need_id', needId)
+      .eq('user_id', session.user.id)
+      .single();
+
+    if (existing) {
+      toast('You already signed up for this!');
+      return;
+    }
+
+    // Create commitment
+    const { error } = await supabase
+      .from('commitments')
+      .insert({
+        need_id: needId,
+        user_id: session.user.id,
+        status: 'confirmed'
+      });
+
+    if (error) {
+      console.error('Commitment error:', error);
+      toast.error('Failed to sign up');
+    } else {
+      toast.success('You\'re signed up to help!');
+      
+      // Update volunteer count
+      await supabase.rpc('increment_volunteer_count', { need_id: needId });
+      
+      // Refresh the needs list
+      fetchNeeds();
+    }
+  };
 
   if (loading) {
     return (
@@ -519,18 +564,21 @@ export default function MemberDashboard() {
                 borderTop: '1px solid #f1f5f9',
                 backgroundColor: '#fafbfc'
               }}>
-                <button style={{ 
-                  width: '100%',
-                  backgroundColor: '#20c997',
-                  color: 'white',
-                  padding: '12px 0',
-                  borderRadius: '8px',
-                  border: 'none',
-                  fontWeight: '600',
-                  cursor: 'pointer',
-                  fontSize: '15px',
-                  transition: 'all 0.2s'
-                }}>
+                <button 
+                  onClick={() => handleICanHelp(opportunity.id)}
+                  style={{ 
+                    width: '100%',
+                    backgroundColor: '#20c997',
+                    color: 'white',
+                    padding: '12px 0',
+                    borderRadius: '8px',
+                    border: 'none',
+                    fontWeight: '600',
+                    cursor: 'pointer',
+                    fontSize: '15px',
+                    transition: 'all 0.2s'
+                  }}
+                >
                   I Can Help
                 </button>
               </div>

@@ -80,18 +80,34 @@ export default function ProfilePage() {
     const t = toast.loading("Saving profile…");
 
     try {
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session?.user) {
+        toast.error('Please sign in to save', { id: t });
+        return;
+      }
+
       const { error } = await supabase
         .from('profiles')
         .upsert({
-          id: user.id,
-          ...profile,
+          id: session.user.id,
+          full_name: profile.full_name,
+          email: profile.email || session.user.email,
+          city: profile.city,
+          phone: profile.phone,
+          age: profile.age,
+          availability: profile.availability,
+          gift_selections: profile.gift_selections,
           updated_at: new Date().toISOString()
         });
 
-      if (error) throw error;
-      
-      setIsEditing(false);
-      toast.success("Profile updated!", { id: t });
+      if (error) {
+        console.error('Save error:', error);
+        toast.error('Failed to save profile', { id: t });
+      } else {
+        toast.success('Profile saved!', { id: t });
+        setIsEditing(false);
+      }
     } catch (error: any) {
       console.error('Error saving profile:', error);
       toast.error(error?.message ? `Save failed: ${error.message}` : "Save failed", { id: t });
@@ -372,10 +388,10 @@ function BasicInfoDisplay({ profile }) {
 // Availability Section Component
 function AvailabilitySection({ availability, isEditing, onChange }) {
   const timeSlots = [
-    { id: 'mornings', label: 'Mornings', icon: Sun },
-    { id: 'afternoons', label: 'Afternoons', icon: Sunset },
-    { id: 'evenings', label: 'Evenings', icon: Moon },
-    { id: 'weekends', label: 'Weekends', icon: Calendar }
+    { id: 'Morning', label: 'Morning', icon: Sun },
+    { id: 'Afternoon', label: 'Afternoon', icon: Sunset },
+    { id: 'Evening', label: 'Evening', icon: Moon },
+    { id: 'Weekends', label: 'Weekends', icon: Calendar }
   ];
 
   const toggleAvailability = (slotId) => {

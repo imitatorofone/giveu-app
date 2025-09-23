@@ -4,6 +4,15 @@ import { useState, useEffect } from 'react';
 import { supabase } from '../../../lib/supabaseClient';
 import { useRouter } from 'next/navigation';
 import { GiftingCategory, GIFTING_ICONS } from '../../../icons/index';
+import { ArrowLeft, ArrowRight } from 'lucide-react';
+
+// Survey-wide design constants
+const SURVEY_GREEN = '#20c997';
+const SURVEY_CARD = 'max-w-2xl mx-auto bg-white rounded-xl shadow-sm border-2 border-gray-100 p-8';
+const SURVEY_BUTTON = 'w-full py-3 bg-[#20c997] text-white rounded-lg font-semibold hover:opacity-90';
+const SURVEY_PROGRESS = 'h-2 bg-gray-200 rounded-full mb-6';
+const SELECTED_STYLE = 'bg-[#20c997] text-white border-[#20c997]';
+const UNSELECTED_STYLE = 'bg-white border-gray-300 text-gray-700 hover:border-[#20c997]';
 
 const giftAreas = [
   { id: 'hands-on-skills', name: 'Hands-On Skills', description: '(building, fixing, crafting)' },
@@ -48,28 +57,37 @@ export default function SurveyStep2() {
   };
 
   const handleNext = async () => {
-    if (!user || selectedGifts.size === 0) return;
+    const selectedCategoryIds = Array.from(selectedGifts);
+    
+    if (selectedCategoryIds.length !== 2) {
+      alert('Please select exactly 2 gifting categories');
+      return;
+    }
 
-    const selectedGiftNames = Array.from(selectedGifts).map(id => 
+    const { data: { session } } = await supabase.auth.getSession();
+    
+    if (!session?.user) {
+      alert('Please sign in to continue');
+      router.push('/auth');
+      return;
+    }
+
+    // Convert IDs to names for storage
+    const selectedCategoryNames = selectedCategoryIds.map(id => 
       giftAreas.find(area => area.id === id)?.name
-    );
+    ).filter(Boolean);
 
-    console.log('Saving gift selections:', { selectedGiftNames, userId: user.id });
-
-    const { data, error } = await supabase
+    const { error } = await supabase
       .from('profiles')
-      .update({
-        gift_selections: selectedGiftNames,
-        primary_gift_area: selectedGiftNames[0]
-      })
-      .eq('id', user.id)
-      .select();
-
-    console.log('Profile update result:', { data, error });
+      .upsert({
+        id: session.user.id,
+        selected_gift_categories: selectedCategoryNames,
+        updated_at: new Date().toISOString()
+      });
 
     if (error) {
-      console.error('Error updating profile:', error);
-      alert(`Error saving your selections: ${error.message}. Please try again.`);
+      console.error('Error saving categories:', error);
+      alert(`Error: ${error.message}`);
       return;
     }
 
@@ -79,31 +97,24 @@ export default function SurveyStep2() {
   if (!user) return <div>Loading...</div>;
 
   return (
-    <main style={{ maxWidth: 520, margin: '40px auto', fontFamily: 'var(--font-family)' }}>
-      {/* Progress indicator */}
-      <div style={{ marginBottom: 'var(--space-6)' }}>
-        <div style={{ fontSize: 'var(--text-sm)', color: 'var(--gray-600)', marginBottom: 'var(--space-2)' }}>Question 1 of 6</div>
-        <div style={{ fontSize: 'var(--text-sm)', color: 'var(--gray-600)', marginBottom: 'var(--space-2)' }}>17% complete</div>
-        <div style={{ width: '100%', height: 4, backgroundColor: 'var(--gray-200)', borderRadius: 'var(--radius-sm)' }}>
-          <div style={{ width: '17%', height: '100%', backgroundColor: 'var(--brand-primary-600)', borderRadius: 'var(--radius-sm)' }}></div>
+    <main className="min-h-screen bg-gray-50 py-12 px-4">
+      <div className={SURVEY_CARD}>
+        {/* Progress indicator */}
+        <div className={`w-full ${SURVEY_PROGRESS}`}>
+          <div className="bg-[#20c997] h-2 rounded-full transition-all" style={{ width: '50%' }}></div>
         </div>
-      </div>
 
-      <div style={{ 
-        backgroundColor: 'white', 
-        border: '1px solid var(--gray-200)', 
-        borderRadius: 'var(--radius-lg)', 
-        padding: 'var(--space-8)',
-        boxShadow: 'var(--shadow-sm)'
-      }}>
-        <h1 style={{ fontSize: 'var(--text-2xl)', fontWeight: 'var(--font-bold)', marginBottom: 'var(--space-2)' }}>
-          Which of these areas sound most like you?
-        </h1>
-        <p style={{ color: 'var(--gray-600)', marginBottom: 'var(--space-6)' }}>
-          Select up to 2 giftings that resonate with how God has made you
-        </p>
+        <div className="text-center mb-6">
+          <p className="text-sm text-gray-500 mb-2">Step 2 of 4</p>
+          <h1 className="text-2xl font-bold text-gray-900 mb-2">
+            Which of these areas sound most like you?
+          </h1>
+          <p className="text-gray-600">
+            Select up to 2 giftings that resonate with how God has made you
+          </p>
+        </div>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           {giftAreas.map((area) => {
             const isSelected = selectedGifts.has(area.id);
             const isDisabled = !isSelected && selectedGifts.size >= 2;
@@ -121,48 +132,61 @@ export default function SurveyStep2() {
           })}
         </div>
 
-        <div style={{ textAlign: 'center', marginTop: 24, fontSize: 14, color: '#666' }}>
+        <div style={{ 
+          textAlign: 'center', 
+          marginTop: 24, 
+          padding: '8px 16px',
+          backgroundColor: selectedGifts.size > 0 ? SURVEY_GREEN : '#f9fafb',
+          border: selectedGifts.size > 0 ? `1px solid ${SURVEY_GREEN}` : '1px solid #e5e7eb',
+          borderRadius: '9999px',
+          display: 'inline-block',
+          margin: '24px auto 0',
+          color: selectedGifts.size > 0 ? 'white' : '#6b7280',
+          fontWeight: 600,
+          fontSize: 14
+        }}>
           Selected: {selectedGifts.size}/2
         </div>
-      </div>
 
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 32 }}>
-        <button
-          onClick={() => router.push('/survey/step1')}
-          style={{
-            color: '#666',
-            background: 'none',
-            border: 'none',
-            fontSize: 16,
-            cursor: 'pointer'
-          }}
-        >
-          ← Previous
-        </button>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 32, gap: 16 }}>
+          <button
+            onClick={() => router.push('/survey/step1')}
+            className="text-gray-600 hover:text-gray-800 transition flex items-center gap-2"
+            style={{
+              background: 'none',
+              border: 'none',
+              fontSize: 16,
+              cursor: 'pointer',
+              padding: '12px 24px',
+              minWidth: '120px',
+              justifyContent: 'flex-start'
+            }}
+          >
+            <ArrowLeft size={18} strokeWidth={1.5} />
+            Previous
+          </button>
 
-        <button
-          onClick={handleNext}
-          disabled={selectedGifts.size === 0}
-          style={{
-            backgroundColor: selectedGifts.size > 0 ? 'var(--brand-primary-600)' : 'var(--gray-400)',
-            color: 'white',
-            padding: 'var(--space-4) var(--space-8)',
-            borderRadius: 'var(--radius-md)',
-            border: 'none',
-            fontSize: 'var(--text-base)',
-            fontWeight: 'var(--font-medium)',
-            cursor: selectedGifts.size > 0 ? 'pointer' : 'not-allowed',
-            transition: 'all 0.2s ease'
-          }}
-        >
-          Keep Going →
-        </button>
-      </div>
-
-      <div style={{ textAlign: 'center', marginTop: 16 }}>
-        <p style={{ color: '#999', fontSize: 14 }}>
-          Let's discover how God has gifted you for His glory.
-        </p>
+          <button
+            onClick={handleNext}
+            disabled={selectedGifts.size !== 2}
+            className="transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+            style={{
+              backgroundColor: selectedGifts.size === 2 ? SURVEY_GREEN : '#9ca3af',
+              color: 'white',
+              padding: '12px 24px',
+              borderRadius: '8px',
+              border: 'none',
+              fontSize: 16,
+              fontWeight: 600,
+              cursor: selectedGifts.size === 2 ? 'pointer' : 'not-allowed',
+              minWidth: '120px',
+              justifyContent: 'flex-end'
+            }}
+          >
+            Keep Going
+            <ArrowRight size={18} strokeWidth={1.5} />
+          </button>
+        </div>
       </div>
     </main>
   );

@@ -3,6 +3,15 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../../../lib/supabaseClient';
 import { useRouter } from 'next/navigation';
+import { Heart, ArrowLeft, ArrowRight } from 'lucide-react';
+
+// Survey-wide design constants
+const SURVEY_GREEN = '#20c997';
+const SURVEY_CARD = 'max-w-2xl mx-auto bg-white rounded-xl shadow-sm border-2 border-gray-100 p-8';
+const SURVEY_BUTTON = 'w-full py-3 bg-[#20c997] text-white rounded-lg font-semibold hover:opacity-90';
+const SURVEY_PROGRESS = 'h-2 bg-gray-200 rounded-full mb-6';
+const SELECTED_STYLE = 'bg-[#20c997] text-white border-[#20c997]';
+const UNSELECTED_STYLE = 'bg-white border-gray-300 text-gray-700 hover:border-[#20c997]';
 
 const giftTags: { [key: string]: string[] } = {
   'Hands-On Skills': ['Carpentry', 'Repairs', 'Gardening', 'Sewing', 'Cooking', 'Decorating', 'Setup/Tear-down'],
@@ -38,32 +47,32 @@ export default function SurveyStep3() {
   const router = useRouter();
 
   useEffect(() => {
-    const getUser = async () => {
-      const { data } = await supabase.auth.getUser();
-      if (!data.user) {
-        router.push('/');
+    async function loadCategories() {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user) {
+        router.push('/auth');
         return;
       }
-      setUser(data.user);
 
-      // Get user's profile to see their selected gift areas
-      const { data: profile, error: profileError } = await supabase
+      setUser(session.user);
+
+      const { data: profile } = await supabase
         .from('profiles')
-        .select('gift_selections')
-        .eq('id', data.user.id)
+        .select('selected_gift_categories')
+        .eq('id', session.user.id)
         .single();
 
-      console.log('Profile query result:', { profile, profileError });
-
-      if (profile && profile.gift_selections && profile.gift_selections.length > 0) {
-        setCurrentGiftArea(profile.gift_selections[0]); // First selected gift area
+      if (profile?.selected_gift_categories) {
+        // Use these categories to filter which skills to show
+        setCurrentGiftArea(profile.selected_gift_categories[0]); // First selected gift area
         setUserProfile(profile);
       } else {
-        console.log('No gift selections found, redirecting to step 2');
+        console.log('No selected categories found, redirecting to step 2');
         router.push('/survey/step2');
       }
-    };
-    getUser();
+    }
+    
+    loadCategories();
   }, []);
 
   const toggleTag = (tag: string) => {
@@ -79,50 +88,43 @@ export default function SurveyStep3() {
   };
 
   const handleNext = async () => {
-    if (!user || selectedTags.size === 0) return;
-
     const selectedTagsArray = Array.from(selectedTags);
     
-    const columnMapping: { [key: string]: string } = {
-      'Hands-On Skills': 'hands_on_skills_tags',
-      'People & Relationships': 'people_relationships_tags',
-      'Problem-Solving & Organizing': 'problem_solving_organizing_tags',
-      'Care & Comfort': 'care_comfort_tags',
-      'Learning & Teaching': 'learning_teaching_tags',
-      'Creativity & Expression': 'creativity_expression_tags',
-      'Leadership & Motivation': 'leadership_motivation_tags',
-      'Behind-the-Scenes Support': 'behind_scenes_support_tags',
-      'Physical & Active': 'physical_active_tags',
-      'Pioneering & Connecting': 'pioneering_connecting_tags'
-    };
-
-    const columnName = columnMapping[currentGiftArea];
-    
-    console.log('STEP 3 DEBUG:');
-    console.log('Current gift area:', currentGiftArea);
-    console.log('Column name:', columnName);
-    console.log('Selected tags:', selectedTagsArray);
-
-    if (columnName) {
-      const { data, error } = await supabase
-        .from('profiles')
-        .update({
-          [columnName]: selectedTagsArray
-        })
-        .eq('id', user.id);
-      
-      console.log('Save result:', { data, error });
-      
-      if (error) {
-        console.error('Error saving tags:', error);
-        alert(`Error saving your selections: ${error.message}. Please try again.`);
-        return;
-      }
-    } else {
-      console.log('ERROR: No column mapping found for gift area');
+    if (selectedTagsArray.length === 0) {
+      alert('Please select at least one skill');
+      return;
     }
 
-    // Always go to step 4 next - step 4 will handle the logic for second gift area or completion
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.user) {
+      alert('Please sign in to continue');
+      return;
+    }
+
+    // Get existing gift_selections and append new ones
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('gift_selections')
+      .eq('id', session.user.id)
+      .single();
+
+    const existingSelections = profile?.gift_selections || [];
+    const updatedSelections = [...existingSelections, ...selectedTagsArray];
+
+    const { error } = await supabase
+      .from('profiles')
+      .upsert({
+        id: session.user.id,
+        gift_selections: updatedSelections,  // Use existing column
+        updated_at: new Date().toISOString()
+      });
+
+    if (error) {
+      console.error('Error saving:', error);
+      alert(`Error saving your selections: ${error.message}. Please try again.`);
+      return;
+    }
+
     router.push('/survey/step4');
   };
 
@@ -131,31 +133,49 @@ export default function SurveyStep3() {
   const availableTags = giftTags[currentGiftArea] || [];
 
   return (
-    <main style={{ maxWidth: 520, margin: '40px auto', fontFamily: 'sans-serif' }}>
-      {/* Progress indicator */}
-      <div style={{ marginBottom: 20 }}>
-        <div style={{ fontSize: 14, color: '#666', marginBottom: 8 }}>Question 2 of 6</div>
-        <div style={{ fontSize: 14, color: '#666', marginBottom: 8 }}>33% complete</div>
-        <div style={{ width: '100%', height: 4, backgroundColor: '#eee', borderRadius: 2 }}>
-          <div style={{ width: '33%', height: '100%', backgroundColor: '#4ECDC4', borderRadius: 2 }}></div>
+    <main className="min-h-screen bg-gray-50 py-12 px-4">
+      <div className={SURVEY_CARD}>
+        {/* Progress indicator */}
+        <div className={`w-full ${SURVEY_PROGRESS}`}>
+          <div className="bg-[#20c997] h-2 rounded-full transition-all" style={{ width: '75%' }}></div>
         </div>
-      </div>
 
-      <div style={{ 
-        backgroundColor: 'white', 
-        border: '1px solid #eee', 
-        borderRadius: 12, 
-        padding: 32,
-        boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
-      }}>
-        <h1 style={{ fontSize: 24, fontWeight: 'bold', marginBottom: 8 }}>
-          {currentGiftArea}
-        </h1>
-        <p style={{ color: '#666', marginBottom: 24 }}>
-          Select up to 2 tags that best describe your skills in this gifting
-        </p>
+        <div className="text-center mb-6">
+          <p className="text-sm text-gray-500 mb-2">Step 3 of 4</p>
+        </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+        {/* Category Header Card */}
+        <div style={{ 
+          backgroundColor: SURVEY_GREEN, 
+          borderRadius: 12, 
+          padding: 16, 
+          marginBottom: 24,
+          display: 'flex',
+          alignItems: 'center',
+          gap: 12
+        }}>
+          <div style={{ 
+            width: 40, 
+            height: 40, 
+            backgroundColor: 'white', 
+            borderRadius: 8, 
+            display: 'flex', 
+            alignItems: 'center', 
+            justifyContent: 'center' 
+          }}>
+            <Heart size={20} color={SURVEY_GREEN} strokeWidth={1.5} />
+          </div>
+          <div>
+            <h1 className="text-xl font-bold text-white mb-1">
+              {currentGiftArea}
+            </h1>
+            <p className="text-sm text-white opacity-90">
+              Select up to 2 tags that best describe your skills in this gifting
+            </p>
+          </div>
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
           {availableTags.map((tag) => {
             const isSelected = selectedTags.has(tag);
             const isDisabled = !isSelected && selectedTags.size >= 2;
@@ -165,17 +185,9 @@ export default function SurveyStep3() {
                 key={tag}
                 onClick={() => toggleTag(tag)}
                 disabled={isDisabled}
-                style={{
-                  padding: '12px 16px',
-                  border: isSelected ? '2px solid #4ECDC4' : '1px solid #ddd',
-                  borderRadius: 8,
-                  backgroundColor: isSelected ? '#f0fffe' : 'white',
-                  cursor: isDisabled ? 'not-allowed' : 'pointer',
-                  opacity: isDisabled ? 0.5 : 1,
-                  textAlign: 'center',
-                  fontSize: 14,
-                  fontWeight: isSelected ? 500 : 400
-                }}
+                className={`px-3 py-2 rounded-full border text-sm font-medium transition min-h-[36px] flex items-center justify-center ${
+                  isSelected ? SELECTED_STYLE : UNSELECTED_STYLE
+                } ${isDisabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
               >
                 {tag}
               </button>
@@ -186,44 +198,44 @@ export default function SurveyStep3() {
         <div style={{ textAlign: 'center', marginTop: 24, fontSize: 14, color: '#666' }}>
           Selected: {selectedTags.size}/2
         </div>
-      </div>
 
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 32 }}>
-        <button
-          onClick={() => router.push('/survey/step2')}
-          style={{
-            color: '#666',
-            background: 'none',
-            border: 'none',
-            fontSize: 16,
-            cursor: 'pointer'
-          }}
-        >
-          ← Previous
-        </button>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 32, gap: 16 }}>
+          <button
+            onClick={() => router.push('/survey/step2')}
+            className="text-gray-600 hover:text-gray-800 transition flex items-center gap-2"
+            style={{
+              background: 'none',
+              border: 'none',
+              fontSize: 16,
+              cursor: 'pointer',
+              padding: '12px 24px'
+            }}
+          >
+            <ArrowLeft size={18} strokeWidth={1.5} />
+            Previous
+          </button>
 
-        <button
-          onClick={handleNext}
-          disabled={selectedTags.size === 0}
-          style={{
-            backgroundColor: selectedTags.size > 0 ? '#4ECDC4' : '#ccc',
-            color: 'white',
-            padding: '16px 32px',
-            borderRadius: 8,
-            border: 'none',
-            fontSize: 16,
-            fontWeight: 500,
-            cursor: selectedTags.size > 0 ? 'pointer' : 'not-allowed'
-          }}
-        >
-          Keep Going →
-        </button>
-      </div>
-
-      <div style={{ textAlign: 'center', marginTop: 16 }}>
-        <p style={{ color: '#999', fontSize: 14 }}>
-          Let's discover how God has gifted you for His glory.
-        </p>
+          <button
+            onClick={handleNext}
+            disabled={selectedTags.size === 0}
+            className="transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+            style={{
+              backgroundColor: selectedTags.size > 0 ? SURVEY_GREEN : '#9ca3af',
+              color: 'white',
+              padding: '12px 24px',
+              borderRadius: '8px',
+              border: 'none',
+              fontSize: 16,
+              fontWeight: 600,
+              cursor: selectedTags.size > 0 ? 'pointer' : 'not-allowed',
+              minWidth: '120px',
+              justifyContent: 'flex-end'
+            }}
+          >
+            Keep Going
+            <ArrowRight size={18} strokeWidth={1.5} />
+          </button>
+        </div>
       </div>
     </main>
   );

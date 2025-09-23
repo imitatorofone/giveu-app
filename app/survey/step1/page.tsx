@@ -3,24 +3,57 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../../../lib/supabaseClient';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, ArrowRight, User, Calendar, MapPin, Phone } from 'lucide-react';
+import { ArrowLeft, ArrowRight, User, Calendar, MapPin, Phone, Clock } from 'lucide-react';
+
+// Survey-wide design constants
+const SURVEY_GREEN = '#20c997';
+const SURVEY_CARD = 'max-w-2xl mx-auto bg-white rounded-xl shadow-sm border-2 border-gray-100 p-8';
+const SURVEY_BUTTON = 'w-full py-3 bg-[#20c997] text-white rounded-lg font-semibold hover:opacity-90';
+const SURVEY_PROGRESS = 'h-2 bg-gray-200 rounded-full mb-6';
+const SELECTED_STYLE = 'bg-[#20c997] text-white border-[#20c997]';
+const UNSELECTED_STYLE = 'bg-white border-gray-300 text-gray-700 hover:border-[#20c997]';
 
 export default function SurveyStep1() {
   const [fullName, setFullName] = useState('');
   const [age, setAge] = useState('');
   const [city, setCity] = useState('');
   const [phone, setPhone] = useState('');
+  const [availability, setAvailability] = useState<string[]>([]);
   const [user, setUser] = useState<any>(null);
   const router = useRouter();
 
+  // Phone formatting function
+  const formatPhoneNumber = (value: string) => {
+    const phoneNumber = value.replace(/\D/g, '');
+    const phoneNumberLength = phoneNumber.length;
+    if (phoneNumberLength < 4) return phoneNumber;
+    if (phoneNumberLength < 7) {
+      return `(${phoneNumber.slice(0, 3)}) ${phoneNumber.slice(3)}`;
+    }
+    return `(${phoneNumber.slice(0, 3)}) ${phoneNumber.slice(3, 6)}-${phoneNumber.slice(6, 10)}`;
+  };
+
+  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const formatted = formatPhoneNumber(e.target.value);
+    setPhone(formatted);
+  };
+
+  const toggleAvailability = (time: string) => {
+    setAvailability(prev => 
+      prev.includes(time) 
+        ? prev.filter(t => t !== time)
+        : [...prev, time]
+    );
+  };
+
   useEffect(() => {
     const getUser = async () => {
-      const { data } = await supabase.auth.getUser();
-      if (!data.user) {
-        router.push('/');
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user) {
+        router.push('/auth');
         return;
       }
-      setUser(data.user);
+      setUser(session.user);
     };
     getUser();
   }, []);
@@ -38,7 +71,8 @@ export default function SurveyStep1() {
       city: city,
       phone: phone,
       phone_last_four: phoneLastFour,
-      email: user.email
+      email: user.email,
+      availability: availability
     });
 
     const { data, error } = await supabase
@@ -50,7 +84,8 @@ export default function SurveyStep1() {
         city: city,
         phone: phone,
         phone_last_four: phoneLastFour,
-        email: user.email
+        email: user.email,
+        availability: availability
       })
       .select();
 
@@ -68,137 +103,115 @@ export default function SurveyStep1() {
   if (!user) return <div>Loading...</div>;
 
   return (
-    <main style={{ 
-      maxWidth: 520, 
-      margin: '40px auto', 
-      fontFamily: 'var(--font-family)',
-      backgroundColor: '#FDFBF7',
-      minHeight: '100vh',
-      padding: 'var(--space-6)'
-    }}>
-      <div style={{ textAlign: 'center', marginBottom: 'var(--space-8)' }}>
-        <h1 style={{ fontSize: 'var(--text-3xl)', fontWeight: 700, marginBottom: 'var(--space-2)', color: '#333333', fontFamily: 'var(--font-quicksand)' }}>Tell us about yourself</h1>
-        <p style={{ color: '#666666', fontSize: 'var(--text-base)', fontFamily: 'var(--font-merriweather)' }}>Let's discover how God has gifted you</p>
-      </div>
-
-      <div style={{ 
-        backgroundColor: 'white', 
-        border: '1px solid var(--gray-200)', 
-        borderRadius: 'var(--radius-lg)', 
-        padding: 'var(--space-8)',
-        boxShadow: 'var(--shadow-lg)'
-      }}>
-        <div style={{ marginBottom: 'var(--space-5)' }}>
-          <label style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', fontWeight: 'var(--font-medium)', marginBottom: 'var(--space-2)', color: '#333333' }}>
-            <User size={16} strokeWidth={1.5} color="#2BB3A3" />
-            Full Name *
-          </label>
-          <input
-            type="text"
-            value={fullName}
-            onChange={(e) => setFullName(e.target.value)}
-            placeholder="Sarah Johnson"
-            style={{ 
-              width: '100%', 
-              padding: 'var(--space-3)', 
-              border: '1px solid var(--gray-300)', 
-              borderRadius: 'var(--radius-md)',
-              fontSize: 'var(--text-base)',
-              transition: 'border-color 0.2s ease'
-            }}
-          />
+    <main className="min-h-screen bg-gray-50 py-12 px-4">
+      <div className={SURVEY_CARD}>
+        {/* Progress indicator */}
+        <div className={`w-full ${SURVEY_PROGRESS}`}>
+          <div className="bg-[#20c997] h-2 rounded-full transition-all" style={{ width: '25%' }}></div>
         </div>
 
-        <div style={{ marginBottom: 'var(--space-5)' }}>
-          <label style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', fontWeight: 'var(--font-medium)', marginBottom: 'var(--space-2)', color: '#333333' }}>
-            <Calendar size={16} strokeWidth={1.5} color="#2BB3A3" />
-            Age *
-          </label>
-          <input
-            type="number"
-            value={age}
-            onChange={(e) => setAge(e.target.value)}
-            placeholder="32"
-            style={{ 
-              width: '100%', 
-              padding: 'var(--space-3)', 
-              border: '1px solid var(--gray-300)', 
-              borderRadius: 'var(--radius-md)',
-              fontSize: 'var(--text-base)',
-              transition: 'border-color 0.2s ease'
-            }}
-          />
+        <div className="text-center mb-6">
+          <p className="text-sm text-gray-500 mb-2">Step 1 of 4</p>
+          <h1 className="text-2xl font-bold text-gray-900 mb-2">Tell us about yourself</h1>
+        </div>
+        <div className="space-y-6">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+              <User className="w-4 h-4" />
+              Full Name *
+            </label>
+            <input
+              type="text"
+              value={fullName}
+              onChange={(e) => setFullName(e.target.value)}
+              placeholder="Sarah Johnson"
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#20c997] focus:border-[#20c997]"
+            />
         </div>
 
-        <div style={{ marginBottom: 'var(--space-5)' }}>
-          <label style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', fontWeight: 'var(--font-medium)', marginBottom: 'var(--space-2)', color: '#333333' }}>
-            <MapPin size={16} strokeWidth={1.5} color="#2BB3A3" />
-            Town/City *
-          </label>
-          <input
-            type="text"
-            value={city}
-            onChange={(e) => setCity(e.target.value)}
-            placeholder="Springfield"
-            style={{ 
-              width: '100%', 
-              padding: 'var(--space-3)', 
-              border: '1px solid var(--gray-300)', 
-              borderRadius: 'var(--radius-md)',
-              fontSize: 'var(--text-base)',
-              transition: 'border-color 0.2s ease'
-            }}
-          />
-        </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+              <Calendar className="w-4 h-4" />
+              Age *
+            </label>
+            <input
+              type="number"
+              value={age}
+              onChange={(e) => setAge(e.target.value)}
+              placeholder="25"
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#20c997] focus:border-[#20c997]"
+            />
+          </div>
 
-        <div style={{ marginBottom: 'var(--space-5)' }}>
-          <label style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', fontWeight: 'var(--font-medium)', marginBottom: 'var(--space-2)', color: '#333333' }}>
-            <Phone size={16} strokeWidth={1.5} color="#2BB3A3" />
-            Phone Number *
-          </label>
-          <input
-            type="tel"
-            value={phone}
-            onChange={(e) => setPhone(e.target.value)}
-            placeholder="(555) 123-4567"
-            style={{ 
-              width: '100%', 
-              padding: 'var(--space-3)', 
-              border: '1px solid var(--gray-300)', 
-              borderRadius: 'var(--radius-md)',
-              fontSize: 'var(--text-base)',
-              transition: 'border-color 0.2s ease'
-            }}
-          />
-        </div>
-      </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+              <MapPin className="w-4 h-4" />
+              City *
+            </label>
+            <input
+              type="text"
+              value={city}
+              onChange={(e) => setCity(e.target.value)}
+              placeholder="Austin"
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#20c997] focus:border-[#20c997]"
+            />
+          </div>
 
-      <div style={{ textAlign: 'center', marginTop: 'var(--space-8)' }}>
-        <button
-          onClick={handleNext}
-          disabled={!fullName || !age || !city || !phone}
-          style={{
-            backgroundColor: fullName && age && city && phone ? '#2BB3A3' : 'var(--gray-300)',
-            color: 'white',
-            padding: 'var(--space-4) var(--space-8)',
-            borderRadius: 'var(--radius-md)',
-            border: 'none',
-            fontSize: 'var(--text-base)',
-            fontWeight: 'var(--font-semibold)',
-            cursor: fullName && age && city && phone ? 'pointer' : 'not-allowed',
-            transition: 'background-color 0.2s ease',
-            display: 'flex',
-            alignItems: 'center',
-            gap: 'var(--space-2)',
-            margin: '0 auto'
-          }}
-        >
-          Keep Going
-          <ArrowRight size={18} strokeWidth={1.5} />
-        </button>
-        <p style={{ color: '#666666', fontSize: 'var(--text-sm)', marginTop: 'var(--space-4)' }}>
-          This will take about 2 minutes to complete
-        </p>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+              <Phone className="w-4 h-4" />
+              Phone Number *
+            </label>
+            <input
+              type="tel"
+              value={phone}
+              onChange={handlePhoneChange}
+              placeholder="(555) 123-4567"
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#20c997] focus:border-[#20c997]"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+              <Clock className="w-4 h-4" />
+              When are you typically available?
+            </label>
+            <div className="grid grid-cols-2 gap-2">
+              {['Morning', 'Afternoon', 'Evening', 'Weekends'].map((time) => (
+                <button
+                  key={time}
+                  type="button"
+                  onClick={() => toggleAvailability(time)}
+                  className={`px-3 py-2 rounded-lg border text-sm font-medium transition ${
+                    availability.includes(time) ? SELECTED_STYLE : UNSELECTED_STYLE
+                  }`}
+                >
+                  {time}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <button
+            onClick={handleNext}
+            disabled={!fullName || !age || !city || !phone}
+            className="transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            style={{
+              backgroundColor: fullName && age && city && phone ? SURVEY_GREEN : '#9ca3af',
+              color: 'white',
+              padding: '12px 24px',
+              borderRadius: '8px',
+              border: 'none',
+              fontSize: 16,
+              fontWeight: 600,
+              cursor: fullName && age && city && phone ? 'pointer' : 'not-allowed',
+              width: '100%'
+            }}
+          >
+            Keep Going
+            <ArrowRight size={18} strokeWidth={1.5} />
+          </button>
+        </div>
       </div>
     </main>
   );
