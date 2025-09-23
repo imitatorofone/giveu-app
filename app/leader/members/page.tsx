@@ -198,7 +198,6 @@ export default function MembersPage() {
 
           const body = await res.json();
           console.log('👤 session:', session?.user?.email, 'counts:', body?.counts);
-          console.log('🏛️ Church data:', { church_code: body.me?.church_code, church_name: body.me?.church_name });
           setApproved(body.approved || []);
           setPending(body.pending || []);
           setChurchName(body.me?.church_name || 'Your Church');

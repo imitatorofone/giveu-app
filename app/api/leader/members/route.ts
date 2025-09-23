@@ -97,27 +97,17 @@ export async function GET(req: Request) {
 
     // Fetch friendly church name
     let church_name: string | null = null;
-    console.log('🔍 User church_code:', me.church_code);
-    
-    // First, let's see what's in the churches table
-    const { data: allChurches, error: allChurchesErr } = await svc
-      .from('churches')
-      .select('*');
-    console.log('🔍 All churches in database:', { allChurches, allChurchesErr });
-    
     if (me.church_code) {
       const { data: church, error: churchErr } = await svc
         .from('churches')
         .select('name')
         .eq('code', me.church_code)
         .maybeSingle();
-      console.log('🔍 Church lookup result:', { church, churchErr });
       
       if (church) {
         church_name = church.name;
       } else {
         // If church not found, create it with a default name
-        console.log('🔍 Church not found, creating default entry for code:', me.church_code);
         const defaultName = me.church_code === '123harmony' ? 'Harmony Church' : `${me.church_code} Church`;
         
         const { data: newChurch, error: createErr } = await svc
@@ -131,7 +121,6 @@ export async function GET(req: Request) {
           .select('name')
           .maybeSingle();
         
-        console.log('🔍 Created church:', { newChurch, createErr });
         church_name = newChurch?.name ?? defaultName;
       }
     }
