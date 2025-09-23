@@ -1,16 +1,65 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
 import { getCategoryByTag } from '@/lib/giftingStructure';
+import toast from 'react-hot-toast';
 
 export default function PendingNeedsPage() {
   const [pendingNeeds, setPendingNeeds] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState(null);
+  const [profile, setProfile] = useState(null);
+  const router = useRouter();
 
   useEffect(() => {
-    fetchPendingNeeds();
+    checkAuthAndLoadData();
   }, []);
+
+  const checkAuthAndLoadData = async () => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session?.user) {
+        router.push('/auth');
+        return;
+      }
+
+      setUser(session.user);
+
+      // Load user profile
+      const { data: profileData, error: profileError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', session.user.id)
+        .single();
+
+      if (profileError) {
+        console.error('Profile error:', profileError);
+        router.push('/dashboard');
+        return;
+      }
+
+      setProfile(profileData);
+
+      // Check if user is a leader
+      if (!profileData?.is_leader) {
+        toast.error('Access denied. Leadership privileges required.');
+        router.push('/dashboard');
+        return;
+      }
+
+      // Load pending needs
+      fetchPendingNeeds();
+
+    } catch (error) {
+      console.error('Auth error:', error);
+      router.push('/auth');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const fetchPendingNeeds = async () => {
     try {
@@ -40,10 +89,10 @@ export default function PendingNeedsPage() {
       
       // Refresh the list
       fetchPendingNeeds();
-      alert('Need approved successfully!');
+      toast.success('Need approved and published!');
     } catch (error) {
       console.error('Error approving need:', error);
-      alert('Error approving need. Please try again.');
+      toast.error('Failed to approve need');
     }
   };
 
@@ -58,10 +107,10 @@ export default function PendingNeedsPage() {
       
       // Refresh the list
       fetchPendingNeeds();
-      alert('Need rejected.');
+      toast.success('Need rejected');
     } catch (error) {
       console.error('Error rejecting need:', error);
-      alert('Error rejecting need. Please try again.');
+      toast.error('Failed to reject need');
     }
   };
 

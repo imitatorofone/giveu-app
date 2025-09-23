@@ -27,7 +27,8 @@ export default function ProfilePage() {
     phone: '',
     age: '',
     availability: [],
-    gift_selections: []
+    gift_selections: [],
+    is_leader: false
   });
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -36,40 +37,103 @@ export default function ProfilePage() {
   // Load user data on component mount
   useEffect(() => {
     async function loadProfile() {
-      const { data: { session } } = await supabase.auth.getSession();
-      console.log('Profile session:', session);
-      
-      if (!session?.user) {
-        console.error('No session found');
-        setLoading(false);
-        return;
-      }
+      try {
+        console.log('🔍 Starting profile load...');
+        
+        // Quick auth sanity check
+        const s = await supabase.auth.getSession();
+        console.log('🔐 Auth sanity check - User ID:', s.session?.user?.id);
+        
+        const { data: { session } } = await supabase.auth.getSession();
+        console.log('Profile session:', session);
+        
+        if (!session?.user) {
+          console.error('No session found');
+          setLoading(false);
+          return;
+        }
 
-      setUser(session.user);
+        setUser(session.user);
+        console.log('👤 User set:', session.user.id);
 
-      const { data: profile, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', session.user.id)
-        .single();
+        console.log('📊 Querying profiles table...');
+        // Updated query to include new church-related columns
+        const { data: profile, error } = await supabase
+          .from('profiles')
+          .select('id, full_name, email, city, phone, age, availability, gift_selections, is_leader, church_code, role, approval_status')
+          .eq('id', session.user.id)
+          .maybeSingle();
 
-      console.log('Profile data:', { profile, error });
-
-      if (profile) {
-        setProfile({
-          full_name: profile.full_name || '',
-          email: profile.email || session.user.email,
-          city: profile.city || '',
-          phone: profile.phone || '',
-          age: profile.age || '',
-          availability: profile.availability || [],
-          gift_selections: profile.gift_selections || []
+        console.log('📊 Profile query result:', { 
+          profile, 
+          error, 
+          userId: session.user.id,
+          hasProfile: !!profile,
+          hasError: !!error,
+          errorType: error?.constructor?.name,
+          errorMessage: error?.message,
+          errorCode: error?.code,
+          errorDetails: error?.details,
+          errorHint: error?.hint
         });
-      } else if (error) {
-        console.error('Error loading profile:', error);
+
+        if (error) {
+          console.error('❌ Error loading profile:', error);
+          // Set default profile if there's an error
+          setProfile({
+            full_name: '',
+            email: session.user.email || '',
+            city: '',
+            phone: '',
+            age: '',
+            availability: [],
+            gift_selections: [],
+            is_leader: false
+          });
+        } else if (profile) {
+          console.log('✅ Profile loaded successfully:', profile);
+          setProfile({
+            full_name: profile.full_name || '',
+            email: profile.email || session.user.email,
+            city: profile.city || '',
+            phone: profile.phone || '',
+            age: profile.age || '',
+            availability: profile.availability || [],
+            gift_selections: profile.gift_selections || [],
+            is_leader: profile.is_leader || false
+          });
+        } else {
+          // No profile found, set defaults
+          console.log('ℹ️ No profile found, setting defaults');
+          setProfile({
+            full_name: '',
+            email: session.user.email || '',
+            city: '',
+            phone: '',
+            age: '',
+            availability: [],
+            gift_selections: [],
+            is_leader: false
+          });
+        }
+        
+        console.log('✅ Profile loading completed');
+      } catch (catchError) {
+        console.error('💥 Unexpected error in loadProfile:', catchError);
+        // Set default profile on unexpected error
+        setProfile({
+          full_name: '',
+          email: '',
+          city: '',
+          phone: '',
+          age: '',
+          availability: [],
+          gift_selections: [],
+          is_leader: false
+        });
+      } finally {
+        setLoading(false);
       }
-      
-      setLoading(false);
     }
 
     loadProfile();
@@ -270,6 +334,103 @@ export default function ProfilePage() {
             }
           />
         </div>
+
+        {/* Leadership Dashboard Access */}
+        {profile.is_leader && (
+          <div style={{ 
+            backgroundColor: '#eff6ff', 
+            borderRadius: '12px', 
+            boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)', 
+            border: '1px solid #bfdbfe', 
+            padding: '24px', 
+            marginBottom: '24px' 
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
+              <div style={{ 
+                width: '40px', 
+                height: '40px', 
+                backgroundColor: '#3b82f6', 
+                borderRadius: '50%', 
+                display: 'flex', 
+                alignItems: 'center', 
+                justifyContent: 'center' 
+              }}>
+                <Crown size={20} color="white" />
+              </div>
+              <h3 style={{ 
+                fontSize: '18px', 
+                fontWeight: '600', 
+                color: '#1e40af', 
+                fontFamily: quicksandFont, 
+                margin: 0 
+              }}>
+                Leadership Dashboard
+              </h3>
+            </div>
+            <p style={{ 
+              color: '#1e40af', 
+              fontSize: '14px', 
+              marginBottom: '16px',
+              fontFamily: quicksandFont
+            }}>
+              Access leadership tools to manage community needs and members.
+            </p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <button
+                onClick={() => window.location.href = '/leader'}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  padding: '12px 16px',
+                  backgroundColor: '#3b82f6',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  fontFamily: quicksandFont,
+                  fontWeight: '500',
+                  fontSize: '14px',
+                  transition: 'background-color 0.2s'
+                }}
+                onMouseEnter={(e) => e.target.style.backgroundColor = '#2563eb'}
+                onMouseLeave={(e) => e.target.style.backgroundColor = '#3b82f6'}
+              >
+                <Crown size={16} />
+                Leadership Overview
+              </button>
+              <button
+                onClick={() => window.location.href = '/leader/pending-needs'}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  padding: '12px 16px',
+                  backgroundColor: '#f8fafc',
+                  color: '#1e40af',
+                  border: '1px solid #3b82f6',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  fontFamily: quicksandFont,
+                  fontWeight: '500',
+                  fontSize: '14px',
+                  transition: 'all 0.2s'
+                }}
+                onMouseEnter={(e) => {
+                  e.target.style.backgroundColor = '#3b82f6';
+                  e.target.style.color = 'white';
+                }}
+                onMouseLeave={(e) => {
+                  e.target.style.backgroundColor = '#f8fafc';
+                  e.target.style.color = '#1e40af';
+                }}
+              >
+                <Settings size={16} />
+                Approve Pending Needs
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
         {/* Persistent Footer */}

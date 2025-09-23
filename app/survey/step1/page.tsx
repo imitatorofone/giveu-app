@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../../../lib/supabaseClient';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, ArrowRight, User, Calendar, MapPin, Phone, Clock } from 'lucide-react';
+import { ArrowLeft, ArrowRight, User, Calendar, MapPin, Phone, Clock, Key, Crown } from 'lucide-react';
 
 // Survey-wide design constants
 const SURVEY_GREEN = '#20c997';
@@ -19,6 +19,9 @@ export default function SurveyStep1() {
   const [city, setCity] = useState('');
   const [phone, setPhone] = useState('');
   const [availability, setAvailability] = useState<string[]>([]);
+  const [churchCode, setChurchCode] = useState('');
+  const [role, setRole] = useState('');
+  const [error, setError] = useState('');
   const [user, setUser] = useState<any>(null);
   const router = useRouter();
 
@@ -61,6 +64,16 @@ export default function SurveyStep1() {
   const handleNext = async () => {
     if (!user) return;
 
+    // Clear any previous errors
+    setError('');
+
+    // Validate church code
+    const validChurchCodes = ['123harmony', '123newlondon', '123brighton'];
+    if (!validChurchCodes.includes(churchCode.toLowerCase())) {
+      setError('Invalid church code. Please contact your church leadership.');
+      return;
+    }
+
     // Extract last 4 digits of phone number
     const phoneLastFour = phone.replace(/\D/g, '').slice(-4);
 
@@ -72,7 +85,10 @@ export default function SurveyStep1() {
       phone: phone,
       phone_last_four: phoneLastFour,
       email: user.email,
-      availability: availability
+      availability: availability,
+      church_code: churchCode.toLowerCase(),
+      role: role,
+      is_leader: role === 'leader'
     });
 
     const { data, error } = await supabase
@@ -85,7 +101,10 @@ export default function SurveyStep1() {
         phone: phone,
         phone_last_four: phoneLastFour,
         email: user.email,
-        availability: availability
+        availability: availability,
+        church_code: churchCode.toLowerCase(),
+        role: role,
+        is_leader: role === 'leader'
       })
       .select();
 
@@ -114,6 +133,11 @@ export default function SurveyStep1() {
           <p className="text-sm text-gray-500 mb-2">Step 1 of 4</p>
           <h1 className="text-2xl font-bold text-gray-900 mb-2">Tell us about yourself</h1>
         </div>
+        {error && (
+          <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+            <p className="text-red-600 text-sm">{error}</p>
+          </div>
+        )}
         <div className="space-y-6">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
@@ -173,6 +197,36 @@ export default function SurveyStep1() {
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+              <Key className="w-4 h-4" />
+              Church Code *
+            </label>
+            <input
+              type="text"
+              placeholder="Enter your church access code"
+              value={churchCode}
+              onChange={(e) => setChurchCode(e.target.value.toLowerCase())}
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#20c997] focus:border-[#20c997]"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+              <Crown className="w-4 h-4" />
+              Your Role *
+            </label>
+            <select
+              value={role}
+              onChange={(e) => setRole(e.target.value)}
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#20c997] focus:border-[#20c997]"
+            >
+              <option value="">Select your role</option>
+              <option value="member">Church Member</option>
+              <option value="leader">Church Leader</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
               <Clock className="w-4 h-4" />
               When are you typically available?
             </label>
@@ -194,17 +248,17 @@ export default function SurveyStep1() {
 
           <button
             onClick={handleNext}
-            disabled={!fullName || !age || !city || !phone}
+            disabled={!fullName || !age || !city || !phone || !churchCode || !role}
             className="transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             style={{
-              backgroundColor: fullName && age && city && phone ? SURVEY_GREEN : '#9ca3af',
+              backgroundColor: fullName && age && city && phone && churchCode && role ? SURVEY_GREEN : '#9ca3af',
               color: 'white',
               padding: '12px 24px',
               borderRadius: '8px',
               border: 'none',
               fontSize: 16,
               fontWeight: 600,
-              cursor: fullName && age && city && phone ? 'pointer' : 'not-allowed',
+              cursor: fullName && age && city && phone && churchCode && role ? 'pointer' : 'not-allowed',
               width: '100%'
             }}
           >

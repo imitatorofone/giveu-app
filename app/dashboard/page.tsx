@@ -213,6 +213,13 @@ export default function MemberDashboard() {
   };
 
   useEffect(() => {
+    // Quick auth sanity check
+    async function checkAuth() {
+      const s = await supabase.auth.getSession();
+      console.log('🔐 Dashboard auth sanity check - User ID:', s.session?.user?.id);
+    }
+    checkAuth();
+    
     fetchNeeds();
   }, []);
 

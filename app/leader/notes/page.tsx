@@ -30,8 +30,14 @@ export default function NotesPage() {
         return;
       }
 
-      // Check if user is a leader by checking email
-      if (authData.user.email !== 'imitatorofone@gmail.com') {
+      // Check if user is a leader by checking profile
+      const { data: profileData, error: profileError } = await supabase
+        .from('profiles')
+        .select('is_leader')
+        .eq('id', authData.user.id)
+        .single();
+
+      if (profileError || !profileData?.is_leader) {
         // Not a leader, redirect to home
         window.location.href = '/';
         return;
