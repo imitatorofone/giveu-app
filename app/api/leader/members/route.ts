@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server';
+﻿import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
 export const runtime = 'nodejs';
@@ -20,7 +20,7 @@ async function getUserFromAuthHeader(req: Request) {
 export async function GET(req: Request) {
   try {
     const user = await getUserFromAuthHeader(req);
-    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });                                                                            
 
     const svc = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
 
@@ -28,7 +28,7 @@ export async function GET(req: Request) {
     // 1) Try fetch by id
     let { data: me, error: meErr } = await svc
       .from('profiles')
-      .select('id, email, church_code, is_leader, role, approval_status')
+      .select('id, email, church_code, is_leader, role, approval_status')       
       .eq('id', user.id)
       .maybeSingle();
 
@@ -36,7 +36,7 @@ export async function GET(req: Request) {
     if ((!me || meErr) && user.email) {
       const { data: byEmail } = await svc
         .from('profiles')
-        .select('id, email, church_code, is_leader, role, approval_status')
+        .select('id, email, church_code, is_leader, role, approval_status')     
         .eq('email', user.email)
         .maybeSingle();
 
@@ -52,7 +52,7 @@ export async function GET(req: Request) {
       }
     }
 
-    // 3) Still missing? create it now with Harmony defaults for this beta
+    // 3) Still missing? create it now with Harmony defaults for this beta      
     if (!me) {
       const { data: inserted, error: insErr } = await svc
         .from('profiles')
@@ -60,7 +60,7 @@ export async function GET(req: Request) {
           id: user.id,
           email: user.email,
           full_name: (user.email || '').split('@')[0],
-          role: user.email === 'imitatorofone@gmail.com' ? 'leader' : 'member',
+          role: user.email === 'imitatorofone@gmail.com' ? 'leader' : 'member', 
           approval_status: 'approved',
           is_leader: user.email === 'imitatorofone@gmail.com',
           church_code: '123harmony',
@@ -70,30 +70,30 @@ export async function GET(req: Request) {
         .maybeSingle();
 
       if (insErr) {
-        return NextResponse.json({ error: `Profile create failed: ${insErr.message}` }, { status: 500 });
+        return NextResponse.json({ error: `Profile create failed: ${insErr.message}` }, { status: 500 });                                                       
       }
-      me = inserted!;
+      me = inserted;
     }
 
     // Guard: leader only
-    if (!me.is_leader) {
-      return NextResponse.json({ error: 'Leader access required' }, { status: 403 });
+    if (!me || !me.is_leader) {
+      return NextResponse.json({ error: 'Leader access required' }, { status: 403 });                                                                           
     }
 
-        // Fetch members in same church - split into approved and pending
+        // Fetch members in same church - split into approved and pending       
         const { data: allMembers, error: membersErr } = await svc
           .from('profiles')
-          .select('id, email, full_name, role, approval_status, is_leader, city, gift_selections')
+          .select('id, email, full_name, role, approval_status, is_leader, city, gift_selections')                                                              
           .eq('church_code', me.church_code)
           .order('is_leader', { ascending: false });
 
     if (membersErr) {
-      return NextResponse.json({ error: membersErr.message }, { status: 500 });
+      return NextResponse.json({ error: membersErr.message }, { status: 500 }); 
     }
 
     // Split members into approved and pending arrays
-    const approved = allMembers?.filter(m => m.approval_status === 'approved') || [];
-    const pending = allMembers?.filter(m => m.approval_status !== 'approved') || [];
+    const approved = allMembers?.filter(m => m.approval_status === 'approved') || [];                                                                           
+    const pending = allMembers?.filter(m => m.approval_status !== 'approved') || [];                                                                            
 
     // Fetch friendly church name
     let church_name: string | null = null;
@@ -103,13 +103,13 @@ export async function GET(req: Request) {
         .select('name')
         .eq('code', me.church_code)
         .maybeSingle();
-      
+
       if (church) {
         church_name = church.name;
       } else {
         // If church not found, create it with a default name
-        const defaultName = me.church_code === '123harmony' ? 'Harmony Church' : `${me.church_code} Church`;
-        
+        const defaultName = me.church_code === '123harmony' ? 'Harmony Church' : `${me.church_code} Church`;                                                    
+
         const { data: newChurch, error: createErr } = await svc
           .from('churches')
           .upsert({
@@ -120,18 +120,18 @@ export async function GET(req: Request) {
           })
           .select('name')
           .maybeSingle();
-        
+
         church_name = newChurch?.name ?? defaultName;
       }
     }
 
-    return NextResponse.json({ 
-      me: { id: me.id, email: me.email, church_code: me.church_code, is_leader: me.is_leader, church_name },
+    return NextResponse.json({
+      me: { id: me.id, email: me.email, church_code: me.church_code, is_leader: me.is_leader, church_name },                                                    
       approved,
       pending,
       counts: { approved: approved.length, pending: pending.length }
     });
   } catch (e: any) {
-    return NextResponse.json({ error: e?.message || 'Server error' }, { status: 500 });
+    return NextResponse.json({ error: e?.message || 'Server error' }, { status: 500 });                                                                         
   }
 }

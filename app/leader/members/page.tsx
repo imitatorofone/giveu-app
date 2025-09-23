@@ -7,6 +7,7 @@ import Header from '../../../components/Header';
 import Footer from '../../../components/Footer';
 import toast from 'react-hot-toast';
 import { Mail } from 'lucide-react';
+import LeaderSubnav from '../../../components/leader/LeaderSubnav';
 
 type Member = {
   id: string;
@@ -346,7 +347,14 @@ export default function MembersPage() {
     <div style={{ paddingBottom: '100px' }}>
       <Header />
       
-      <div className="p-6 space-y-6">
+      <div className="p-6 space-y-4">
+        {/* Leader sub-navigation */}
+        <LeaderSubnav 
+          active="members" 
+          membersCount={approved.length + pending.length}
+          className="mb-2"
+        />
+        
         <h1 className="text-xl font-bold">Members of {churchName}</h1>
 
         {/* Search + filters */}

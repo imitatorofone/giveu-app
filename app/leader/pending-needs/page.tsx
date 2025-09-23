@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
 import { getCategoryByTag } from '@/lib/giftingStructure';
 import toast from 'react-hot-toast';
+import LeaderSubnav from '../../../components/leader/LeaderSubnav';
 
 export default function PendingNeedsPage() {
   const [pendingNeeds, setPendingNeeds] = useState([]);
@@ -125,9 +126,15 @@ export default function PendingNeedsPage() {
   return (
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="max-w-4xl mx-auto px-4">
-        <h1 className="text-2xl font-bold text-gray-900 mb-6">
-          Pending Needs Review ({pendingNeeds.length})
-        </h1>
+        <div className="p-6 space-y-4">
+          {/* Leader sub-navigation */}
+          <LeaderSubnav 
+            active="pending-needs" 
+            needsCount={pendingNeeds.length}
+            className="mb-2"
+          />
+          
+          <h1 className="text-xl font-bold">Pending Needs</h1>
 
         {/* Cards Grid - Exact copy of Ways to Serve layout */}
         {pendingNeeds.length === 0 ? (
@@ -254,6 +261,7 @@ export default function PendingNeedsPage() {
             ))}
           </div>
         )}
+        </div>
       </div>
     </div>
   );
