@@ -14,9 +14,8 @@ export default function LeaderSubnav({ className = '' }: LeaderSubnavProps) {
   const pathname = usePathname();
 
   const navItems = [
-    { href: '/leader', label: 'Dashboard', path: '/leader' },
-    { href: '/leader/members', label: 'Members', path: '/leader/members' },
     { href: '/leader/pending-needs', label: 'Pending Needs', path: '/leader/pending-needs' },
+    { href: '/leader/members', label: 'Members', path: '/leader/members' },
   ];
 
   return (

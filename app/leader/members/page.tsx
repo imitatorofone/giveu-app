@@ -1,543 +1,337 @@
 'use client';
 
-import { useEffect, useState, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { supabase } from '@/lib/supabaseClient';
-import Header from '../../../components/Header';
-import Footer from '../../../components/Footer';
-import toast from 'react-hot-toast';
-import { Mail } from 'lucide-react';
-import LeaderSubnav from '../../../components/leader/LeaderSubnav';
-
-type Member = {
-  id: string;
-  email: string | null;
-  full_name: string | null;
-  role: string | null;
-  approval_status: string | null;
-  is_leader: boolean | null;
-  city?: string | null;                     // NEW
-  gift_selections?: string[] | string | null; // NEW (array or comma-string)
-};
-
-// local optimistic update helpers
-function removeFrom<T extends { id: string }>(arr: T[], id: string) {
-  return arr.filter(x => x.id !== id);
-}
-
-function initialsOf(name?: string | null, fallbackEmail?: string | null) {
-  const src = (name || fallbackEmail || '').trim();
-  if (!src) return '?';
-  const parts = src.split(/[.\s_@-]+/).filter(Boolean);
-  const a = parts[0]?.[0] || '';
-  const b = parts.length > 1 ? parts[1]?.[0] : '';
-  return (a + b).toUpperCase();
-}
-
-// Filter chip component
-function FilterChip({
-  active,
-  children,
-  onClick,
-}: { active: boolean; children: React.ReactNode; onClick: () => void }) {
-  return (
-    <button
-      onClick={onClick}
-      className={`px-3 py-1.5 rounded-full text-sm border transition ${
-        active ? 'text-white' : 'text-gray-700'
-      }`}
-      style={{
-        borderColor: active ? '#20c997' : '#e5e7eb',
-        backgroundColor: active ? '#20c997' : 'white',
-      }}
-    >
-      {children}
-    </button>
-  );
-}
-
-
-function MemberTile({
-  m,
-  status,                 // 'pending' | 'active'
-  onOpen,
-  onApprove,
-  onDeny,
-}: {
-  m: Member;
-  status: 'pending' | 'active';
-  onOpen: () => void;
-  onApprove?: (id: string) => void;
-  onDeny?: (id: string) => void;
-}) {
-  return (
-    <div
-      role="button"
-      onClick={onOpen}
-      className="flex items-center justify-between rounded-xl border border-gray-200 bg-white p-4 hover:shadow-sm transition cursor-pointer select-none"
-    >
-      {/* Left: Avatar + Name */}
-      <div className="flex items-center gap-3 min-w-0">
-        <div
-          className="h-10 w-10 rounded-full flex items-center justify-center font-bold text-white shrink-0"
-          style={{ backgroundColor: '#20c997' }}
-          aria-hidden
-        >
-          {initialsOf(m.full_name, m.email)}
-        </div>
-            <div className="min-w-0">
-              <div className="flex items-center gap-2">
-                <span className="font-semibold text-sm md:text-base truncate">
-                  {m.full_name || '—'}
-                </span>
-              </div>
-              <div className="text-xs md:text-sm text-gray-600 truncate capitalize">
-                {m.is_leader ? (
-                  <span className="font-semibold" style={{ color: '#20c997' }}>
-                    Leader
-                  </span>
-                ) : (
-                  m.role || 'member'
-                )}
-              </div>
-            </div>
-      </div>
-
-      {/* Right: Status + Actions (buttons stop propagation) */}
-      <div className="flex items-center gap-2 shrink-0">
-        <span
-          className="inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium uppercase tracking-wide"
-          style={{ borderColor: '#20c997', color: '#20c997' }}
-        >
-          {status === 'pending' ? 'Pending' : 'Active'}
-        </span>
-
-        {status === 'pending' && onApprove && onDeny ? (
-          <>
-            <button
-              onClick={(e) => { e.stopPropagation(); onApprove(m.id); }}
-              className="px-3 py-1.5 rounded-lg text-white text-sm font-semibold hover:opacity-90"
-              style={{ backgroundColor: '#20c997' }}
-            >
-              Approve
-            </button>
-            <button
-              onClick={(e) => { e.stopPropagation(); onDeny(m.id); }}
-              className="px-3 py-1.5 rounded-lg text-sm font-semibold text-gray-800 bg-gray-100 hover:bg-gray-200"
-            >
-              Deny
-            </button>
-          </>
-        ) : null}
-      </div>
-    </div>
-  );
-}
+import { supabaseBrowser as supabase } from '@/lib/supabaseBrowser';
+import Header from '@/components/Header';
+import Footer from '@/components/Footer';
 
 export default function MembersPage() {
+  const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState<any>(null);
+  const [profile, setProfile] = useState<any>(null);
+  const [members, setMembers] = useState<any[]>([]);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [roleFilter, setRoleFilter] = useState('All Roles');
+  const [statusFilter, setStatusFilter] = useState('All Status');
   const router = useRouter();
 
-  // existing state you already had:
-  const [approved, setApproved] = useState<Member[]>([]);
-  const [pending, setPending] = useState<Member[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [err, setErr] = useState<string | null>(null);
-  const [churchName, setChurchName] = useState<string>('Your Church');
-
-  // NEW: search + filters
-  const [query, setQuery] = useState('');
-  const [roleFilter, setRoleFilter] = useState<'all' | 'member' | 'leader'>('all');
-  const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'active'>('all');
-
-  // Clear filters functionality
-  const hasFilters =
-    query.trim().length > 0 ||
-    roleFilter !== 'all' ||
-    statusFilter !== 'all';
-
-  function resetFilters() {
-    setQuery('');
-    setRoleFilter('all');
-    setStatusFilter('all');
-  }
-
-  // Modal state
-  const [profileOpen, setProfileOpen] = useState(false);
-  const [profileLoading, setProfileLoading] = useState(false);
-  const [selected, setSelected] = useState<Member | null>(null);
-  const [detail, setDetail] = useState<any | null>(null);
-
   useEffect(() => {
-    (async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      const token = session?.access_token;
-
-      console.log('👤 MembersPage session email:', session?.user?.email);
-
-      if (!token) {
-        setErr('Please sign in.');
-        setLoading(false);
-        return;
-      }
-
-      const res = await fetch('/api/leader/members', {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      if (!res.ok) {
-        const text = await res.text(); // <-- capture raw body
-        console.error('❌ /api/leader/members failed:', res.status, text);
-        try {
-          const body = JSON.parse(text);
-          setErr(body?.error || `Failed with ${res.status}`);
-        } catch {
-          setErr(text || `Failed with ${res.status}`);
-        }
-        setLoading(false);
-        return;
-      }
-
-          const body = await res.json();
-          console.log('👤 session:', session?.user?.email, 'counts:', body?.counts);
-          setApproved(body.approved || []);
-          setPending(body.pending || []);
-          setChurchName(body.me?.church_name || 'Your Church');
-          setLoading(false);
-    })();
+    checkAuthAndLoadData();
   }, []);
 
-  async function reloadMembers() {
-    const { data: { session } } = await supabase.auth.getSession();
-    const token = session?.access_token;
-    if (!token) return;
-    const res = await fetch('/api/leader/members', { headers: { Authorization: `Bearer ${token}` } });
-    if (!res.ok) return;
-        const body = await res.json();
-        setApproved(body.approved || []);
-        setPending(body.pending || []);
-        setChurchName(body.me?.church_name || 'Your Church');
-        console.log('🔁 reloaded members counts:', body?.counts);
-  }
-
-  // Filter logic (client-side for now)
-  const norm = (v: any) =>
-    (Array.isArray(v) ? v.join(' ') : (v ?? '')).toString().toLowerCase();
-
-  const tagsOf = (v: Member['gift_selections']) => {
-    if (Array.isArray(v)) return v;
-    if (typeof v === 'string') return v.split(',').map(s => s.trim()).filter(Boolean);
-    return [];
-  };
-
-  const match = (m: Member) => {
-    const q = query.trim().toLowerCase();
-    const haystack =
-      norm(m.full_name) + ' ' +
-      norm(m.city) + ' ' +
-      norm(tagsOf(m.gift_selections));
-
-    const inText = !q || haystack.includes(q);
-
-    const roleOk =
-      roleFilter === 'all' ||
-      (roleFilter === 'leader' ? !!m.is_leader : !m.is_leader);
-
-    // status filter is already applied by which list we render,
-    // but if you want it to also constrain within each list:
-    const statusOk =
-      statusFilter === 'all' ||
-      (statusFilter === 'pending' && m.approval_status !== 'approved') ||
-      (statusFilter === 'active' && m.approval_status === 'approved');
-
-    return inText && roleOk && statusOk;
-  };
-
-  const filteredPending = useMemo(
-    () => pending.filter(match),
-    [pending, query, roleFilter, statusFilter]
-  );
-  const filteredApproved = useMemo(
-    () => approved.filter(match),
-    [approved, query, roleFilter, statusFilter]
-  );
-
-  // navigate to detail
-  const openMember = (id: string) => router.push(`/leader/members/${id}`);
-
-  // Modal functions
-  function closeProfile() {
-    setProfileOpen(false);
-    setDetail(null);
-    setSelected(null);
-    document.body.style.overflow = '';
-  }
-
-  async function openProfile(m: Member) {
-    setSelected(m);
-    setProfileOpen(true);
-    setProfileLoading(true);
-    document.body.style.overflow = 'hidden'; // lock scroll
-
-    const { data: { session } } = await supabase.auth.getSession();
-    const token = session?.access_token;
-    if (!token) { toast.error('Please sign in.'); setProfileLoading(false); return; }
-
-    const res = await fetch(`/api/leader/members/${m.id}`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    if (!res.ok) {
-      const text = await res.text().catch(() => '');
-      console.error('profile load failed:', res.status, text);
-      toast.error('Could not load profile.');
-      setProfileLoading(false);
-      return;
-    }
-    const body = await res.json();
-    setDetail(body.member);
-    setProfileLoading(false);
-  }
-
-  async function actOnMember(memberId: string, action: 'approve' | 'deny') {
-    const { data: { session } } = await supabase.auth.getSession();
-    const token = session?.access_token;
-    if (!token) { toast.error('Please sign in.'); return; }
-
-    // optimistic move for approve
-    if (action === 'approve') {
-      const idx = pending.findIndex(m => m.id === memberId);
-      if (idx !== -1) {
-        const moved = pending[idx];
-        setPending(prev => removeFrom(prev, memberId));
-        setApproved(prev => [{ ...moved, approval_status: 'approved' }, ...prev]);
+  const checkAuthAndLoadData = async () => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session?.user) {
+        router.push('/auth');
+        return;
       }
-    } else {
-      // optimistic remove for deny
-      setPending(prev => removeFrom(prev, memberId));
-    }
 
-    const res = await fetch('/api/leader/members/approve', {
-      method: 'PATCH',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({ memberId, action }),
+      setUser(session.user);
+
+      // Load user profile
+      const { data: profileData, error: profileError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', session.user.id)
+        .single();
+
+      if (profileError) {
+        console.error('Profile error:', profileError);
+        router.push('/dashboard');
+        return;
+      }
+
+      setProfile(profileData);
+
+      // Check if user is a leader
+      if (!profileData?.is_leader) {
+        router.push('/dashboard');
+        return;
+      }
+
+      // Load members data - filter by church_code if available
+      let query = supabase.from('profiles').select('*');
+      
+      // If the leader has a church_code, filter by it
+      if (profileData.church_code) {
+        query = query.eq('church_code', profileData.church_code);
+        console.log('[Members] Filtering by church_code:', profileData.church_code);
+      } else {
+        console.log('[Members] No church_code found for leader, showing all profiles');
+      }
+      
+      const { data: profilesData, error: profilesError } = await query.order('full_name');
+
+      console.log('[Members] Profiles query result:', { profilesData, profilesError });
+      console.log('[Members] Total profiles found:', profilesData?.length || 0);
+      if (profilesData) {
+        profilesData.forEach((profile, index) => {
+          console.log(`[Members] Profile ${index + 1}:`, {
+            id: profile.id,
+            full_name: profile.full_name,
+            email: profile.email,
+            approval_status: profile.approval_status,
+            is_leader: profile.is_leader
+          });
+        });
+      }
+
+      setMembers(profilesData || []);
+
+    } catch (error) {
+      console.error('Auth error:', error);
+      router.push('/auth');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const filteredMembers = members.filter(member => {
+    const matchesSearch = !searchTerm || 
+      member.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      member.email?.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    const matchesRole = roleFilter === 'All Roles' || 
+      (roleFilter === 'Leaders' && member.is_leader) ||
+      (roleFilter === 'Members' && !member.is_leader);
+    
+    const matchesStatus = statusFilter === 'All Status' ||
+      (statusFilter === 'Pending' && (member.approval_status === 'pending' || member.approval_status === null)) ||
+      (statusFilter === 'Active' && (member.approval_status === 'approved' || member.approval_status === 'active'));
+    
+    console.log('[Members] Filtering member:', {
+      name: member.full_name,
+      searchTerm,
+      roleFilter,
+      statusFilter,
+      memberRole: member.is_leader ? 'Leader' : 'Member',
+      memberStatus: member.approval_status,
+      matchesSearch,
+      matchesRole,
+      matchesStatus,
+      passes: matchesSearch && matchesRole && matchesStatus
     });
+    
+    return matchesSearch && matchesRole && matchesStatus;
+  });
 
-    if (!res.ok) {
-      const text = await res.text().catch(() => '');
-      console.error('approve/deny failed:', res.status, text);
-      toast.error('Action failed. Reverting…');
+  console.log('[Members] Filtered members count:', filteredMembers.length);
 
-      // revert optimistic change
-      // simplest approach: refetch full list after failure
-      await reloadMembers();
-      return;
+  const pendingMembers = filteredMembers.filter(m => m.approval_status === 'pending' || m.approval_status === null);
+  const activeMembers = filteredMembers.filter(m => m.approval_status === 'approved' || m.approval_status === 'active');
+
+  const approveMember = async (memberId: string) => {
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ approval_status: 'approved' })
+        .eq('id', memberId);
+
+      if (!error) {
+        setMembers(prev => prev.map(m => 
+          m.id === memberId ? { ...m, approval_status: 'approved' } : m
+        ));
+      }
+    } catch (error) {
+      console.error('Error approving member:', error);
     }
+  };
 
-    const body = await res.json().catch(() => ({}));
-    toast.success(action === 'approve' ? 'Member approved' : 'Member denied');
+  const denyMember = async (memberId: string) => {
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ approval_status: 'denied' })
+        .eq('id', memberId);
+
+      if (!error) {
+        setMembers(prev => prev.filter(m => m.id !== memberId));
+      }
+    } catch (error) {
+      console.error('Error denying member:', error);
+    }
+  };
+
+  const getInitials = (name: string) => {
+    return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-lg">Loading members...</div>
+      </div>
+    );
   }
-
-  if (loading) return <div className="p-6">Loading members…</div>;
-  if (err) return <div className="p-6 text-red-600">{err}</div>;
-
 
   return (
-    <div style={{ paddingBottom: '100px' }}>
+    <div className="min-h-screen bg-gray-50">
       <Header />
       
-      <div className="p-6 space-y-4">
-        {/* Leader sub-navigation */}
-        <LeaderSubnav 
-          active="members" 
-          membersCount={approved.length + pending.length}
-          className="mb-2"
-        />
-        
-        <h1 className="text-xl font-bold">Members of {churchName}</h1>
+      <main className="py-8">
+        <div className="max-w-4xl mx-auto px-4">
+          <div className="p-6 space-y-4">
+            
+            {/* Page Header */}
+            <h1 className="text-2xl font-bold text-gray-900 mb-6">Members (Your Church)</h1>
 
-        {/* Search + filters */}
-        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+            {/* Search Bar */}
+            <div className="mb-6">
               <input
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                placeholder="who/what are you looking for?"
-                className="w-full md:w-1/2 rounded-xl border border-gray-300 px-4 py-2 outline-none focus:border-gray-400"
+                type="text"
+                placeholder="Search by name or email..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
               />
-          <div className="flex flex-wrap items-center gap-2">
-            <FilterChip active={roleFilter === 'all'} onClick={() => setRoleFilter('all')}>All Roles</FilterChip>
-            <FilterChip active={roleFilter === 'member'} onClick={() => setRoleFilter('member')}>Members</FilterChip>
-            <FilterChip active={roleFilter === 'leader'} onClick={() => setRoleFilter('leader')}>Leaders</FilterChip>
+            </div>
 
-            <span className="mx-1 text-gray-300">|</span>
+            {/* Filters */}
+            <div className="flex items-center gap-4 mb-6">
+              {/* Role Filters */}
+              <div className="flex gap-2">
+                {['All Roles', 'Members', 'Leaders'].map((role) => (
+                  <button
+                    key={role}
+                    onClick={() => setRoleFilter(role)}
+                    className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
+                      roleFilter === role
+                        ? 'bg-emerald-500 text-white'
+                        : 'bg-white text-gray-600 border border-gray-300 hover:bg-gray-50'
+                    }`}
+                  >
+                    {role}
+                  </button>
+                ))}
+              </div>
 
-            <FilterChip active={statusFilter === 'all'} onClick={() => setStatusFilter('all')}>All Status</FilterChip>
-            <FilterChip active={statusFilter === 'pending'} onClick={() => setStatusFilter('pending')}>Pending</FilterChip>
-            <FilterChip active={statusFilter === 'active'} onClick={() => setStatusFilter('active')}>Active</FilterChip>
+              {/* Separator */}
+              <div className="w-px h-6 bg-gray-300"></div>
 
-            {hasFilters && (
-              <button
-                onClick={resetFilters}
-                className="px-3 py-1.5 rounded-full text-sm border transition text-white"
-                style={{ borderColor: '#20c997', backgroundColor: '#20c997' }}
-              >
-                Clear
-              </button>
-            )}
+              {/* Status Filters */}
+              <div className="flex gap-2">
+                {['All Status', 'Pending', 'Active'].map((status) => (
+                  <button
+                    key={status}
+                    onClick={() => setStatusFilter(status)}
+                    className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
+                      statusFilter === status
+                        ? 'bg-emerald-500 text-white'
+                        : 'bg-white text-gray-600 border border-gray-300 hover:bg-gray-50'
+                    }`}
+                  >
+                    {status}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Members List */}
+            <div className="space-y-8">
+              {/* Pending Members */}
+              {pendingMembers.length > 0 && (
+                <div>
+                  <h2 className="text-lg font-semibold text-gray-900 mb-4">
+                    Pending Members ({pendingMembers.length})
+                  </h2>
+                  <div className="space-y-3">
+                    {pendingMembers.map((member) => (
+                      <div key={member.id} className="bg-white rounded-lg border border-gray-200 p-4">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 bg-emerald-100 rounded-full flex items-center justify-center">
+                              <span className="text-emerald-600 font-semibold text-sm">
+                                {getInitials(member.full_name || member.email || 'U')}
+                              </span>
+                            </div>
+                            <div>
+                              <h3 className="font-semibold text-gray-900">{member.full_name}</h3>
+                              <p className="text-sm text-gray-600">Member</p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <span className="px-3 py-1 bg-emerald-100 text-emerald-700 rounded-full text-xs font-medium">
+                              PENDING
+                            </span>
+                            <button
+                              onClick={() => approveMember(member.id)}
+                              className="px-4 py-2 bg-emerald-500 text-white rounded-lg text-sm font-medium hover:bg-emerald-600 transition-colors"
+                            >
+                              Approve
+                            </button>
+                            <button
+                              onClick={() => denyMember(member.id)}
+                              className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-300 transition-colors"
+                            >
+                              Deny
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Active Members */}
+              {activeMembers.length > 0 && (
+                <div>
+                  <h2 className="text-lg font-semibold text-gray-900 mb-4">
+                    Active Members ({activeMembers.length})
+                  </h2>
+                  <div className="space-y-3">
+                    {activeMembers.map((member) => (
+                      <div key={member.id} className="bg-white rounded-lg border border-gray-200 p-4">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 bg-emerald-100 rounded-full flex items-center justify-center">
+                              <span className="text-emerald-600 font-semibold text-sm">
+                                {getInitials(member.full_name || member.email || 'U')}
+                              </span>
+                            </div>
+                            <div>
+                              <h3 className="font-semibold text-gray-900">{member.full_name}</h3>
+                              <p className={`text-sm ${member.is_leader ? 'text-emerald-600' : 'text-gray-600'}`}>
+                                {member.is_leader ? 'Leader' : 'Member'}
+                              </p>
+                            </div>
+                          </div>
+                          <span className="px-3 py-1 bg-emerald-100 text-emerald-700 rounded-full text-xs font-medium">
+                            ACTIVE
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Empty State */}
+              {filteredMembers.length === 0 && (
+                <div className="text-center py-12">
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">
+                    {searchTerm || roleFilter !== 'All Roles' || statusFilter !== 'All Status' 
+                      ? 'No members found' 
+                      : 'No members yet'
+                    }
+                  </h3>
+                  <p className="text-gray-600">
+                    {searchTerm || roleFilter !== 'All Roles' || statusFilter !== 'All Status'
+                      ? 'Try adjusting your search or filter criteria' 
+                      : 'Members will appear here once they join your church'
+                    }
+                  </p>
+                </div>
+              )}
+            </div>
           </div>
         </div>
-
-        {/* Pending */}
-        {statusFilter !== 'active' && (
-          <>
-            <h2 className="text-lg font-semibold mt-2">Pending Members ({filteredPending.length})</h2>
-            <div className="mt-3 space-y-3">
-              {filteredPending.length === 0 ? (
-                <p className="text-sm text-gray-600">No pending members.</p>
-              ) : (
-                filteredPending.map((m) => (
-                  <MemberTile
-                    key={m.id}
-                    m={m}
-                    status="pending"
-                    onOpen={() => openProfile(m)}
-                    onApprove={(id) => actOnMember(id, 'approve')}
-                    onDeny={(id) => actOnMember(id, 'deny')}
-                  />
-                ))
-              )}
-            </div>
-          </>
-        )}
-
-        {/* Active */}
-        {statusFilter !== 'pending' && (
-          <>
-            <h2 className="text-lg font-semibold mt-8">Active Members ({filteredApproved.length})</h2>
-            <div className="mt-3 space-y-3">
-              {filteredApproved.length === 0 ? (
-                <p className="text-sm text-gray-600">No active members yet.</p>
-              ) : (
-                filteredApproved.map((m) => (
-                  <MemberTile
-                    key={m.id}
-                    m={m}
-                    status="active"
-                    onOpen={() => openProfile(m)}
-                  />
-                ))
-              )}
-            </div>
-          </>
-        )}
-      </div>
+      </main>
       
       <Footer />
-
-      {/* Profile Modal */}
-      {profileOpen && (
-        <div
-          role="dialog"
-          aria-modal="true"
-          className="fixed inset-0 z-50"
-          onKeyDown={(e) => e.key === 'Escape' && closeProfile()}
-        >
-          {/* Backdrop */}
-          <div
-            className="absolute inset-0 bg-black/40"
-            onClick={closeProfile}
-          />
-          {/* Panel */}
-          <div className="absolute inset-x-0 top-[8vh] mx-auto w-[92vw] max-w-xl rounded-2xl bg-white shadow-lg">
-            <div className="flex items-start justify-between p-5 border-b">
-              <div className="flex items-center gap-3">
-                <div
-                  className="h-12 w-12 rounded-full flex items-center justify-center font-bold text-white"
-                  style={{ backgroundColor: '#20c997' }}
-                >
-                  {initialsOf(detail?.full_name ?? selected?.full_name, detail?.email ?? selected?.email)}
-                </div>
-                    <div>
-                      <div className="text-lg font-semibold">
-                        {detail?.full_name || selected?.full_name || '—'}
-                      </div>
-                      <div className="text-sm text-gray-600 capitalize">
-                        { (detail?.is_leader || selected?.is_leader) ? (
-                          <span className="font-semibold" style={{ color: '#20c997' }}>Leader</span>
-                        ) : (
-                          (detail?.role || selected?.role || 'member')
-                        )}
-                        {' • '}
-                        {(detail?.approval_status || selected?.approval_status || 'approved')}
-                      </div>
-                    </div>
-              </div>
-
-              <button
-                onClick={closeProfile}
-                className="rounded-lg px-2 py-1 text-sm border hover:bg-gray-50"
-              >
-                ✕
-              </button>
-            </div>
-
-            {/* Body */}
-            <div className="p-5 space-y-4">
-              {profileLoading ? (
-                <div className="text-sm text-gray-600">Loading profile…</div>
-              ) : (
-                <>
-                  <div className="grid gap-3 md:grid-cols-2 text-sm">
-                    <div className="text-gray-600">Email</div>
-                    <div>{detail?.email || '—'}</div>
-                        <div className="text-gray-600">Church</div>
-                        <div>{detail?.church_name || detail?.church_code || '—'}</div>
-                    <div className="text-gray-600">City</div>
-                    <div>{detail?.city || '—'}</div>
-                    <div className="text-gray-600">Phone</div>
-                    <div>{detail?.phone || '—'}</div>
-                    <div className="text-gray-600">Age</div>
-                    <div>{detail?.age ?? '—'}</div>
-                  </div>
-
-                  {(detail?.gift_selections && Array.isArray(detail.gift_selections) && detail.gift_selections.length > 0) ? (
-                    <div>
-                      <div className="text-sm font-semibold mb-2">Giftings</div>
-                      <div className="flex flex-wrap gap-2">
-                        {detail.gift_selections.map((g: string) => (
-                          <span key={`sel-${g}`} className="px-2 py-0.5 rounded-full text-xs border" style={{ borderColor: '#e5e7eb' }}>
-                            {g}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                  ) : null}
-                </>
-              )}
-            </div>
-
-            {/* Footer: actions for pending */}
-            {selected && (selected.approval_status !== 'approved') && (
-              <div className="flex items-center justify-end gap-2 p-5 border-t">
-                <button
-                  onClick={async () => { await actOnMember(selected.id, 'deny'); closeProfile(); }}
-                  className="px-3 py-1.5 rounded-lg text-sm font-semibold text-gray-800 bg-gray-100 hover:bg-gray-200"
-                >
-                  Deny
-                </button>
-                <button
-                  onClick={async () => { await actOnMember(selected.id, 'approve'); closeProfile(); }}
-                  className="px-3 py-1.5 rounded-lg text-white text-sm font-semibold hover:opacity-90"
-                  style={{ backgroundColor: '#20c997' }}
-                >
-                  Approve
-                </button>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
     </div>
   );
 }
