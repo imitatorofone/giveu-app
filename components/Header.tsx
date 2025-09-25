@@ -1,7 +1,6 @@
 'use client';
 
 import { Bell } from 'lucide-react';
-import SignOutButton from '@/components/SignOutButton';
 
 // Brand typography
 const quicksandFont = 'Quicksand, -apple-system, BlinkMacSystemFont, sans-serif';
@@ -44,9 +43,6 @@ export default function Header() {
           }}>
             <Bell size={20} color="#64748b" />
           </button>
-          <SignOutButton className="sign-out-btn">
-            Sign out
-          </SignOutButton>
         </div>
       </div>
     </header>

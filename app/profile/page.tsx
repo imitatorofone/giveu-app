@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { 
   User, Mail, MapPin, Clock, Edit3, Save, X,
   Sun, Sunset, Moon, Calendar, Phone, Bell,
+  LogOut,
   // Category Icons
   Wrench, Users, Brain, Heart, BookOpen, Palette, 
   Crown, Settings, Dumbbell, Compass
@@ -13,6 +14,7 @@ import { GIFT_CATEGORIES } from '../../constants/giftCategories.js';
 import Footer from '../../components/Footer';
 import Header from '../../components/Header';
 import toast from "react-hot-toast";
+import { useRouter } from 'next/navigation';
 
 // Brand typography
 const quicksandFont = 'Quicksand, -apple-system, BlinkMacSystemFont, sans-serif';
@@ -33,6 +35,7 @@ export default function ProfilePage() {
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const router = useRouter();
 
   // Load user data on component mount
   useEffect(() => {
@@ -48,8 +51,8 @@ export default function ProfilePage() {
         console.log('Profile session:', session);
         
         if (!session?.user) {
-          console.error('No session found');
-          setLoading(false);
+          console.log('No session found, redirecting to auth page');
+          router.push('/auth');
           return;
         }
 
@@ -212,25 +215,74 @@ export default function ProfilePage() {
               My Profile
             </h1>
             {!isEditing ? (
-              <button
-                onClick={() => setIsEditing(true)}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  padding: '8px 16px',
-                  backgroundColor: '#20c997',
-                  color: 'white',
-                  borderRadius: '8px',
-                  border: 'none',
-                  cursor: 'pointer',
-                  fontFamily: quicksandFont,
-                  fontWeight: '500'
-                }}
-              >
-                <Edit3 size={18} />
-                Edit Profile
-              </button>
+              <div style={{ display: 'flex', gap: '12px' }}>
+                <button
+                  onClick={() => setIsEditing(true)}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    padding: '8px 16px',
+                    backgroundColor: '#20c997',
+                    color: 'white',
+                    borderRadius: '8px',
+                    border: 'none',
+                    cursor: 'pointer',
+                    fontFamily: quicksandFont,
+                    fontWeight: '500'
+                  }}
+                >
+                  <Edit3 size={18} />
+                  Edit Profile
+                </button>
+                
+                <button
+                  onClick={async () => {
+                    console.log('[Profile] Sign out requested');
+                    
+                    if (confirm('Sign out? You\'ll need your email again to sign in.')) {
+                      console.log('[Profile] User confirmed sign out');
+                      const { error } = await supabase.auth.signOut();
+                      
+                      if (error) {
+                        console.error('[Profile] Error signing out:', error);
+                        toast.error('Error signing out');
+                        return;
+                      }
+                      
+                      console.log('[Profile] Sign out successful, redirecting');
+                      router.push('/auth');
+                    } else {
+                      console.log('[Profile] User cancelled sign out');
+                    }
+                  }}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    padding: '8px 16px',
+                    backgroundColor: 'transparent',
+                    color: '#6b7280',
+                    borderRadius: '8px',
+                    border: '1px solid #e5e7eb',
+                    cursor: 'pointer',
+                    fontFamily: quicksandFont,
+                    fontWeight: '500',
+                    transition: 'all 0.2s ease'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = '#f9fafb';
+                    e.currentTarget.style.borderColor = '#d1d5db';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = 'transparent';
+                    e.currentTarget.style.borderColor = '#e5e7eb';
+                  }}
+                >
+                  <LogOut size={18} />
+                  Sign out
+                </button>
+              </div>
             ) : (
               <div style={{ display: 'flex', gap: '8px' }}>
                 <button

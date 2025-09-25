@@ -3,6 +3,7 @@
 import { supabaseBrowser } from '@/lib/supabaseBrowser';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
+import { LogOut } from 'lucide-react';
 
 interface SignOutButtonProps {
   className?: string;
@@ -14,22 +15,30 @@ export default function SignOutButton({ className = '', children }: SignOutButto
   const [isLoading, setIsLoading] = useState(false);
 
   const handleSignOut = async () => {
-    try {
-      setIsLoading(true);
-      const { error } = await supabaseBrowser.auth.signOut();
-      
-      if (error) {
-        console.error('Error signing out:', error);
-        return;
+    console.log('[SignOutButton] Sign out requested');
+    
+    if (confirm('Sign out? You\'ll need your email again to sign in.')) {
+      try {
+        console.log('[SignOutButton] User confirmed sign out');
+        setIsLoading(true);
+        const { error } = await supabaseBrowser.auth.signOut();
+        
+        if (error) {
+          console.error('[SignOutButton] Error signing out:', error);
+          return;
+        }
+        
+        console.log('[SignOutButton] Sign out successful, redirecting');
+        // Redirect to auth page after successful sign out
+        router.push('/auth');
+        router.refresh(); // Refresh to clear any cached data
+      } catch (error) {
+        console.error('[SignOutButton] Unexpected error during sign out:', error);
+      } finally {
+        setIsLoading(false);
       }
-      
-      // Redirect to home page or login page after successful sign out
-      router.push('/');
-      router.refresh(); // Refresh to clear any cached data
-    } catch (error) {
-      console.error('Unexpected error during sign out:', error);
-    } finally {
-      setIsLoading(false);
+    } else {
+      console.log('[SignOutButton] User cancelled sign out');
     }
   };
 
@@ -39,6 +48,9 @@ export default function SignOutButton({ className = '', children }: SignOutButto
       disabled={isLoading}
       className={className}
       style={{ 
+        display: 'flex',
+        alignItems: 'center',
+        gap: '8px',
         color: '#6b7280',
         background: 'none',
         border: 'none',
@@ -47,6 +59,7 @@ export default function SignOutButton({ className = '', children }: SignOutButto
         opacity: isLoading ? 0.6 : 1
       }}
     >
+      <LogOut size={16} />
       {isLoading ? 'Signing out...' : children}
     </button>
   );
