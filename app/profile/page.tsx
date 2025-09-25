@@ -146,7 +146,7 @@ export default function ProfilePage() {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       
-      if (!session?.user) {
+      if (!session?.user?.id) {
         toast.error('Please sign in to save', { id: t });
         return;
       }
