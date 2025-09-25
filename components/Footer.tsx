@@ -2,6 +2,7 @@
 
 import { usePathname } from 'next/navigation';
 import { Heart, CalendarDays, Plus, UserCircle, MessageCircle } from 'lucide-react';
+import LeadershipTools from './LeadershipTools';
 
 export default function Footer() {
   const pathname = usePathname();
@@ -126,6 +127,10 @@ export default function Footer() {
           </span>
         </button>
         
+          {/* Leaders see Leadership Tools; everyone else sees Feedback */}
+          <LeadershipTools pathname={pathname} />
+          
+          {/* Fallback Feedback button for non-leaders */}
           <button 
             onClick={() => window.location.href = '/feedback'}
             style={{
