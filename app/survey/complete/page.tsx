@@ -51,7 +51,7 @@ export default function SurveyComplete() {
         // Set skills
         if (profile.gift_selections) {
           // Remove duplicates and ensure unique skills
-          const uniqueSkills = [...new Set(profile.gift_selections)];
+          const uniqueSkills = [...new Set(profile.gift_selections)] as string[];
           setUserSkills(uniqueSkills);
         }
       }

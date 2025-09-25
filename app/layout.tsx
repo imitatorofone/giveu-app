@@ -18,7 +18,8 @@ const heading = Merriweather({
 });
 
 export const metadata: Metadata = {
-  title: "ENGAGE",
+  title: "giveU - Where your gifts meet God's work",
+  description: "Connect your gifts with meaningful opportunities to serve your community",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

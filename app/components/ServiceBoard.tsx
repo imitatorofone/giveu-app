@@ -1,11 +1,12 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { supabase } from '../../lib/supabaseClient';
+import { supabaseBrowser as supabase } from '../../lib/supabaseBrowser';
 
 interface ServiceBoardProps {
   userId: string;
   orgId: string;
+  onNeedClick?: (needId: string) => void;
 }
 
 interface Need {
@@ -16,10 +17,10 @@ interface Need {
   people_required: number;
   event_date: string;
   tags: string[];
-  signups?: Array<{ user_id: string }>;
+  commitments?: Array<{ user_id: string }>;
 }
 
-export default function ServiceBoard({ userId, orgId }: ServiceBoardProps) {
+export default function ServiceBoard({ userId, orgId, onNeedClick }: ServiceBoardProps) {
   const [needs, setNeeds] = useState<Need[]>([]);
   const [highlightedNeedId, setHighlightedNeedId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -57,7 +58,7 @@ export default function ServiceBoard({ userId, orgId }: ServiceBoardProps) {
       // Get all approved needs
       const { data: allNeeds } = await supabase
         .from('needs')
-        .select('*, signups!left(user_id)')
+        .select('*, commitments!left(user_id)')
         .eq('org_id', orgId)
         .eq('status', 'approved')
         .order('created_at', { ascending: false });
@@ -87,29 +88,28 @@ export default function ServiceBoard({ userId, orgId }: ServiceBoardProps) {
     }
   };
   
-  const handleSignUp = async (needId: string) => {
+  const handleCommit = async (needId: string) => {
     try {
       const { error } = await supabase
-        .from('signups')
+        .from('commitments')
         .insert({
           need_id: needId,
-          user_id: userId,
-          org_id: orgId,
-          status: 'pending'
-        });
+          user_id: userId
+        })
+        .select();
       
       if (error) {
-        console.error('Error signing up:', error);
-        alert('Failed to sign up. Please try again.');
+        console.error('Error committing to help:', error);
+        alert('Failed to commit. Please try again.');
         return;
       }
       
       // Refresh the needs list
       fetchMatchedNeeds();
-      alert('Successfully signed up!');
+      alert('Thank you for helping!');
     } catch (error) {
-      console.error('Error in handleSignUp:', error);
-      alert('Failed to sign up. Please try again.');
+      console.error('Error in handleCommit:', error);
+      alert('Failed to commit. Please try again.');
     }
   };
   
@@ -156,7 +156,8 @@ export default function ServiceBoard({ userId, orgId }: ServiceBoardProps) {
               need={need}
               userId={userId}
               isHighlighted={need.id === highlightedNeedId}
-              onSignUp={() => handleSignUp(need.id)}
+              onCommit={() => handleCommit(need.id)}
+              onNeedClick={onNeedClick}
             />
           ))}
         </div>
@@ -169,25 +170,43 @@ function NeedCard({
   need, 
   userId, 
   isHighlighted, 
-  onSignUp 
+  onCommit,
+  onNeedClick
 }: { 
   need: Need; 
   userId: string;
   isHighlighted: boolean; 
-  onSignUp: () => void; 
+  onCommit: () => void;
+  onNeedClick?: (needId: string) => void;
 }) {
-  const userSignedUp = need.signups?.some(s => s.user_id === userId);
+  const userCommitted = need.commitments?.some(c => c.user_id === userId);
   
   return (
-    <div style={{
-      border: '1px solid var(--border)',
-      borderRadius: 8,
-      padding: 24,
-      backgroundColor: isHighlighted ? 'var(--muted)' : 'var(--card)',
-      borderLeft: isHighlighted ? '4px solid var(--primary)' : '4px solid transparent',
-      boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-      transition: 'all 0.2s'
-    }}>
+    <div 
+      style={{
+        border: '1px solid var(--border)',
+        borderRadius: 8,
+        padding: 24,
+        backgroundColor: isHighlighted ? 'var(--muted)' : 'var(--card)',
+        borderLeft: isHighlighted ? '4px solid var(--primary)' : '4px solid transparent',
+        boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+        transition: 'all 0.2s',
+        cursor: onNeedClick ? 'pointer' : 'default'
+      }}
+      onClick={() => onNeedClick?.(need.id)}
+      onMouseEnter={(e) => {
+        if (onNeedClick) {
+          e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)';
+          e.currentTarget.style.transform = 'translateY(-1px)';
+        }
+      }}
+      onMouseLeave={(e) => {
+        if (onNeedClick) {
+          e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.1)';
+          e.currentTarget.style.transform = 'translateY(0)';
+        }
+      }}
+    >
       <div style={{ 
         display: 'flex', 
         justifyContent: 'space-between', 
@@ -235,33 +254,36 @@ function NeedCard({
         </div>
         
         <button 
-          onClick={onSignUp}
-          disabled={userSignedUp}
+          onClick={(e) => {
+            e.stopPropagation();
+            onCommit();
+          }}
+          disabled={userCommitted}
           style={{
             padding: '8px 16px',
             borderRadius: 8,
             fontSize: 14,
             fontWeight: 500,
             border: 'none',
-            cursor: userSignedUp ? 'not-allowed' : 'pointer',
-            backgroundColor: userSignedUp ? 'var(--success)' : 'var(--primary)',
-            color: userSignedUp ? 'var(--success-foreground)' : 'var(--primary-foreground)',
+            cursor: userCommitted ? 'not-allowed' : 'pointer',
+            backgroundColor: userCommitted ? 'var(--success)' : 'var(--primary)',
+            color: userCommitted ? 'var(--success-foreground)' : 'var(--primary-foreground)',
             transition: 'background-color 0.2s'
           }}
           onMouseEnter={(e) => {
-            if (!userSignedUp) {
+            if (!userCommitted) {
               e.currentTarget.style.backgroundColor = 'var(--primary)';
               e.currentTarget.style.opacity = '0.9';
             }
           }}
           onMouseLeave={(e) => {
-            if (!userSignedUp) {
+            if (!userCommitted) {
               e.currentTarget.style.backgroundColor = 'var(--primary)';
               e.currentTarget.style.opacity = '1';
             }
           }}
         >
-          {userSignedUp ? 'Signed Up!' : 'I Can Help'}
+          {userCommitted ? 'Helping!' : 'I Can Help'}
         </button>
       </div>
     </div>

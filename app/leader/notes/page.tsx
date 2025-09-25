@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
-import { supabase } from '../../../lib/supabaseClient';
+import { supabaseBrowser as supabase } from '../../../lib/supabaseBrowser';
 import ClientOnly from '../../_clientOnly';
 
 export default function NotesPage() {

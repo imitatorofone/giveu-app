@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { supabase } from '../../lib/supabaseClient';
+import { supabaseBrowser as supabase } from '../../lib/supabaseBrowser';
 import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
 import Image from 'next/image';
@@ -28,15 +28,20 @@ export default function AuthPage() {
   useEffect(() => {
     let isMounted = true;
 
-    async function check() {
-      console.log('[auth] mount → checking session');
-      console.log('[auth] Supabase client config:', {
-        persistSession: true,
-        autoRefreshToken: true,
-        detectSessionInUrl: true
-      });
-      
-      const { data, error } = await supabase.auth.getSession();
+        async function check() {
+          console.log('[auth] mount → checking session');
+          console.log('[auth] Supabase client config:', {
+            persistSession: true,
+            autoRefreshToken: true,
+            detectSessionInUrl: true
+          });
+          
+          // Debug: Check localStorage for session data
+          const sessionStorage = localStorage.getItem('sb-rydvyhzbudmtldmfelby-auth-token');
+          console.log('[auth] localStorage session:', sessionStorage ? 'EXISTS' : 'MISSING');
+          console.log('[auth] localStorage content:', sessionStorage);
+          
+          const { data, error } = await supabase.auth.getSession();
       console.log('[auth] getSession result:', { 
         hasSession: !!data.session, 
         hasUser: !!data.session?.user,

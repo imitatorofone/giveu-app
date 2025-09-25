@@ -23,5 +23,5 @@
     }
   },
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
-  "exclude": ["node_modules", "engage_nested_bak"]
+  "exclude": ["node_modules", "engage_nested_bak", "backups", "**/*.bak.tsx", "**/page-backup.tsx"]
 }

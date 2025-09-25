@@ -39,25 +39,28 @@ interface Commitment {
     specific_date: string;
     specific_time: string;
     city: string;
-  };
+  }[];
 }
 
 // Grouping function
 function groupCommitmentsByTime(commitments: Commitment[]) {
-  const today = [];
-  const tomorrow = [];
-  const thisWeek = [];
-  const ongoing = [];
-  const asap = [];
-  const other = [];
+  const today: Commitment[] = [];
+  const tomorrow: Commitment[] = [];
+  const thisWeek: Commitment[] = [];
+  const ongoing: Commitment[] = [];
+  const asap: Commitment[] = [];
+  const other: Commitment[] = [];
 
   commitments.forEach(commitment => {
-    if (commitment.need.urgency === 'asap') {
+    const need = commitment.need[0]; // Get first need from array
+    if (!need) return; // Skip if no need data
+    
+    if (need.urgency === 'asap') {
       asap.push(commitment);
-    } else if (commitment.need.urgency === 'ongoing') {
+    } else if (need.urgency === 'ongoing') {
       ongoing.push(commitment);
-    } else if (commitment.need.specific_date) {
-      const date = parseISO(commitment.need.specific_date);
+    } else if (need.specific_date) {
+      const date = parseISO(need.specific_date);
       if (isToday(date)) {
         today.push(commitment);
       } else if (isTomorrow(date)) {
@@ -95,34 +98,34 @@ function CommitmentSection({ title, commitments }: { title: string; commitments:
         {commitments.map((commitment) => (
           <div key={commitment.id} className="bg-white rounded-xl border shadow-sm p-6">
             <h3 className="text-lg font-bold text-gray-900 mb-3">
-              {commitment.need.title}
+              {commitment.need[0]?.title || 'Untitled Need'}
             </h3>
             <p className="text-gray-600 mb-4">
-              {commitment.need.description}
+              {commitment.need[0]?.description || 'No description available'}
             </p>
             
             <div className="flex items-center gap-6 text-sm text-gray-600">
               <div className="flex items-center gap-2">
                 <Calendar className="w-4 h-4" />
                 <span>
-                  {commitment.need.urgency === 'asap' 
+                  {commitment.need[0]?.urgency === 'asap' 
                     ? 'As Soon As Possible' 
-                    : commitment.need.urgency === 'ongoing'
+                    : commitment.need[0]?.urgency === 'ongoing'
                     ? 'Ongoing'
-                    : commitment.need.specific_date
-                    ? format(parseISO(commitment.need.specific_date), 'MMM d, yyyy')
+                    : commitment.need[0]?.specific_date
+                    ? format(parseISO(commitment.need[0].specific_date), 'MMM d, yyyy')
                     : 'Flexible'
                   }
                 </span>
               </div>
               <div className="flex items-center gap-2">
                 <MapPin className="w-4 h-4" />
-                <span>{commitment.need.city}</span>
+                <span>{commitment.need[0]?.city || 'Location not specified'}</span>
               </div>
-              {commitment.need.specific_time && (
+              {commitment.need[0]?.specific_time && (
                 <div className="flex items-center gap-2">
                   <Clock className="w-4 h-4" />
-                  <span>{formatTime(commitment.need.specific_time)}</span>
+                  <span>{formatTime(commitment.need[0].specific_time)}</span>
                 </div>
               )}
             </div>

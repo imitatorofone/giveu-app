@@ -43,6 +43,7 @@ export default function CommunityBoard() {
     loadData();
   }, [router]);
 
+
   const handleHelp = (opportunity: any) => {
     setSelectedOpportunity(opportunity);
     setShowConfirmDialog(true);

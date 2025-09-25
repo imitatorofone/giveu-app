@@ -652,7 +652,7 @@ export default function ShareNeedScreen() {
     return 'Specific date/time';
   };
 
-  if (!user) return <div>Loading...</div>;
+  if (!authChecked || !session?.user) return <div>Loading...</div>;
 
   if (showPreview) {
     return (

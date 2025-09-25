@@ -1,14 +1,21 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { 
   Calendar, Clock, MapPin, Users, User, Bell, 
   Heart, CalendarDays, Plus, UserCircle, MessageCircle, AlertCircle, Check 
 } from 'lucide-react';
-import { supabase } from '../../lib/supabaseClient'; // Use your shared client
+import { supabaseBrowser as supabase } from '../../lib/supabaseBrowser'; // Use browser client for session persistence
 import { GIFT_CATEGORIES } from '../../constants/giftCategories.js';
 import Footer from '../../components/Footer';
 import Header from '../../components/Header';
+import dynamic from 'next/dynamic';
+
+const NeedDetailModal = dynamic(
+  () => import('../../components/NeedDetailModal'),
+  { ssr: false }
+);
 import toast from 'react-hot-toast';
 
 // Brand typography
@@ -122,6 +129,10 @@ export default function MemberDashboard() {
   const [selectedSort, setSelectedSort] = useState('Best Match');
   const [userGifts, setUserGifts] = useState<string[]>([]);
   const [userCommitments, setUserCommitments] = useState<string[]>([]);
+  const [selectedNeedId, setSelectedNeedId] = useState<string | null>(null);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const router = useRouter();
+  const searchParams = useSearchParams();
 
   // Helper function for dynamic tag coloring
   const getTagColor = (tag: string) => {
@@ -215,13 +226,74 @@ export default function MemberDashboard() {
   useEffect(() => {
     // Quick auth sanity check
     async function checkAuth() {
+      console.log('🔐 Dashboard auth check starting...');
+      
+      // Debug: Check localStorage for session data
+      const sessionStorage = localStorage.getItem('sb-rydvyhzbudmtldmfelby-auth-token');
+      console.log('🔐 Dashboard localStorage session:', sessionStorage ? 'EXISTS' : 'MISSING');
+      console.log('🔐 Dashboard localStorage content:', sessionStorage);
+      
+      // Add a small delay to ensure session is fully loaded
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      // Try getUser() instead of getSession()
+      const userResult = await supabase.auth.getUser();
+      console.log('🔐 Dashboard auth getUser result:', {
+        hasUser: !!userResult.data.user,
+        userId: userResult.data.user?.id,
+        userEmail: userResult.data.user?.email,
+        error: userResult.error?.message
+      });
+      
+      // Also try getSession() for comparison
       const s = await supabase.auth.getSession();
-      console.log('🔐 Dashboard auth sanity check - User ID:', s.session?.user?.id);
+      console.log('🔐 Dashboard auth getSession result:', {
+        hasSession: !!s.data.session,
+        hasUser: !!s.data.session?.user,
+        userId: s.data.session?.user?.id,
+        userEmail: s.data.session?.user?.email,
+        error: s.error?.message
+      });
+      
+      if (userResult.data.user?.id) {
+        console.log('🔐 Dashboard setting currentUserId to:', userResult.data.user.id);
+        setCurrentUserId(userResult.data.user.id);
+      } else if (s.data.session?.user?.id) {
+        console.log('🔐 Dashboard setting currentUserId from session to:', s.data.session.user.id);     
+        setCurrentUserId(s.data.session.user.id);
+      } else {
+        console.log('🔐 Dashboard no valid user found, redirecting to auth');
+        router.push('/auth');
+        return;
+      }
+      
+      // Additional debugging for modal
+      console.log('🔐 Dashboard currentUserId state will be:', userResult.data.user?.id || s.data.session?.user?.id);
     }
     checkAuth();
     
     fetchNeeds();
   }, []);
+
+  // Handle deep-link modal opening
+  useEffect(() => {
+    const needId = searchParams.get('needId');
+    console.log('[dashboard] Deep-link needId from URL:', needId);
+    if (needId) {
+      setSelectedNeedId(needId);
+    }
+  }, [searchParams]);
+
+  const handleNeedClick = (needId: string) => {
+    console.log('[dashboard] Need clicked with ID:', needId);
+    setSelectedNeedId(needId);
+    router.replace(`/dashboard?needId=${needId}`, { scroll: false });
+  };
+
+  const handleModalClose = () => {
+    setSelectedNeedId(null);
+    router.replace('/dashboard', { scroll: false });
+  };
 
   // Close sort dropdown when clicking outside
   useEffect(() => {
@@ -693,15 +765,29 @@ export default function MemberDashboard() {
           gap: '20px'
         }}>
           {sortedOpportunities.map((opportunity) => (
-            <div key={opportunity.id} style={{ 
-              backgroundColor: 'white',
-              borderRadius: '12px',
-              border: '1px solid #e2e8f0',
-              overflow: 'hidden',
-              display: 'flex',
-              flexDirection: 'column',
-              minHeight: '280px' // Consistent card height
-            }}>
+            <div 
+              key={opportunity.id} 
+              style={{ 
+                backgroundColor: 'white',
+                borderRadius: '12px',
+                border: '1px solid #e2e8f0',
+                overflow: 'hidden',
+                display: 'flex',
+                flexDirection: 'column',
+                minHeight: '280px', // Consistent card height
+                cursor: 'pointer',
+                transition: 'all 0.2s ease'
+              }}
+              onClick={() => handleNeedClick(opportunity.id)}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.boxShadow = '0 8px 25px -5px rgba(0, 0, 0, 0.15)';
+                e.currentTarget.style.transform = 'translateY(-2px)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.1)';
+                e.currentTarget.style.transform = 'translateY(0)';
+              }}
+            >
               {/* Card Header */}
               <div style={{ padding: '20px 20px 0 20px' }}>
                 <h3 style={{ 
@@ -861,7 +947,12 @@ export default function MemberDashboard() {
                   const isCommitted = userCommitments.includes(opportunity.id);
                   return (
                     <button 
-                      onClick={() => !isCommitted && handleICanHelp(opportunity.id)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (!isCommitted) {
+                          handleICanHelp(opportunity.id);
+                        }
+                      }}
                       disabled={isCommitted}
                       style={{ 
                         width: '100%',
@@ -899,6 +990,13 @@ export default function MemberDashboard() {
 
       {/* Persistent Footer */}
       <Footer />
+
+      {/* Need Detail Modal */}
+      <NeedDetailModal 
+        needId={selectedNeedId}
+        onClose={handleModalClose}
+        userId={currentUserId || undefined}
+      />
     </div>
   );
 }

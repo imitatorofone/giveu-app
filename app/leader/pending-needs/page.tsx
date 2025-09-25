@@ -7,11 +7,35 @@ import { getCategoryByTag } from '@/lib/giftingStructure';
 import toast from 'react-hot-toast';
 import LeaderSubnav from '../../../components/leader/LeaderSubnav';
 
+// Helper function to format giftings (array or string)
+const formatGiftings = (giftings: string[] | string): string[] => {
+  if (Array.isArray(giftings)) {
+    return giftings;
+  }
+  if (typeof giftings === 'string') {
+    return giftings.split(',').map(g => g.trim()).filter(Boolean);
+  }
+  return [];
+};
+
+type PendingNeed = {
+  id: string;
+  title: string;
+  description: string;
+  urgency: string;
+  ongoing_start_date?: string;
+  created_at: string;
+  city?: string;
+  location?: string;
+  people_needed: number;
+  giftings_needed: string[];
+};
+
 export default function PendingNeedsPage() {
-  const [pendingNeeds, setPendingNeeds] = useState([]);
+  const [pendingNeeds, setPendingNeeds] = useState<PendingNeed[]>([]);
   const [loading, setLoading] = useState(true);
-  const [user, setUser] = useState(null);
-  const [profile, setProfile] = useState(null);
+  const [user, setUser] = useState<any>(null);
+  const [profile, setProfile] = useState<any>(null);
   const router = useRouter();
 
   useEffect(() => {
@@ -79,7 +103,7 @@ export default function PendingNeedsPage() {
     }
   };
 
-  const handleApprove = async (needId) => {
+  const handleApprove = async (needId: string) => {
     try {
       const { error } = await supabase
         .from('needs')
@@ -97,7 +121,7 @@ export default function PendingNeedsPage() {
     }
   };
 
-  const handleReject = async (needId) => {
+  const handleReject = async (needId: string) => {
     try {
       const { error } = await supabase
         .from('needs')
@@ -217,7 +241,7 @@ export default function PendingNeedsPage() {
                   {/* Skills Tags - Matches Ways to Serve styling */}
                   <div className="mb-6">
                     <div className="flex flex-wrap gap-2">
-                      {formatGiftings(need.giftings_needed).slice(0, 3).map((skill, index) => {
+                      {formatGiftings(need.giftings_needed).slice(0, 3).map((skill: string, index: number) => {
                         const category = getCategoryByTag(skill);
                         return (
                           <span 

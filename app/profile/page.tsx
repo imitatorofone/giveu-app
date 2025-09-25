@@ -9,7 +9,7 @@ import {
   Wrench, Users, Brain, Heart, BookOpen, Palette, 
   Crown, Settings, Dumbbell, Compass
 } from 'lucide-react';
-import { supabase } from '../../lib/supabaseClient';
+import { supabaseBrowser as supabase } from '../../lib/supabaseBrowser';
 import { GIFT_CATEGORIES } from '../../constants/giftCategories.js';
 import Footer from '../../components/Footer';
 import Header from '../../components/Header';
@@ -21,8 +21,17 @@ const quicksandFont = 'Quicksand, -apple-system, BlinkMacSystemFont, sans-serif'
 const merriweatherFont = 'Merriweather, Georgia, serif';
 
 export default function ProfilePage() {
-  const [user, setUser] = useState(null);
-  const [profile, setProfile] = useState({
+  const [user, setUser] = useState<any>(null);
+  const [profile, setProfile] = useState<{
+    full_name: string;
+    email: string;
+    city: string;
+    phone: string;
+    age: string;
+    availability: string[];
+    gift_selections: string[];
+    is_leader: boolean;
+  }>({
     full_name: '',
     email: '',
     city: '',
@@ -45,7 +54,7 @@ export default function ProfilePage() {
         
         // Quick auth sanity check
         const s = await supabase.auth.getSession();
-        console.log('🔐 Auth sanity check - User ID:', s.session?.user?.id);
+        console.log('🔐 Auth sanity check - User ID:', s.data.session?.user?.id);
         
         const { data: { session } } = await supabase.auth.getSession();
         console.log('Profile session:', session);
@@ -366,7 +375,7 @@ export default function ProfilePage() {
           <AvailabilitySection 
             availability={profile.availability}
             isEditing={isEditing}
-            onChange={(newAvailability) => 
+            onChange={(newAvailability: string[]) => 
               setProfile(prev => ({ ...prev, availability: newAvailability }))
             }
           />
@@ -381,7 +390,7 @@ export default function ProfilePage() {
           <GiftSelectionSection
             selectedGifts={profile.gift_selections || []}
             isEditing={isEditing}
-            onChange={(newGifts) => 
+            onChange={(newGifts: string[]) => 
               setProfile(prev => ({ ...prev, gift_selections: newGifts }))
             }
           />
@@ -445,8 +454,8 @@ export default function ProfilePage() {
                   fontSize: '14px',
                   transition: 'background-color 0.2s'
                 }}
-                onMouseEnter={(e) => e.target.style.backgroundColor = '#2563eb'}
-                onMouseLeave={(e) => e.target.style.backgroundColor = '#3b82f6'}
+                onMouseEnter={(e) => (e.target as HTMLButtonElement).style.backgroundColor = '#2563eb'}
+                onMouseLeave={(e) => (e.target as HTMLButtonElement).style.backgroundColor = '#3b82f6'}
               >
                 <Crown size={16} />
                 Leadership Overview
@@ -469,12 +478,12 @@ export default function ProfilePage() {
                   transition: 'all 0.2s'
                 }}
                 onMouseEnter={(e) => {
-                  e.target.style.backgroundColor = '#3b82f6';
-                  e.target.style.color = 'white';
+                  (e.target as HTMLButtonElement).style.backgroundColor = '#3b82f6';
+                  (e.target as HTMLButtonElement).style.color = 'white';
                 }}
                 onMouseLeave={(e) => {
-                  e.target.style.backgroundColor = '#f8fafc';
-                  e.target.style.color = '#1e40af';
+                  (e.target as HTMLButtonElement).style.backgroundColor = '#f8fafc';
+                  (e.target as HTMLButtonElement).style.color = '#1e40af';
                 }}
               >
                 <Settings size={16} />
@@ -493,7 +502,7 @@ export default function ProfilePage() {
 }
 
 // Basic Info Form Component
-function BasicInfoForm({ profile, setProfile }) {
+function BasicInfoForm({ profile, setProfile }: { profile: any; setProfile: (profile: any) => void }) {
   return (
     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '16px' }}>
       <div>
@@ -503,7 +512,7 @@ function BasicInfoForm({ profile, setProfile }) {
         <input
           type="text"
           value={profile.full_name}
-          onChange={(e) => setProfile(prev => ({ ...prev, full_name: e.target.value }))}
+          onChange={(e) => setProfile((prev: any) => ({ ...prev, full_name: e.target.value }))}
           style={{
             width: '100%',
             padding: '8px 12px',
@@ -522,7 +531,7 @@ function BasicInfoForm({ profile, setProfile }) {
         <input
           type="text"
           value={profile.city}
-          onChange={(e) => setProfile(prev => ({ ...prev, city: e.target.value }))}
+          onChange={(e) => setProfile((prev: any) => ({ ...prev, city: e.target.value }))}
           style={{
             width: '100%',
             padding: '8px 12px',
@@ -541,7 +550,7 @@ function BasicInfoForm({ profile, setProfile }) {
         <input
           type="tel"
           value={profile.phone}
-          onChange={(e) => setProfile(prev => ({ ...prev, phone: e.target.value }))}
+          onChange={(e) => setProfile((prev: any) => ({ ...prev, phone: e.target.value }))}
           style={{
             width: '100%',
             padding: '8px 12px',
@@ -560,7 +569,7 @@ function BasicInfoForm({ profile, setProfile }) {
         <input
           type="number"
           value={profile.age}
-          onChange={(e) => setProfile(prev => ({ ...prev, age: e.target.value }))}
+          onChange={(e) => setProfile((prev: any) => ({ ...prev, age: e.target.value }))}
           style={{
             width: '100%',
             padding: '8px 12px',
@@ -577,7 +586,7 @@ function BasicInfoForm({ profile, setProfile }) {
 }
 
 // Basic Info Display Component
-function BasicInfoDisplay({ profile }) {
+function BasicInfoDisplay({ profile }: { profile: any }) {
   return (
     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', fontSize: '14px', color: '#6b7280' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -599,7 +608,7 @@ function BasicInfoDisplay({ profile }) {
 }
 
 // Availability Section Component
-function AvailabilitySection({ availability, isEditing, onChange }) {
+function AvailabilitySection({ availability, isEditing, onChange }: { availability: string[]; isEditing: boolean; onChange: (availability: string[]) => void }) {
   const timeSlots = [
     { id: 'Morning', label: 'Morning', icon: Sun },
     { id: 'Afternoon', label: 'Afternoon', icon: Sunset },
@@ -607,11 +616,11 @@ function AvailabilitySection({ availability, isEditing, onChange }) {
     { id: 'Weekends', label: 'Weekends', icon: Calendar }
   ];
 
-  const toggleAvailability = (slotId) => {
+  const toggleAvailability = (slotId: string) => {
     if (!isEditing) return;
     
     const newAvailability = availability.includes(slotId)
-      ? availability.filter(id => id !== slotId)
+      ? availability.filter((id: string) => id !== slotId)
       : [...availability, slotId];
     
     onChange(newAvailability);
@@ -653,7 +662,7 @@ function AvailabilitySection({ availability, isEditing, onChange }) {
 }
 
 // Enhanced Gift Selection with Skill Bubbles
-function GiftSelectionSection({ selectedGifts, isEditing, onChange }) {
+function GiftSelectionSection({ selectedGifts, isEditing, onChange }: { selectedGifts: string[]; isEditing: boolean; onChange: (gifts: string[]) => void }) {
   const [expandedCategories, setExpandedCategories] = useState({});
 
   const categories = {
@@ -719,18 +728,18 @@ function GiftSelectionSection({ selectedGifts, isEditing, onChange }) {
     }
   };
 
-  const toggleCategory = (categoryId) => {
+  const toggleCategory = (categoryId: string) => {
     setExpandedCategories(prev => ({
       ...prev,
-      [categoryId]: !prev[categoryId]
+      [categoryId]: !(prev as any)[categoryId]
     }));
   };
 
-  const toggleGift = (giftTag) => {
+  const toggleGift = (giftTag: string) => {
     if (!isEditing) return;
     
     const newGifts = selectedGifts.includes(giftTag)
-      ? selectedGifts.filter(tag => tag !== giftTag)
+      ? selectedGifts.filter((tag: string) => tag !== giftTag)
       : [...selectedGifts, giftTag];
     
     onChange(newGifts);
@@ -743,7 +752,7 @@ function GiftSelectionSection({ selectedGifts, isEditing, onChange }) {
         <div style={{ marginBottom: '24px' }}>
           <h4 style={{ fontSize: '14px', fontWeight: '600', color: '#374151', marginBottom: '12px', fontFamily: 'Quicksand, sans-serif' }}>Selected Skills</h4>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-            {selectedGifts.map((gift) => (
+            {selectedGifts.map((gift: string) => (
               <span
                 key={gift}
                 style={{
@@ -774,7 +783,7 @@ function GiftSelectionSection({ selectedGifts, isEditing, onChange }) {
           </h4>
           
           {Object.entries(categories).map(([categoryId, category]) => {
-            const isExpanded = expandedCategories[categoryId];
+            const isExpanded = (expandedCategories as any)[categoryId];
             const selectedInCategory = category.tags.filter(tag => selectedGifts.includes(tag));
 
             return (
