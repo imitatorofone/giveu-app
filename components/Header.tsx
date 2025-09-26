@@ -1,12 +1,37 @@
 'use client';
 
-import { Bell } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { supabaseBrowser as supabase } from '../lib/supabaseBrowser';
+import NotificationDropdown from './NotificationDropdown';
 
 // Brand typography
 const quicksandFont = 'Quicksand, -apple-system, BlinkMacSystemFont, sans-serif';
 const merriweatherFont = 'Merriweather, Georgia, serif';
 
 export default function Header() {
+  const [userId, setUserId] = useState<string | null>(null);
+  const [isLeader, setIsLeader] = useState(false);
+
+  useEffect(() => {
+    const checkUser = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user) {
+        setUserId(session.user.id);
+        
+        // Check if user is a leader
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('is_leader')
+          .eq('id', session.user.id)
+          .single();
+        
+        setIsLeader(profile?.is_leader || false);
+      }
+    };
+
+    checkUser();
+  }, []);
+
   return (
     <header style={{ 
       backgroundColor: 'white', 
@@ -35,14 +60,9 @@ export default function Header() {
         </div>
         
         <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-          <button style={{ 
-            padding: '8px',
-            background: 'none',
-            border: 'none',
-            cursor: 'pointer'
-          }}>
-            <Bell size={20} color="#64748b" />
-          </button>
+          {userId && isLeader && (
+            <NotificationDropdown userId={userId} />
+          )}
         </div>
       </div>
     </header>

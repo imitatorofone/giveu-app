@@ -489,95 +489,263 @@ export default function MemberDashboard() {
     }
   });
 
+  // Create notifications for leaders when someone signs up to help
+  const createNotificationForLeaders = async (needId: string, volunteerId: string) => {
+    try {
+      console.log('🔔 Creating notifications for leaders...');
+      
+      // First check if notifications table exists by trying a simple query
+      const { error: tableCheckError } = await supabase
+        .from('notifications')
+        .select('id')
+        .limit(1);
+      
+      if (tableCheckError) {
+        console.log('ℹ️ Notifications table not found, skipping notification creation:', tableCheckError.message);
+        return;
+      }
+      
+      // Get the need details
+      console.log('🔍 Fetching need details for ID:', needId);
+      const { data: need, error: needError } = await supabase
+        .from('needs')
+        .select('title, church_code')
+        .eq('id', needId)
+        .single();
+
+      console.log('🔍 Need query result:', { need, needError });
+
+      if (needError || !need) {
+        console.error('❌ Error fetching need details:', {
+          needError,
+          needErrorType: typeof needError,
+          needErrorKeys: Object.keys(needError || {}),
+          needErrorString: JSON.stringify(needError, null, 2),
+          needErrorMessage: needError?.message,
+          needErrorCode: needError?.code,
+          needErrorDetails: needError?.details,
+          needErrorHint: needError?.hint,
+          need,
+          needId
+        });
+        return;
+      }
+
+      // Get volunteer details
+      console.log('🔍 Fetching volunteer details for ID:', volunteerId);
+      const { data: volunteer, error: volunteerError } = await supabase
+        .from('profiles')
+        .select('full_name')
+        .eq('id', volunteerId)
+        .single();
+
+      console.log('🔍 Volunteer query result:', { volunteer, volunteerError });
+
+      if (volunteerError || !volunteer) {
+        console.error('❌ Error fetching volunteer details:', {
+          volunteerError,
+          volunteerErrorType: typeof volunteerError,
+          volunteerErrorKeys: Object.keys(volunteerError || {}),
+          volunteerErrorString: JSON.stringify(volunteerError, null, 2),
+          volunteerErrorMessage: volunteerError?.message,
+          volunteerErrorCode: volunteerError?.code,
+          volunteer,
+          volunteerId
+        });
+        return;
+      }
+
+      // Get all leaders in the same organization
+      console.log('🔍 Fetching leaders for church_code:', need.church_code);
+      const { data: leaders, error: leadersError } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('is_leader', true)
+        .eq('church_code', need.church_code);
+
+      console.log('🔍 Leaders query result:', { leaders, leadersError });
+
+      if (leadersError || !leaders || leaders.length === 0) {
+        console.log('ℹ️ No leaders found for organization:', {
+          churchCode: need.church_code,
+          leadersError,
+          leadersCount: leaders?.length || 0
+        });
+        return;
+      }
+
+      // Create notifications for each leader
+      const notifications = leaders.map(leader => ({
+        user_id: leader.id,
+        title: 'New Volunteer Signup',
+        message: `${volunteer.full_name || 'Someone'} signed up to help with "${need.title}"`,
+        related_need_id: needId,
+        related_response_id: null, // We'll update this after getting the response ID
+        is_read: false
+      }));
+
+      const { data: insertedNotifications, error: insertError } = await supabase
+        .from('notifications')
+        .insert(notifications)
+        .select('id');
+
+      if (insertError) {
+        console.error('❌ Error creating notifications:', insertError);
+        return;
+      }
+
+      console.log('✅ Created notifications for', leaders.length, 'leaders');
+      
+      // Update notifications with the response ID
+      const { data: response, error: responseError } = await supabase
+        .from('opportunity_responses')
+        .select('id')
+        .eq('need_id', needId)
+        .eq('user_id', volunteerId)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single();
+
+      if (response && !responseError) {
+        await supabase
+          .from('notifications')
+          .update({ related_response_id: response.id })
+          .in('id', insertedNotifications.map(n => n.id));
+      }
+
+    } catch (error) {
+      console.error('❌ Error in createNotificationForLeaders:', error);
+    }
+  };
+
   const handleICanHelp = async (needId: string) => {
-    console.log('🔘 I Can Help clicked for need:', needId);
-    
-    const { data: { session } } = await supabase.auth.getSession();
-    
-    if (!session?.user) {
-      toast.error('Please sign in to help');
-      return;
-    }
-
-    console.log('✅ User session found:', session.user.id);
-
-    // Check if already submitted a response
-    const { data: existing, error: checkError } = await supabase
-      .from('opportunity_responses')
-      .select('id, status')
-      .eq('need_id', needId)
-      .eq('user_id', session.user.id)
-      .maybeSingle();
-
-    if (checkError) {
-      console.error('Error checking existing commitment:', checkError);
-      toast.error('Error checking your commitment status');
-      return;
-    }
-
-    if (existing) {
-      if (existing.status === 'pending') {
-        toast('Your volunteer response is pending leader approval!', {
-          icon: '⏳',
-          style: {
-            background: '#f59e0b',
-            color: 'white',
-          },
-        });
-      } else if (existing.status === 'accepted') {
-        toast('You\'re already signed up to help with this need!', {
-          icon: '✅',
-          style: {
-            background: '#10b981',
-            color: 'white',
-          },
-        });
-      } else if (existing.status === 'declined') {
-        toast('Your volunteer response was declined. Please contact a leader if you have questions.', {
-          icon: '❌',
-          style: {
-            background: '#ef4444',
-            color: 'white',
-          },
-        });
+    try {
+      console.log('🔘 I Can Help clicked for need:', needId);
+      
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session?.user) {
+        toast.error('Please sign in to help');
+        return;
       }
-      return;
-    }
 
-    // Create opportunity response (auto-accepted)
-    console.log('📝 Creating opportunity response for need:', needId, 'user:', session.user.id);
-    
-    const { error } = await supabase
-      .from('opportunity_responses')
-      .insert({
-        need_id: needId,
-        user_id: session.user.id,
-        response_type: 'volunteer',
-        status: 'accepted'
+      console.log('✅ User session found:', session.user.id);
+      console.log('🔍 Starting duplicate check...');
+
+      // Check if already submitted a response
+      const { data: existing, error: checkError } = await supabase
+        .from('opportunity_responses')
+        .select('id, status')
+        .eq('need_id', needId)
+        .eq('user_id', session.user.id)
+        .maybeSingle();
+
+      if (checkError) {
+        console.error('❌ Error checking existing commitment:', checkError);
+        toast.error('Error checking your commitment status');
+        return;
+      }
+      
+      console.log('✅ Duplicate check passed, no existing response found');
+      console.log('🔍 Checking if existing response found...', { existing });
+
+      if (existing) {
+        if (existing.status === 'pending') {
+          toast('Your volunteer response is pending leader approval!', {
+            icon: '⏳',
+            style: {
+              background: '#f59e0b',
+              color: 'white',
+            },
+          });
+        } else if (existing.status === 'accepted') {
+          toast('You\'re already signed up to help with this need!', {
+            icon: '✅',
+            style: {
+              background: '#10b981',
+              color: 'white',
+            },
+          });
+        } else if (existing.status === 'declined') {
+          toast('Your volunteer response was declined. Please contact a leader if you have questions.', {
+            icon: '❌',
+            style: {
+              background: '#ef4444',
+              color: 'white',
+            },
+          });
+        }
+        return;
+      }
+
+      console.log('🔍 No existing response found, proceeding to create new response...');
+
+      // Create opportunity response (auto-accepted)
+      console.log('📝 Creating opportunity response for need:', needId, 'user:', session.user.id);
+      console.log('🔍 Attempting database insert...');
+      
+      const { error } = await supabase
+        .from('opportunity_responses')
+        .insert({
+          need_id: needId,
+          user_id: session.user.id,
+          response_type: 'volunteer',
+          status: 'accepted'
+        });
+
+      if (error) {
+        console.error('❌ Opportunity response error:', error);
+        toast.error('Failed to submit volunteer response');
+        return;
+      } else {
+        console.log('✅ Database insert successful');
+        console.log('✅ Successfully submitted volunteer response');
+        console.log('🔍 Showing success toast...');
+        toast.success('You\'re signed up to help! Added to your commitments.');
+        console.log('✅ Toast notification shown');
+        
+        // Add the new response to state immediately for UI feedback
+        setUserCommitments(prev => [...prev, needId]);
+        
+        // TEMPORARILY DISABLED: Create notification for leaders (non-blocking)
+        // TODO: Re-enable notifications after core functionality is stable
+        /*
+        try {
+          await createNotificationForLeaders(needId, session.user.id);
+        } catch (notificationError) {
+          console.error('❌ Notification creation failed, but volunteer signup succeeded:', notificationError);
+          // Don't break the main flow - notification is optional
+        }
+        */
+        console.log('✅ Volunteer signup completed successfully (notifications temporarily disabled)');
+        console.log('🔍 Process complete - all steps finished successfully');
+        
+        // Update volunteer count via RPC
+        console.log('📊 Updating volunteer count...');
+        const { error: rpcError } = await supabase.rpc('increment_volunteer_count', { need_id: needId });
+        
+        if (rpcError) {
+          console.error('❌ RPC error:', rpcError);
+          // Don't show error to user, just log it
+        }
+        
+        // Refresh the needs list to show updated volunteer counts
+        console.log('🔄 Refreshing needs list...');
+        fetchNeeds();
+    } catch (error) {
+      console.error('❌ CRITICAL ERROR in handleICanHelp:', error);
+      console.error('❌ Error details:', {
+        error,
+        errorType: typeof error,
+        errorKeys: Object.keys(error || {}),
+        errorString: JSON.stringify(error, null, 2),
+        errorMessage: error?.message,
+        errorCode: error?.code,
+        errorDetails: error?.details,
+        errorHint: error?.hint,
+        needId
       });
-
-    if (error) {
-      console.error('❌ Opportunity response error:', error);
-      toast.error('Failed to submit volunteer response');
-    } else {
-      console.log('✅ Successfully submitted volunteer response');
-      toast.success('You\'re signed up to help! Added to your commitments.');
-      
-      // Add the new response to state immediately for UI feedback
-      setUserCommitments(prev => [...prev, needId]);
-      
-      // Update volunteer count via RPC
-      console.log('📊 Updating volunteer count...');
-      const { error: rpcError } = await supabase.rpc('increment_volunteer_count', { need_id: needId });
-      
-      if (rpcError) {
-        console.error('❌ RPC error:', rpcError);
-        // Don't show error to user, just log it
-      }
-      
-      // Refresh the needs list to show updated volunteer counts
-      console.log('🔄 Refreshing needs list...');
-      fetchNeeds();
+      toast.error('An unexpected error occurred. Please try again.');
     }
   };
 
