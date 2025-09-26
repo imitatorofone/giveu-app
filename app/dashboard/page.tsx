@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { 
   Calendar, Clock, MapPin, Users, User, Bell, 
-  Heart, CalendarDays, Plus, UserCircle, MessageCircle, AlertCircle, Check 
+  Heart, CalendarDays, Plus, UserCircle, MessageCircle, AlertCircle, Check, Wrench 
 } from 'lucide-react';
 import { supabaseBrowser as supabase } from '../../lib/supabaseBrowser'; // Use browser client for session persistence
 import { GIFT_CATEGORIES } from '../../constants/giftCategories.js';
@@ -907,6 +907,29 @@ export default function MemberDashboard() {
                 </p>
 
 
+                {/* Skills Section - Matching modal style */}
+                {opportunity.tags && opportunity.tags.length > 0 && (
+                  <div style={{ 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    gap: '8px', 
+                    marginBottom: '12px',
+                    flexWrap: 'wrap'
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <Wrench size={16} color="#6b7280" />
+                      <span style={{ 
+                        color: '#6b7280', 
+                        fontSize: '14px', 
+                        fontWeight: '500', 
+                        fontFamily: quicksandFont 
+                      }}>
+                        Skills needed:
+                      </span>
+                    </div>
+                  </div>
+                )}
+
                 {/* Tags - Dynamic color and checkmarks with Quicksand font */}
                 <div style={{ 
                   display: 'flex', 
@@ -926,7 +949,7 @@ export default function MemberDashboard() {
                           borderRadius: '16px',
                           fontSize: '12px',
                           fontWeight: '500',
-                          fontFamily: 'Quicksand, sans-serif',
+                          fontFamily: quicksandFont,
                           ...styles
                         }}
                       >
@@ -962,6 +985,7 @@ export default function MemberDashboard() {
                         borderRadius: '8px',
                         border: '2px solid #20c997',
                         fontWeight: '600',
+                        fontFamily: quicksandFont,
                         cursor: isCommitted ? 'default' : 'pointer',
                         fontSize: '15px',
                         transition: 'all 0.2s',

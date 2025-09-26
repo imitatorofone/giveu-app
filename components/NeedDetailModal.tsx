@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { X, MapPin, Calendar, Clock, User, Mail, Heart, Wrench } from 'lucide-react';
+import { X, MapPin, Calendar, Clock, User, Mail, Heart, Wrench, Check } from 'lucide-react';
 import { supabaseBrowser as supabase } from '../lib/supabaseBrowser';
 import toast from 'react-hot-toast';
 
@@ -476,14 +476,14 @@ export default function NeedDetailModal({ needId, onClose, userId }: NeedDetailM
                 style={{
                   flex: 1,
                   padding: '12px 20px',
-                  backgroundColor: isCommitted ? '#f3f4f6' : '#20c997',
-                  color: isCommitted ? '#374151' : 'white',
-                  border: isCommitted ? '1px solid #d1d5db' : 'none',
+                  backgroundColor: isCommitted ? '#20c997' : '#20c997',
+                  color: isCommitted ? 'white' : 'white',
+                  border: isCommitted ? '2px solid #20c997' : 'none',
                   borderRadius: '8px',
                   fontSize: '16px',
                   fontWeight: '600',
                   fontFamily: quicksandFont,
-                  cursor: actionLoading ? 'not-allowed' : 'pointer',
+                  cursor: actionLoading ? 'not-allowed' : (isCommitted ? 'pointer' : 'pointer'),
                   transition: 'all 0.2s ease',
                   opacity: actionLoading ? 0.6 : 1,
                   display: 'flex',
@@ -492,12 +492,12 @@ export default function NeedDetailModal({ needId, onClose, userId }: NeedDetailM
                   gap: '8px'
                 }}
                 onMouseEnter={(e) => {
-                  if (!actionLoading && !isCommitted) {
+                  if (!actionLoading) {
                     e.currentTarget.style.backgroundColor = '#1ba085';
                   }
                 }}
                 onMouseLeave={(e) => {
-                  if (!actionLoading && !isCommitted) {
+                  if (!actionLoading) {
                     e.currentTarget.style.backgroundColor = '#20c997';
                   }
                 }}
@@ -506,8 +506,8 @@ export default function NeedDetailModal({ needId, onClose, userId }: NeedDetailM
                   'Loading...'
                 ) : isCommitted ? (
                   <>
-                    <Heart size={18} fill="currentColor" />
                     You're helping
+                    <Check size={18} />
                   </>
                 ) : (
                   <>

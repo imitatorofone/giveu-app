@@ -9,7 +9,7 @@ using (
     from public.profiles leader
     join public.profiles owner on owner.id = public.needs.created_by
     where leader.id = auth.uid()
-      and leader.org_id = owner.org_id
+      and leader.church_code = owner.church_code
       and leader.role in ('leader','admin')
   )
 )
@@ -19,7 +19,7 @@ with check (
     from public.profiles leader
     join public.profiles owner on owner.id = public.needs.created_by
     where leader.id = auth.uid()
-      and leader.org_id = owner.org_id
+      and leader.church_code = owner.church_code
       and leader.role in ('leader','admin')
   )
 );
@@ -35,7 +35,7 @@ using (
     from public.profiles leader
     join public.profiles owner on owner.id = public.needs.created_by
     where leader.id = auth.uid()
-      and leader.org_id = owner.org_id
+      and leader.church_code = owner.church_code
       and leader.role in ('leader','admin')
   )
 );

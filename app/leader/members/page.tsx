@@ -53,6 +53,14 @@ export default function MembersPage() {
       }
 
       // Load members data - filter by church_code if available
+      console.log('[Members] Starting profiles query...');
+      console.log('[Members] Leader profile data:', {
+        id: profileData.id,
+        church_code: profileData.church_code,
+        role: profileData.role,
+        is_leader: profileData.is_leader
+      });
+      
       let query = supabase.from('profiles').select('*');
       
       // If the leader has a church_code, filter by it
@@ -63,22 +71,45 @@ export default function MembersPage() {
         console.log('[Members] No church_code found for leader, showing all profiles');
       }
       
+      console.log('[Members] Executing Supabase query...');
       const { data: profilesData, error: profilesError } = await query.order('full_name');
 
-      console.log('[Members] Profiles query result:', { profilesData, profilesError });
+      console.log('[Members] Raw Supabase response:', { 
+        data: profilesData, 
+        error: profilesError,
+        hasData: !!profilesData,
+        dataLength: profilesData?.length || 0,
+        hasError: !!profilesError
+      });
+
+      if (profilesError) {
+        console.error('[Members] Supabase query error details:', {
+          message: profilesError.message,
+          details: profilesError.details,
+          hint: profilesError.hint,
+          code: profilesError.code
+        });
+      }
+
       console.log('[Members] Total profiles found:', profilesData?.length || 0);
-      if (profilesData) {
+      if (profilesData && profilesData.length > 0) {
+        console.log('[Members] All profiles details:');
         profilesData.forEach((profile, index) => {
           console.log(`[Members] Profile ${index + 1}:`, {
             id: profile.id,
             full_name: profile.full_name,
             email: profile.email,
             approval_status: profile.approval_status,
-            is_leader: profile.is_leader
+            is_leader: profile.is_leader,
+            church_code: profile.church_code,
+            role: profile.role
           });
         });
+      } else {
+        console.log('[Members] No profiles returned from query');
       }
 
+      console.log('[Members] Setting members state with:', profilesData || []);
       setMembers(profilesData || []);
 
     } catch (error) {
@@ -88,6 +119,14 @@ export default function MembersPage() {
       setLoading(false);
     }
   };
+
+  console.log('[Members] Starting filtering process...');
+  console.log('[Members] Input data:', {
+    totalMembers: members.length,
+    searchTerm,
+    roleFilter,
+    statusFilter
+  });
 
   const filteredMembers = members.filter(member => {
     const matchesSearch = !searchTerm || 
@@ -102,8 +141,11 @@ export default function MembersPage() {
       (statusFilter === 'Pending' && (member.approval_status === 'pending' || member.approval_status === null)) ||
       (statusFilter === 'Active' && (member.approval_status === 'approved' || member.approval_status === 'active'));
     
+    const passes = matchesSearch && matchesRole && matchesStatus;
+    
     console.log('[Members] Filtering member:', {
       name: member.full_name,
+      id: member.id,
       searchTerm,
       roleFilter,
       statusFilter,
@@ -112,16 +154,33 @@ export default function MembersPage() {
       matchesSearch,
       matchesRole,
       matchesStatus,
-      passes: matchesSearch && matchesRole && matchesStatus
+      passes
     });
     
-    return matchesSearch && matchesRole && matchesStatus;
+    return passes;
   });
 
-  console.log('[Members] Filtered members count:', filteredMembers.length);
+  console.log('[Members] Filtering results:', {
+    totalMembers: members.length,
+    filteredCount: filteredMembers.length,
+    searchTerm,
+    roleFilter,
+    statusFilter
+  });
 
-  const pendingMembers = filteredMembers.filter(m => m.approval_status === 'pending' || m.approval_status === null);
-  const activeMembers = filteredMembers.filter(m => m.approval_status === 'approved' || m.approval_status === 'active');
+  // Only separate into pending/active when specific status filter is selected
+  const pendingMembers = statusFilter === 'Pending' ? filteredMembers.filter(m => m.approval_status === 'pending' || m.approval_status === null) : [];
+  const activeMembers = statusFilter === 'Active' ? filteredMembers.filter(m => m.approval_status === 'approved' || m.approval_status === 'active') : [];
+
+  console.log('[Members] Final rendering data:', {
+    statusFilter,
+    filteredMembersCount: filteredMembers.length,
+    pendingMembersCount: pendingMembers.length,
+    activeMembersCount: activeMembers.length,
+    willShowCombinedList: statusFilter === 'All Status',
+    willShowPendingList: statusFilter === 'Pending',
+    willShowActiveList: statusFilter === 'Active'
+  });
 
   const approveMember = async (memberId: string) => {
     try {
@@ -231,8 +290,68 @@ export default function MembersPage() {
 
             {/* Members List */}
             <div className="space-y-8">
-              {/* Pending Members */}
-              {pendingMembers.length > 0 && (
+              {/* Combined List for "All Status" */}
+              {statusFilter === 'All Status' && (
+                <div>
+                  <h2 className="text-lg font-semibold text-gray-900 mb-4">
+                    All Members ({filteredMembers.length})
+                  </h2>
+                  <div className="space-y-3">
+                    {filteredMembers.map((member) => {
+                      const isPending = member.approval_status === 'pending' || member.approval_status === null;
+                      const isActive = member.approval_status === 'approved' || member.approval_status === 'active';
+                      
+                      return (
+                        <div key={member.id} className="bg-white rounded-lg border border-gray-200 p-4">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                              <div className="w-10 h-10 bg-emerald-100 rounded-full flex items-center justify-center">
+                                <span className="text-emerald-600 font-semibold text-sm">
+                                  {getInitials(member.full_name || member.email || 'U')}
+                                </span>
+                              </div>
+                              <div>
+                                <h3 className="font-semibold text-gray-900">{member.full_name}</h3>
+                                <p className={`text-sm ${member.is_leader ? 'text-emerald-600' : 'text-gray-600'}`}>
+                                  {member.is_leader ? 'Leader' : 'Member'}
+                                </p>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-3">
+                              <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+                                isPending 
+                                  ? 'bg-emerald-100 text-emerald-700' 
+                                  : 'bg-emerald-100 text-emerald-700'
+                              }`}>
+                                {isPending ? 'PENDING' : 'ACTIVE'}
+                              </span>
+                              {isPending && (
+                                <>
+                                  <button
+                                    onClick={() => approveMember(member.id)}
+                                    className="px-4 py-2 bg-emerald-500 text-white rounded-lg text-sm font-medium hover:bg-emerald-600 transition-colors"
+                                  >
+                                    Approve
+                                  </button>
+                                  <button
+                                    onClick={() => denyMember(member.id)}
+                                    className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-300 transition-colors"
+                                  >
+                                    Deny
+                                  </button>
+                                </>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Pending Members - Only when "Pending" filter is selected */}
+              {statusFilter === 'Pending' && pendingMembers.length > 0 && (
                 <div>
                   <h2 className="text-lg font-semibold text-gray-900 mb-4">
                     Pending Members ({pendingMembers.length})
@@ -276,8 +395,8 @@ export default function MembersPage() {
                 </div>
               )}
 
-              {/* Active Members */}
-              {activeMembers.length > 0 && (
+              {/* Active Members - Only when "Active" filter is selected */}
+              {statusFilter === 'Active' && activeMembers.length > 0 && (
                 <div>
                   <h2 className="text-lg font-semibold text-gray-900 mb-4">
                     Active Members ({activeMembers.length})
