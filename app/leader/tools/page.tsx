@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { supabaseBrowser as supabase } from '../../../lib/supabaseBrowser';
 import Header from '../../../components/Header';
 import Footer from '../../../components/Footer';
-import { Inbox, Users, UserPlus, MessageSquare, ChevronRight } from 'lucide-react';
+import { Inbox, Users, UserPlus, MessageSquare, ChevronRight, UserCheck } from 'lucide-react';
 
 // Brand typography
 const quicksandFont = 'Quicksand, -apple-system, BlinkMacSystemFont, sans-serif';
@@ -154,6 +154,7 @@ export default function LeaderToolsPage() {
   const { Toast, show } = useToast();
   const [allowed, setAllowed] = useState<boolean | null>(null);
   const [pendingCount, setPendingCount] = useState<number>(0);
+  const [pendingResponsesCount, setPendingResponsesCount] = useState<number>(0);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -177,24 +178,39 @@ export default function LeaderToolsPage() {
         const userIsLeader = isLeader(profile);
         setAllowed(userIsLeader);
 
-        // Only fetch pending count if user is a leader
+        // Only fetch pending counts if user is a leader
         if (userIsLeader) {
+          // Fetch pending needs count
           const { count, error } = await supabase
             .from('needs')
             .select('id', { count: 'exact', head: true })
             .eq('status', 'pending');
 
           if (error) {
-            console.error('Error fetching pending count:', error);
+            console.error('Error fetching pending needs count:', error);
             setPendingCount(0);
           } else {
             setPendingCount(count || 0);
+          }
+
+          // Fetch pending volunteer responses count
+          const { count: responsesCount, error: responsesError } = await supabase
+            .from('opportunity_responses')
+            .select('id', { count: 'exact', head: true })
+            .eq('status', 'pending');
+
+          if (responsesError) {
+            console.error('Error fetching pending responses count:', responsesError);
+            setPendingResponsesCount(0);
+          } else {
+            setPendingResponsesCount(responsesCount || 0);
           }
         }
       } catch (error) {
         console.error('Error in leader tools setup:', error);
         setAllowed(false);
         setPendingCount(0);
+        setPendingResponsesCount(0);
       } finally {
         setLoading(false);
       }
@@ -269,6 +285,16 @@ export default function LeaderToolsPage() {
             subtitle="View and manage your community."
             href="/leader/members"
             ariaLabel="Open Members"
+          />
+
+          {/* Volunteer Responses */}
+          <Row
+            icon={UserCheck}
+            title="Volunteer Responses"
+            subtitle="Review and approve volunteer commitments."
+            badge={pendingResponsesCount > 0 ? { text: `${pendingResponsesCount} pending`, color: 'green' } : undefined}
+            href="/leader/volunteer-responses"
+            ariaLabel="Open Volunteer Responses"
           />
 
           {/* Invite Leaders */}

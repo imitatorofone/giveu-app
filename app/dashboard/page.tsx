@@ -345,10 +345,10 @@ export default function MemberDashboard() {
         if (!session?.user) return;
 
         const { data: commitments } = await supabase
-          .from('commitments')
-          .select('need_id')
+          .from('opportunity_responses')
+          .select('need_id, status')
           .eq('user_id', session.user.id)
-          .eq('status', 'confirmed');
+          .in('status', ['pending', 'accepted']);
 
         if (commitments) {
           setUserCommitments(commitments.map(c => c.need_id));
@@ -501,10 +501,10 @@ export default function MemberDashboard() {
 
     console.log('✅ User session found:', session.user.id);
 
-    // Check if already committed
+    // Check if already submitted a response
     const { data: existing, error: checkError } = await supabase
-      .from('commitments')
-      .select('id')
+      .from('opportunity_responses')
+      .select('id, status')
       .eq('need_id', needId)
       .eq('user_id', session.user.id)
       .maybeSingle();
@@ -516,35 +516,54 @@ export default function MemberDashboard() {
     }
 
     if (existing) {
-      toast('You\'re already signed up for this!', {
-        icon: 'ℹ️',
-        style: {
-          background: '#3b82f6',
-          color: 'white',
-        },
-      });
+      if (existing.status === 'pending') {
+        toast('Your volunteer response is pending leader approval!', {
+          icon: '⏳',
+          style: {
+            background: '#f59e0b',
+            color: 'white',
+          },
+        });
+      } else if (existing.status === 'accepted') {
+        toast('You\'re already approved to help with this need!', {
+          icon: '✅',
+          style: {
+            background: '#10b981',
+            color: 'white',
+          },
+        });
+      } else if (existing.status === 'declined') {
+        toast('Your volunteer response was declined. Please contact a leader if you have questions.', {
+          icon: '❌',
+          style: {
+            background: '#ef4444',
+            color: 'white',
+          },
+        });
+      }
       return;
     }
 
-    // Create commitment
-    console.log('📝 Creating commitment for need:', needId, 'user:', session.user.id);
+    // Create opportunity response (pending leader approval)
+    console.log('📝 Creating opportunity response for need:', needId, 'user:', session.user.id);
     
     const { error } = await supabase
-      .from('commitments')
+      .from('opportunity_responses')
       .insert({
         need_id: needId,
         user_id: session.user.id,
-        status: 'confirmed'
+        response_type: 'volunteer',
+        status: 'pending'
       });
 
     if (error) {
-      console.error('❌ Commitment error:', error);
-      toast.error('Failed to sign up');
+      console.error('❌ Opportunity response error:', error);
+      toast.error('Failed to submit volunteer response');
     } else {
-      console.log('✅ Successfully committed to need');
-      toast.success('You\'re signed up to help!');
+      console.log('✅ Successfully submitted volunteer response');
+      toast.success('Your volunteer response has been submitted for leader approval!');
       
-      // Add the new commitment to state immediately for UI feedback
+      // Add the new response to state immediately for UI feedback
       setUserCommitments(prev => [...prev, needId]);
       
       // Update volunteer count via RPC

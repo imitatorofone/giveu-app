@@ -168,18 +168,17 @@ export default function MembersPage() {
     statusFilter
   });
 
-  // Only separate into pending/active when specific status filter is selected
-  const pendingMembers = statusFilter === 'Pending' ? filteredMembers.filter(m => m.approval_status === 'pending' || m.approval_status === null) : [];
-  const activeMembers = statusFilter === 'Active' ? filteredMembers.filter(m => m.approval_status === 'approved' || m.approval_status === 'active') : [];
+  // Always separate into pending and active members
+  const pendingMembers = filteredMembers.filter(m => m.approval_status === 'pending' || m.approval_status === null);
+  const activeMembers = filteredMembers.filter(m => m.approval_status === 'approved' || m.approval_status === 'active');
 
   console.log('[Members] Final rendering data:', {
     statusFilter,
     filteredMembersCount: filteredMembers.length,
     pendingMembersCount: pendingMembers.length,
     activeMembersCount: activeMembers.length,
-    willShowCombinedList: statusFilter === 'All Status',
-    willShowPendingList: statusFilter === 'Pending',
-    willShowActiveList: statusFilter === 'Active'
+    willShowPendingSection: pendingMembers.length > 0,
+    willShowActiveSection: activeMembers.length > 0
   });
 
   const approveMember = async (memberId: string) => {
@@ -290,68 +289,8 @@ export default function MembersPage() {
 
             {/* Members List */}
             <div className="space-y-8">
-              {/* Combined List for "All Status" */}
-              {statusFilter === 'All Status' && (
-                <div>
-                  <h2 className="text-lg font-semibold text-gray-900 mb-4">
-                    All Members ({filteredMembers.length})
-                  </h2>
-                  <div className="space-y-3">
-                    {filteredMembers.map((member) => {
-                      const isPending = member.approval_status === 'pending' || member.approval_status === null;
-                      const isActive = member.approval_status === 'approved' || member.approval_status === 'active';
-                      
-                      return (
-                        <div key={member.id} className="bg-white rounded-lg border border-gray-200 p-4">
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-3">
-                              <div className="w-10 h-10 bg-emerald-100 rounded-full flex items-center justify-center">
-                                <span className="text-emerald-600 font-semibold text-sm">
-                                  {getInitials(member.full_name || member.email || 'U')}
-                                </span>
-                              </div>
-                              <div>
-                                <h3 className="font-semibold text-gray-900">{member.full_name}</h3>
-                                <p className={`text-sm ${member.is_leader ? 'text-emerald-600' : 'text-gray-600'}`}>
-                                  {member.is_leader ? 'Leader' : 'Member'}
-                                </p>
-                              </div>
-                            </div>
-                            <div className="flex items-center gap-3">
-                              <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                                isPending 
-                                  ? 'bg-emerald-100 text-emerald-700' 
-                                  : 'bg-emerald-100 text-emerald-700'
-                              }`}>
-                                {isPending ? 'PENDING' : 'ACTIVE'}
-                              </span>
-                              {isPending && (
-                                <>
-                                  <button
-                                    onClick={() => approveMember(member.id)}
-                                    className="px-4 py-2 bg-emerald-500 text-white rounded-lg text-sm font-medium hover:bg-emerald-600 transition-colors"
-                                  >
-                                    Approve
-                                  </button>
-                                  <button
-                                    onClick={() => denyMember(member.id)}
-                                    className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-300 transition-colors"
-                                  >
-                                    Deny
-                                  </button>
-                                </>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-
-              {/* Pending Members - Only when "Pending" filter is selected */}
-              {statusFilter === 'Pending' && pendingMembers.length > 0 && (
+              {/* Pending Members */}
+              {pendingMembers.length > 0 && (
                 <div>
                   <h2 className="text-lg font-semibold text-gray-900 mb-4">
                     Pending Members ({pendingMembers.length})
@@ -395,8 +334,8 @@ export default function MembersPage() {
                 </div>
               )}
 
-              {/* Active Members - Only when "Active" filter is selected */}
-              {statusFilter === 'Active' && activeMembers.length > 0 && (
+              {/* Active Members */}
+              {activeMembers.length > 0 && (
                 <div>
                   <h2 className="text-lg font-semibold text-gray-900 mb-4">
                     Active Members ({activeMembers.length})

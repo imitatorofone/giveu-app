@@ -1,0 +1,63 @@
+-- Create opportunity_responses table for leader response management
+-- Run this in your Supabase SQL editor
+
+CREATE TABLE IF NOT EXISTS opportunity_responses (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  need_id UUID REFERENCES needs(id) ON DELETE CASCADE,
+  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+  response_type TEXT DEFAULT 'volunteer', -- 'volunteer', 'decline', etc.
+  status TEXT DEFAULT 'pending', -- 'pending', 'accepted', 'declined'
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  leader_notified BOOLEAN DEFAULT FALSE,
+  leader_approved_at TIMESTAMP WITH TIME ZONE,
+  leader_approved_by UUID REFERENCES auth.users(id),
+  UNIQUE(need_id, user_id)
+);
+
+-- Add indexes for performance
+CREATE INDEX IF NOT EXISTS idx_opportunity_responses_need_id ON opportunity_responses(need_id);
+CREATE INDEX IF NOT EXISTS idx_opportunity_responses_user_id ON opportunity_responses(user_id);
+CREATE INDEX IF NOT EXISTS idx_opportunity_responses_status ON opportunity_responses(status);
+CREATE INDEX IF NOT EXISTS idx_opportunity_responses_created_at ON opportunity_responses(created_at);
+
+-- RLS Policies for opportunity_responses
+ALTER TABLE opportunity_responses ENABLE ROW LEVEL SECURITY;
+
+-- Users can insert their own responses
+CREATE POLICY "Users can insert their own responses" ON opportunity_responses
+FOR INSERT TO authenticated
+WITH CHECK (auth.uid() = user_id);
+
+-- Users can view their own responses
+CREATE POLICY "Users can view their own responses" ON opportunity_responses
+FOR SELECT TO authenticated
+USING (auth.uid() = user_id);
+
+-- Leaders can view all responses (simplified for MVP)
+CREATE POLICY "Leaders can view all responses" ON opportunity_responses
+FOR SELECT TO authenticated
+USING (
+  EXISTS (
+    SELECT 1 FROM public.profiles leader
+    WHERE leader.id = auth.uid()
+      AND leader.role IN ('leader', 'admin')
+  )
+);
+
+-- Leaders can update all responses (simplified for MVP)
+CREATE POLICY "Leaders can update all responses" ON opportunity_responses
+FOR UPDATE TO authenticated
+USING (
+  EXISTS (
+    SELECT 1 FROM public.profiles leader
+    WHERE leader.id = auth.uid()
+      AND leader.role IN ('leader', 'admin')
+  )
+)
+WITH CHECK (
+  EXISTS (
+    SELECT 1 FROM public.profiles leader
+    WHERE leader.id = auth.uid()
+      AND leader.role IN ('leader', 'admin')
+  )
+);
