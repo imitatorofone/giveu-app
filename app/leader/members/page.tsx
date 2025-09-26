@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { supabaseBrowser as supabase } from '@/lib/supabaseBrowser';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
+import { ArrowLeft } from 'lucide-react';
 
 export default function MembersPage() {
   const [loading, setLoading] = useState(true);
@@ -234,7 +235,19 @@ export default function MembersPage() {
           <div className="p-6 space-y-4">
             
             {/* Page Header */}
-            <h1 className="text-2xl font-bold text-gray-900 mb-6">Members (Your Church)</h1>
+            <div className="mb-6">
+              <div className="flex items-center gap-4 mb-4">
+                <button
+                  onClick={() => router.push('/leader/tools')}
+                  className="flex items-center gap-2 px-3 py-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+                  title="Back to Leadership Tools"
+                >
+                  <ArrowLeft className="w-4 h-4" />
+                  <span className="text-sm font-medium">Back to Tools</span>
+                </button>
+              </div>
+              <h1 className="text-2xl font-bold text-gray-900">Members (Your Church)</h1>
+            </div>
 
             {/* Search Bar */}
             <div className="mb-6">

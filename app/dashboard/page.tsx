@@ -525,7 +525,7 @@ export default function MemberDashboard() {
           },
         });
       } else if (existing.status === 'accepted') {
-        toast('You\'re already approved to help with this need!', {
+        toast('You\'re already signed up to help with this need!', {
           icon: '✅',
           style: {
             background: '#10b981',
@@ -544,7 +544,7 @@ export default function MemberDashboard() {
       return;
     }
 
-    // Create opportunity response (pending leader approval)
+    // Create opportunity response (auto-accepted)
     console.log('📝 Creating opportunity response for need:', needId, 'user:', session.user.id);
     
     const { error } = await supabase
@@ -553,7 +553,7 @@ export default function MemberDashboard() {
         need_id: needId,
         user_id: session.user.id,
         response_type: 'volunteer',
-        status: 'pending'
+        status: 'accepted'
       });
 
     if (error) {
@@ -561,7 +561,7 @@ export default function MemberDashboard() {
       toast.error('Failed to submit volunteer response');
     } else {
       console.log('✅ Successfully submitted volunteer response');
-      toast.success('Your volunteer response has been submitted for leader approval!');
+      toast.success('You\'re signed up to help! Added to your commitments.');
       
       // Add the new response to state immediately for UI feedback
       setUserCommitments(prev => [...prev, needId]);

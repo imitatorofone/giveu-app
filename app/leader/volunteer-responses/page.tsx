@@ -7,7 +7,7 @@ import Header from '../../../components/Header';
 import Footer from '../../../components/Footer';
 import { 
   UserCheck, Clock, CheckCircle, XCircle, Filter, 
-  Calendar, MapPin, Users, Mail, Phone, Wrench 
+  Calendar, MapPin, Users, Mail, Phone, Wrench, ArrowLeft 
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -18,8 +18,9 @@ interface VolunteerResponse {
   id: string;
   need_id: string;
   user_id: string;
-  status: 'pending' | 'accepted' | 'declined';
+  status: 'pending' | 'accepted' | 'declined' | 'cancelled';
   created_at: string;
+  cancelled_at?: string;
   need: {
     id: string;
     title: string;
@@ -44,7 +45,7 @@ export default function VolunteerResponsesPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [responses, setResponses] = useState<VolunteerResponse[]>([]);
-  const [filter, setFilter] = useState<'all' | 'pending' | 'accepted' | 'declined'>('all');
+  const [filter, setFilter] = useState<'all' | 'pending' | 'accepted' | 'declined' | 'cancelled'>('all');
   const [actingId, setActingId] = useState<string | null>(null);
   const [tableError, setTableError] = useState<boolean>(false);
 
@@ -116,10 +117,19 @@ export default function VolunteerResponsesPage() {
       console.log('[VolunteerResponses] Table exists, proceeding with simplified query...');
       
       // First, get the opportunity responses
+      console.log('🔍 [Leader Debug] Fetching all volunteer responses...');
+      
       const { data: responsesData, error: responsesError } = await supabase
         .from('opportunity_responses')
-        .select('id, need_id, user_id, status, created_at')
+        .select('id, need_id, user_id, status, created_at, cancelled_at')
         .order('created_at', { ascending: false });
+
+      console.log('🔍 [Leader Debug] Raw responses query result:', {
+        responsesData,
+        responsesError,
+        count: responsesData?.length || 0,
+        statuses: responsesData?.map(r => ({ id: r.id, status: r.status, cancelled_at: r.cancelled_at })) || []
+      });
 
       if (responsesError) {
         console.error('[VolunteerResponses] Error loading responses:', responsesError);
@@ -351,6 +361,7 @@ export default function VolunteerResponsesPage() {
       case 'pending': return 'bg-yellow-100 text-yellow-800';
       case 'accepted': return 'bg-green-100 text-green-800';
       case 'declined': return 'bg-red-100 text-red-800';
+      case 'cancelled': return 'bg-red-100 text-red-800';
       default: return 'bg-gray-100 text-gray-800';
     }
   };
@@ -360,6 +371,7 @@ export default function VolunteerResponsesPage() {
       case 'pending': return <Clock className="w-4 h-4" />;
       case 'accepted': return <CheckCircle className="w-4 h-4" />;
       case 'declined': return <XCircle className="w-4 h-4" />;
+      case 'cancelled': return <XCircle className="w-4 h-4" />;
       default: return <Clock className="w-4 h-4" />;
     }
   };
@@ -389,8 +401,18 @@ export default function VolunteerResponsesPage() {
           <div className="p-6 space-y-6">
             {/* Page Header */}
             <div className="mb-6">
+              <div className="flex items-center gap-4 mb-4">
+                <button
+                  onClick={() => router.push('/leader/tools')}
+                  className="flex items-center gap-2 px-3 py-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+                  title="Back to Leadership Tools"
+                >
+                  <ArrowLeft className="w-4 h-4" />
+                  <span className="text-sm font-medium">Back to Tools</span>
+                </button>
+              </div>
               <h1 className="text-2xl font-bold text-gray-900 mb-2">Volunteer Responses</h1>
-              <p className="text-gray-600">Review and approve volunteer commitments to community needs.</p>
+              <p className="text-gray-600">Monitor volunteer commitments to community needs. New volunteers are auto-accepted but can be managed here.</p>
             </div>
 
             {/* Filters */}
@@ -401,7 +423,8 @@ export default function VolunteerResponsesPage() {
                   { key: 'all', label: 'All Responses' },
                   { key: 'pending', label: 'Pending' },
                   { key: 'accepted', label: 'Accepted' },
-                  { key: 'declined', label: 'Declined' }
+                  { key: 'declined', label: 'Declined' },
+                  { key: 'cancelled', label: 'Cancelled' }
                 ].map((filterOption) => (
                   <button
                     key={filterOption.key}
@@ -413,6 +436,11 @@ export default function VolunteerResponsesPage() {
                     }`}
                   >
                     {filterOption.label}
+                    {filterOption.key === 'cancelled' && responses.filter(r => r.status === 'cancelled').length > 0 && (
+                      <span className="ml-2 px-2 py-0.5 bg-red-100 text-red-800 text-xs rounded-full">
+                        {responses.filter(r => r.status === 'cancelled').length}
+                      </span>
+                    )}
                   </button>
                 ))}
               </div>
@@ -462,7 +490,7 @@ export default function VolunteerResponsesPage() {
                   </h3>
                   <p className="text-gray-600">
                     {filter === 'all' 
-                      ? 'Volunteer responses will appear here when members commit to helping with needs.'
+                      ? 'Volunteer responses will appear here when members sign up to help with needs.'
                       : `No responses with ${filter} status found.`
                     }
                   </p>
@@ -475,7 +503,9 @@ export default function VolunteerResponsesPage() {
                   );
 
                   return (
-                    <div key={response.id} className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm">
+                    <div key={response.id} className={`rounded-lg border border-gray-200 p-6 shadow-sm ${
+                      response.status === 'cancelled' ? 'bg-gray-50' : 'bg-white'
+                    }`}>
                       <div className="flex items-start justify-between mb-4">
                         <div className="flex items-center gap-3">
                           <div className="w-12 h-12 bg-[#20c997] rounded-full flex items-center justify-center">
@@ -488,7 +518,10 @@ export default function VolunteerResponsesPage() {
                               {response.volunteer.full_name || 'Volunteer'}
                             </h3>
                             <p className="text-sm text-gray-600">
-                              Responded {formatDate(response.created_at)}
+                              {response.status === 'cancelled' && response.cancelled_at
+                                ? `Cancelled on ${formatDate(response.cancelled_at)}`
+                                : `Responded ${formatDate(response.created_at)}`
+                              }
                             </p>
                           </div>
                         </div>
@@ -498,6 +531,11 @@ export default function VolunteerResponsesPage() {
                             {getStatusIcon(response.status)}
                             {response.status.charAt(0).toUpperCase() + response.status.slice(1)}
                           </span>
+                          {response.status === 'accepted' && (
+                            <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                              Auto-accepted
+                            </span>
+                          )}
                         </div>
                       </div>
 

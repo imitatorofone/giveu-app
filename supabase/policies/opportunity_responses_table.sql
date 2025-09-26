@@ -6,11 +6,12 @@ CREATE TABLE IF NOT EXISTS opportunity_responses (
   need_id UUID REFERENCES needs(id) ON DELETE CASCADE,
   user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
   response_type TEXT DEFAULT 'volunteer', -- 'volunteer', 'decline', etc.
-  status TEXT DEFAULT 'pending', -- 'pending', 'accepted', 'declined'
+  status TEXT DEFAULT 'pending', -- 'pending', 'accepted', 'declined', 'cancelled'
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   leader_notified BOOLEAN DEFAULT FALSE,
   leader_approved_at TIMESTAMP WITH TIME ZONE,
   leader_approved_by UUID REFERENCES auth.users(id),
+  cancelled_at TIMESTAMP WITH TIME ZONE DEFAULT NULL,
   UNIQUE(need_id, user_id)
 );
 
@@ -19,6 +20,10 @@ CREATE INDEX IF NOT EXISTS idx_opportunity_responses_need_id ON opportunity_resp
 CREATE INDEX IF NOT EXISTS idx_opportunity_responses_user_id ON opportunity_responses(user_id);
 CREATE INDEX IF NOT EXISTS idx_opportunity_responses_status ON opportunity_responses(status);
 CREATE INDEX IF NOT EXISTS idx_opportunity_responses_created_at ON opportunity_responses(created_at);
+
+-- Add cancelled_at field for existing databases (if not already present)
+ALTER TABLE opportunity_responses 
+ADD COLUMN IF NOT EXISTS cancelled_at TIMESTAMP WITH TIME ZONE DEFAULT NULL;
 
 -- RLS Policies for opportunity_responses
 ALTER TABLE opportunity_responses ENABLE ROW LEVEL SECURITY;
@@ -32,6 +37,12 @@ WITH CHECK (auth.uid() = user_id);
 CREATE POLICY "Users can view their own responses" ON opportunity_responses
 FOR SELECT TO authenticated
 USING (auth.uid() = user_id);
+
+-- Users can update their own responses (for cancellation)
+CREATE POLICY "Users can update their own responses" ON opportunity_responses
+FOR UPDATE TO authenticated
+USING (auth.uid() = user_id)
+WITH CHECK (auth.uid() = user_id);
 
 -- Leaders can view all responses (simplified for MVP)
 CREATE POLICY "Leaders can view all responses" ON opportunity_responses
