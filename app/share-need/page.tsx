@@ -5,6 +5,7 @@ import { supabaseBrowser as supabase } from '../../lib/supabaseBrowser';
 import { useRouter } from 'next/navigation';
 import { Icon } from '../../icons/index';
 import { ArrowLeft, MapPin, Users, Calendar, Clock, AlertCircle, CheckCircle } from 'lucide-react';
+import { createNotification } from '../../lib/notificationHelper';
 
 const primaryGiftings = [
   { id: 'hands-on', name: 'Hands-On Skills', skills: ['Carpentry', 'Repairs', 'Gardening', 'Sewing', 'Cooking', 'Decorating', 'Setup/Tear-down'] },
@@ -200,6 +201,47 @@ export default function ShareNeedScreen() {
       console.log('[ShareNeed] Supabase insert result:', { data: insertData, error });
       if (insertData && insertData.length > 0) {
         console.log('[ShareNeed] Inserted need details:', insertData[0]);
+        
+        // Send notifications to leaders if this is a new need submission
+        if (insertData[0] && !error) {
+          console.log('[ShareNeed] Need created, sending notifications to leaders...');
+          
+          // Get user profile to get church_code
+          const { data: userProfile } = await supabase
+            .from('profiles')
+            .select('church_code, full_name')
+            .eq('id', user.id)
+            .single();
+          
+          if (userProfile?.church_code) {
+            // Get all leaders in the church
+            const { data: leaders } = await supabase
+              .from('profiles')
+              .select('id')
+              .eq('church_code', userProfile.church_code)
+              .eq('role', 'leader')
+              .eq('is_leader', true);
+
+            // Send notification to each leader
+            if (leaders && leaders.length > 0) {
+              for (const leader of leaders) {
+                await createNotification({
+                  userId: leader.id,
+                  eventType: 'need.submitted',
+                  eventData: {
+                    need_id: insertData[0].id,
+                    submitter_name: userProfile.full_name || user.email,
+                    submitter_id: user.id,
+                    title: insertData[0].title,
+                    city: insertData[0].location,
+                    path: '/leader/pending-needs'
+                  }
+                });
+              }
+              console.log(`[ShareNeed] Sent notifications to ${leaders.length} leaders`);
+            }
+          }
+        }
       }
 
       // If needs table doesn't exist, fall back to a simple approach
