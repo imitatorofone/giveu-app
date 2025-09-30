@@ -12,6 +12,8 @@
     "restore:feedback": "node scripts/restore-feedback.mjs"
   },
   "dependencies": {
+    "@knocklabs/client": "^0.18.4",
+    "@knocklabs/node": "^1.18.0",
     "@supabase/supabase-js": "^2.57.4",
     "date-fns": "^4.1.0",
     "dotenv": "^17.2.2",

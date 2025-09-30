@@ -547,20 +547,49 @@ export default function MemberDashboard() {
     // Create opportunity response (auto-accepted)
     console.log('📝 Creating opportunity response for need:', needId, 'user:', session.user.id);
     
-    const { error } = await supabase
+    console.log('🔍 [Debug] Attempting to insert opportunity response:', {
+      need_id: needId,
+      user_id: session.user.id,
+      response_type: 'volunteer',
+      status: 'accepted'
+    });
+
+    const { data, error } = await supabase
       .from('opportunity_responses')
       .insert({
         need_id: needId,
         user_id: session.user.id,
         response_type: 'volunteer',
         status: 'accepted'
-      });
+      })
+      .select();
 
     if (error) {
       console.error('❌ Opportunity response error:', error);
-      toast.error('Failed to submit volunteer response');
+      console.error('❌ Error details:', {
+        message: error.message,
+        code: error.code,
+        details: error.details,
+        hint: error.hint,
+        fullError: JSON.stringify(error, null, 2)
+      });
+      
+      // Try to get more info about the table
+      console.log('🔍 Checking if opportunity_responses table exists...');
+      const { data: tableCheck, error: tableError } = await supabase
+        .from('opportunity_responses')
+        .select('*')
+        .limit(1);
+      
+      if (tableError) {
+        console.error('❌ Table check error:', tableError);
+        toast.error('Database table not found. Please contact support.');
+      } else {
+        console.log('✅ Table exists, but insert failed');
+        toast.error('Failed to submit volunteer response');
+      }
     } else {
-      console.log('✅ Successfully submitted volunteer response');
+      console.log('✅ Successfully submitted volunteer response:', data);
       toast.success('You\'re signed up to help! Added to your commitments.');
       
       // Add the new response to state immediately for UI feedback

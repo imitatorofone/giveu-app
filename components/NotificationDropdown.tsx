@@ -1,246 +1,128 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
-import { Bell, X, Check } from 'lucide-react';
-import { supabaseBrowser as supabase } from '../lib/supabaseBrowser';
-import { formatDistanceToNow } from 'date-fns';
+import { Bell } from 'lucide-react';
+import { useState, useRef, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { useNotifications } from '@/app/hooks/useNotifications';
 
-interface Notification {
-  id: string;
-  title: string;
-  message: string;
-  related_need_id: string | null;
-  related_response_id: string | null;
-  is_read: boolean;
-  created_at: string;
-}
-
-interface NotificationDropdownProps {
-  userId: string;
-}
-
-export default function NotificationDropdown({ userId }: NotificationDropdownProps) {
-  const [notifications, setNotifications] = useState<Notification[]>([]);
+export default function NotificationDropdown() {
   const [isOpen, setIsOpen] = useState(false);
-  const [loading, setLoading] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
-
-  // Fetch notifications
-  const fetchNotifications = async () => {
-    if (!userId) return;
-    
-    setLoading(true);
-    try {
-      const { data, error } = await supabase
-        .from('notifications')
-        .select('*')
-        .eq('user_id', userId)
-        .order('created_at', { ascending: false })
-        .limit(20);
-
-      if (error) {
-        console.error('Error fetching notifications:', error);
-        return;
-      }
-
-      setNotifications(data || []);
-    } catch (error) {
-      console.error('Error fetching notifications:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Mark notification as read
-  const markAsRead = async (notificationId: string) => {
-    try {
-      const { error } = await supabase
-        .from('notifications')
-        .update({ is_read: true })
-        .eq('id', notificationId);
-
-      if (error) {
-        console.error('Error marking notification as read:', error);
-        return;
-      }
-
-      // Update local state
-      setNotifications(prev => 
-        prev.map(notif => 
-          notif.id === notificationId 
-            ? { ...notif, is_read: true }
-            : notif
-        )
-      );
-    } catch (error) {
-      console.error('Error marking notification as read:', error);
-    }
-  };
-
-  // Mark all notifications as read
-  const markAllAsRead = async () => {
-    const unreadIds = notifications
-      .filter(n => !n.is_read)
-      .map(n => n.id);
-
-    if (unreadIds.length === 0) return;
-
-    try {
-      const { error } = await supabase
-        .from('notifications')
-        .update({ is_read: true })
-        .in('id', unreadIds);
-
-      if (error) {
-        console.error('Error marking all notifications as read:', error);
-        return;
-      }
-
-      // Update local state
-      setNotifications(prev => 
-        prev.map(notif => ({ ...notif, is_read: true }))
-      );
-    } catch (error) {
-      console.error('Error marking all notifications as read:', error);
-    }
-  };
-
-  // Handle notification click
-  const handleNotificationClick = (notification: Notification) => {
-    markAsRead(notification.id);
-    
-    // Navigate to volunteer responses page if it's a volunteer signup notification
-    if (notification.related_response_id) {
-      window.location.href = '/leader/volunteer-responses';
-    }
-  };
+  const router = useRouter();
+  
+  const { notifications, unreadCount, isLoading, markAsRead } = useNotifications();
 
   // Close dropdown when clicking outside
   useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
+    function handleClickOutside(event: MouseEvent) {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
         setIsOpen(false);
       }
-    };
-
+    }
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Fetch notifications when component mounts or userId changes
-  useEffect(() => {
-    fetchNotifications();
-  }, [userId]);
+  const handleNotificationClick = async (notification: any) => {
+    console.log('🔔 Notification clicked:', notification);
+    console.log('🔔 Path to navigate:', notification.event_data?.path);
+    
+    // Mark as read
+    if (!notification.read_at) {
+      await markAsRead(notification.id);
+    }
 
-  // Calculate unread count
-  const unreadCount = notifications.filter(n => !n.is_read).length;
+    // Navigate to the path specified in event_data
+    if (notification.event_data?.path) {
+      router.push(notification.event_data.path);
+      setIsOpen(false);
+    }
+  };
+
+  const getNotificationMessage = (notification: any) => {
+    const { event_type, event_data } = notification;
+
+    switch (event_type) {
+      case 'need.matches_gifting':
+        return `New opportunity: ${event_data.title}`;
+      case 'volunteer.signed_up':
+        return `${event_data.volunteer_name} signed up for ${event_data.title}`;
+      case 'member.join_request':
+        return `${event_data.member_name} requested to join your church`;
+      case 'need.submitted':
+        return `New need submitted: ${event_data.title || 'Unknown'}`;
+      case 'need.approved':
+        return `Your need "${event_data.title}" was approved`;
+      default:
+        return 'New notification';
+    }
+  };
+
+  const getTimeAgo = (dateString: string) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const seconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+
+    if (seconds < 60) return 'Just now';
+    if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
+    if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`;
+    return `${Math.floor(seconds / 86400)}d ago`;
+  };
 
   return (
     <div className="relative" ref={dropdownRef}>
       {/* Bell Icon with Badge */}
       <button
-        onClick={() => {
-          setIsOpen(!isOpen);
-          if (!isOpen) {
-            fetchNotifications();
-          }
-        }}
-        className="relative p-2 hover:bg-gray-100 rounded-lg transition-colors"
-        style={{ 
-          background: 'none',
-          border: 'none',
-          cursor: 'pointer'
-        }}
+        onClick={() => setIsOpen(!isOpen)}
+        className="relative p-2 text-gray-600 hover:text-gray-900 transition-colors"
+        aria-label="Notifications"
       >
-        <Bell size={20} color="#64748b" />
+        <Bell className="h-6 w-6" />
         {unreadCount > 0 && (
-          <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-medium">
-            {unreadCount > 99 ? '99+' : unreadCount}
+          <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
+            {unreadCount > 9 ? '9+' : unreadCount}
           </span>
         )}
       </button>
 
       {/* Dropdown */}
       {isOpen && (
-        <div className="absolute right-0 top-full mt-2 w-80 bg-white border border-gray-200 rounded-lg shadow-lg z-50">
-          {/* Header */}
-          <div className="flex items-center justify-between p-4 border-b border-gray-200">
+        <div className="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-lg border border-gray-200 z-50 max-h-96 overflow-y-auto">
+          <div className="p-4 border-b border-gray-200">
             <h3 className="font-semibold text-gray-900">Notifications</h3>
-            <div className="flex items-center gap-2">
-              {unreadCount > 0 && (
-                <button
-                  onClick={markAllAsRead}
-                  className="text-xs text-blue-600 hover:text-blue-800 font-medium"
-                >
-                  Mark all read
-                </button>
-              )}
-              <button
-                onClick={() => setIsOpen(false)}
-                className="p-1 hover:bg-gray-100 rounded"
-              >
-                <X size={16} color="#64748b" />
-              </button>
-            </div>
           </div>
 
-          {/* Notifications List */}
-          <div className="max-h-96 overflow-y-auto">
-            {loading ? (
-              <div className="p-4 text-center text-gray-500">
-                Loading notifications...
-              </div>
-            ) : notifications.length === 0 ? (
-              <div className="p-4 text-center text-gray-500">
-                No notifications yet
-              </div>
-            ) : (
-              notifications.map((notification) => (
-                <div
+          {isLoading ? (
+            <div className="p-4 text-center text-gray-500">Loading...</div>
+          ) : notifications.length === 0 ? (
+            <div className="p-4 text-center text-gray-500">
+              No notifications yet
+            </div>
+          ) : (
+            <div className="divide-y divide-gray-100">
+              {notifications.map((notification) => (
+                <button
                   key={notification.id}
                   onClick={() => handleNotificationClick(notification)}
-                  className={`p-4 border-b border-gray-100 cursor-pointer hover:bg-gray-50 transition-colors ${
-                    !notification.is_read ? 'bg-blue-50' : ''
+                  className={`w-full text-left p-4 hover:bg-gray-50 transition-colors ${
+                    !notification.read_at ? 'bg-blue-50' : ''
                   }`}
                 >
-                  <div className="flex items-start gap-3">
-                    <div className={`w-2 h-2 rounded-full mt-2 flex-shrink-0 ${
-                      !notification.is_read ? 'bg-blue-500' : 'bg-gray-300'
-                    }`} />
-                    <div className="flex-1 min-w-0">
-                      <h4 className="font-medium text-gray-900 text-sm">
-                        {notification.title}
-                      </h4>
-                      <p className="text-gray-600 text-sm mt-1">
-                        {notification.message}
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <p className="text-sm text-gray-900 font-medium">
+                        {getNotificationMessage(notification)}
                       </p>
-                      <p className="text-xs text-gray-400 mt-2">
-                        {formatDistanceToNow(new Date(notification.created_at), { addSuffix: true })}
+                      <p className="text-xs text-gray-500 mt-1">
+                        {getTimeAgo(notification.created_at)}
                       </p>
                     </div>
-                    {!notification.is_read && (
-                      <div className="flex-shrink-0">
-                        <div className="w-2 h-2 bg-blue-500 rounded-full" />
-                      </div>
+                    {!notification.read_at && (
+                      <span className="ml-2 h-2 w-2 bg-blue-500 rounded-full flex-shrink-0 mt-1.5" />
                     )}
                   </div>
-                </div>
-              ))
-            )}
-          </div>
-
-          {/* Footer */}
-          {notifications.length > 0 && (
-            <div className="p-3 border-t border-gray-200 text-center">
-              <button
-                onClick={() => {
-                  setIsOpen(false);
-                  window.location.href = '/leader/volunteer-responses';
-                }}
-                className="text-sm text-blue-600 hover:text-blue-800 font-medium"
-              >
-                View all responses
-              </button>
+                </button>
+              ))}
             </div>
           )}
         </div>

@@ -60,8 +60,8 @@ export default function Header() {
         </div>
         
         <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-          {userId && isLeader && (
-            <NotificationDropdown userId={userId} />
+          {userId && (
+            <NotificationDropdown />
           )}
         </div>
       </div>
