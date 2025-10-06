@@ -1,3 +1,8 @@
+// RESERVED FOR FUTURE PUSH NOTIFICATIONS
+// This endpoint exists but is not currently used for in-app notifications.
+// DIY notifications (Supabase) handle all in-app messaging.
+// This will be activated when we implement push notification delivery via Knock.
+
 import { NextRequest, NextResponse } from 'next/server';
 
 export const runtime = 'nodejs';
