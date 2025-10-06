@@ -49,7 +49,10 @@ export default function NotificationDropdown() {
 
     let text: string;
 
-    if (event_type === "volunteer.signed_up") {
+    if (event_type === "knock_message") {
+      // Handle Knock messages
+      text = evt.title || 'New notification';
+    } else if (event_type === "volunteer.signed_up") {
       const volunteerName = (evt.volunteer_name as string) ?? "A volunteer";
       text = `${volunteerName} signed up for ${needTitle}`;
     } else {

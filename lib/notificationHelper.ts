@@ -32,6 +32,22 @@ export async function createNotification({
   try {
     console.log('🔔 Creating notification:', { userId, eventType, event_data });
     
+    // Check if notification already exists (for volunteer signups)
+    if (eventType === 'volunteer.signed_up' && needId) {
+      const { data: existing } = await supabase
+        .from('notifications')
+        .select('id')
+        .eq('user_id', userId)
+        .eq('event_type', 'volunteer.signed_up')
+        .contains('event_data', { need_id: needId })
+        .maybeSingle();
+
+      if (existing) {
+        console.log('🔔 Notification already exists, skipping');
+        return;
+      }
+    }
+    
     const { error } = await supabase
       .from('notifications')
       .insert({
