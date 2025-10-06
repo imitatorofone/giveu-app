@@ -41,21 +41,38 @@ export default function NotificationDropdown() {
 
   const getNotificationMessage = (notification: any) => {
     const { event_type, event_data } = notification;
+    const evt = event_data ?? {};
+    const needTitle =
+      (evt.need_title as string) ??
+      (evt.title as string) ??
+      "this need";
 
-    switch (event_type) {
-      case 'need.matches_gifting':
-        return `New opportunity: ${event_data.title}`;
-      case 'volunteer.signed_up':
-        return `${event_data.volunteer_name} signed up for ${event_data.title}`;
-      case 'member.join_request':
-        return `${event_data.member_name} requested to join your church`;
-      case 'need.submitted':
-        return `New need submitted: ${event_data.title || 'Unknown'}`;
-      case 'need.approved':
-        return `Your need "${event_data.title}" was approved`;
-      default:
-        return 'New notification';
+    let text: string;
+
+    if (event_type === "volunteer.signed_up") {
+      const volunteerName = (evt.volunteer_name as string) ?? "A volunteer";
+      text = `${volunteerName} signed up for ${needTitle}`;
+    } else {
+      // existing fallback(s) for other event types
+      switch (event_type) {
+        case 'need.matches_gifting':
+          text = `New opportunity: ${needTitle}`;
+          break;
+        case 'member.join_request':
+          text = `${evt.member_name} requested to join your church`;
+          break;
+        case 'need.submitted':
+          text = `New need submitted: ${needTitle}`;
+          break;
+        case 'need.approved':
+          text = `Your need "${needTitle}" was approved`;
+          break;
+        default:
+          text = evt.title ?? event_type;
+      }
     }
+
+    return text;
   };
 
   const getTimeAgo = (dateString: string) => {

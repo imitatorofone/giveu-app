@@ -135,9 +135,19 @@ export default function PendingNeedsPage() {
   const approveNeed = async (needId: string) => {
     setActingId(needId);
     try {
+      // Get the leader's church_code from their profile
+      if (!profile?.church_code) {
+        toast.error('Your profile is missing a church code. Please contact support.');
+        return;
+      }
+
       const { data, error } = await supabase
         .from('needs')
-        .update({ status: 'active', updated_at: new Date().toISOString() })
+        .update({ 
+          status: 'active', 
+          church_code: profile.church_code,  // ADD THIS LINE
+          updated_at: new Date().toISOString() 
+        })
         .eq('id', needId)
         .select('id,status');
 

@@ -1,0 +1,16 @@
+Act as a change auditor. Summarize TODAY'S changes only for the ENGAGE / GiveU app.
+
+Output in this structure:
+
+A) SUMMARY (1–3 sentences)
+
+B) CHANGED FILES (path only)
+- …
+
+C) KEY CHANGES (bullets; functions/components/routes touched)
+
+D) RISKS/REGRESSIONS (if any)
+
+E) NEXT STEPS INFERRED (1–3 bullets)
+
+No extra commentary.

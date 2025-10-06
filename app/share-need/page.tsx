@@ -215,12 +215,8 @@ export default function ShareNeedScreen() {
           
           if (userProfile?.church_code) {
             // Get all leaders in the church
-            const { data: leaders } = await supabase
-              .from('profiles')
-              .select('id')
-              .eq('church_code', userProfile.church_code)
-              .eq('role', 'leader')
-              .eq('is_leader', true);
+            const { data: leaders } = await supabase.from('profiles').select('id').eq('church_code', (insertData[0].church_code ?? userProfile?.church_code ?? null)).eq('is_leader', true).neq('id', insertData[0].created_by);
+            console.log('[ShareNeed] Recipients query result:', leaders);
 
             // Send notification to each leader
             if (leaders && leaders.length > 0) {
@@ -228,14 +224,11 @@ export default function ShareNeedScreen() {
                 await createNotification({
                   userId: leader.id,
                   eventType: 'need.submitted',
-                  eventData: {
-                    need_id: insertData[0].id,
-                    submitter_name: userProfile.full_name || user.email,
-                    submitter_id: user.id,
-                    title: insertData[0].title,
-                    city: insertData[0].location,
-                    path: '/leader/pending-needs'
-                  }
+                  title: insertData[0].title,
+                  description: `New need submitted by ${userProfile.full_name || user.email}`,
+                  path: '/leader/pending-needs',
+                  needId: insertData[0].id,
+                  need_title: insertData[0].title
                 });
               }
               console.log(`[ShareNeed] Sent notifications to ${leaders.length} leaders`);

@@ -1,0 +1,44 @@
+Act as a change auditor. Scan the entire workspace and summarize the last 14–30 days of changes RELATING TO THE ENGAGE / GiveU MVP (Auth, Profiles, Needs, Commitments, Leader Tools, Notifications, UI).
+
+Output EXACTLY in this structure (no extra commentary):
+
+1) FILES TOUCHED
+- <path> — <purpose/role in the app>
+- …
+
+2) CODE CHANGES (key functions/routes/components)
+- <file:line(s)> — <function or component> — <what changed / why>
+- …
+
+3) ENV/CONFIG
+- env vars created/modified (names only)
+- providers/config files changed (paths)
+
+4) DB CHANGES
+- tables/columns added/modified
+- policies (RLS) added/changed
+- migrations/scripts (paths)
+
+5) NOTIFICATIONS (Knock & DIY)
+- workflow keys referenced in code
+- helper utilities (e.g., createNotification) and where called
+
+6) AUTH WORKFLOWS
+- sign-in/out code paths, role gates, church_code handling
+
+7) UI/UX CHANGES
+- pages/screens added/modified
+- notable components/patterns
+- navigation changes
+
+8) COMMANDS/ERRORS
+- recurring console/terminal errors with short notes
+- commands/scripts run (e.g., npm scripts, sql files)
+
+9) TODO / FIXME
+- list all // TODO or FIXME with file:line and brief content
+
+10) OPEN QUESTIONS
+- code comments or patterns that imply undecided choices
+
+Be concise but complete. Include file paths and line refs when helpful.

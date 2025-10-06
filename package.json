@@ -19,6 +19,7 @@
     "dotenv": "^17.2.2",
     "lucide-react": "^0.263.1",
     "next": "15.5.2",
+    "package-name": "^0.1.0",
     "pg": "^8.16.3",
     "react": "18.3.1",
     "react-dom": "18.3.1",

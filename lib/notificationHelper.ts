@@ -1,22 +1,43 @@
-import { supabaseBrowser as supabase } from '../lib/supabaseBrowser';
+import { createClient } from '@supabase/supabase-js';
 
-export async function createNotification(params: {
-  userId: string;
-  eventType: string;
-  eventData: any;
+export async function createNotification({
+  userId, eventType, title, description, path, needId,
+  need_title, volunteer_name, volunteer_id,
+}: {
+  userId: string
+  eventType: string
+  title?: string
+  description?: string
+  path?: string
+  needId?: string
+  need_title?: string
+  volunteer_name?: string
+  volunteer_id?: string
 }) {
-  
+  const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  );
+
+  const event_data = {
+    title,
+    description,
+    path: path ?? "/dashboard",
+    need_id: needId ?? null,
+    need_title: need_title ?? null,
+    volunteer_name: volunteer_name ?? null,
+    volunteer_id: volunteer_id ?? null,
+  };
+
   try {
-    console.log('🔔 Creating notification:', params);
+    console.log('🔔 Creating notification:', { userId, eventType, event_data });
     
-    // Insert directly into notifications table
-    // The webhook will automatically send it to Knock
     const { error } = await supabase
       .from('notifications')
       .insert({
-        user_id: params.userId,
-        event_type: params.eventType,
-        event_data: params.eventData
+        user_id: userId,
+        event_type: eventType,
+        event_data,
       });
 
     if (error) {
