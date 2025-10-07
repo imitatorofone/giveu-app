@@ -132,6 +132,7 @@ export default function MemberDashboard() {
   const [userCommitments, setUserCommitments] = useState<string[]>([]);
   const [selectedNeedId, setSelectedNeedId] = useState<string | null>(null);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [deepLinkRetryCount, setDeepLinkRetryCount] = useState(0);
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -280,10 +281,38 @@ export default function MemberDashboard() {
   useEffect(() => {
     const needId = searchParams.get('needId');
     console.log('[dashboard] Deep-link needId from URL:', needId);
-    if (needId) {
-      setSelectedNeedId(needId);
+    console.log('[dashboard] Opportunities loaded:', opportunities.length);
+    console.log('[dashboard] Deep-link retry count:', deepLinkRetryCount);
+    
+    if (needId && opportunities.length > 0) {
+      // Check if the need exists in loaded opportunities
+      const needExists = opportunities.some(opp => opp.id === needId);
+      
+      if (needExists) {
+        console.log('[dashboard] Opening modal for need:', needId);
+        setSelectedNeedId(needId);
+        setDeepLinkRetryCount(0); // Reset retry count on success
+      } else {
+        console.warn('[dashboard] Need not found in opportunities:', needId);
+        console.log('[dashboard] Available need IDs:', opportunities.map(opp => opp.id));
+        
+        // Retry fetching needs if we haven't tried too many times
+        if (deepLinkRetryCount < 2) {
+          console.log('[dashboard] Retrying fetchNeeds for deep-link...');
+          setDeepLinkRetryCount(prev => prev + 1);
+          fetchNeeds();
+        } else {
+          console.error('[dashboard] Max retries reached for deep-link need:', needId);
+        }
+      }
+    } else if (needId && opportunities.length === 0 && !loading) {
+      console.log('[dashboard] NeedId found but opportunities not loaded yet, retrying...');
+      if (deepLinkRetryCount < 2) {
+        setDeepLinkRetryCount(prev => prev + 1);
+        fetchNeeds();
+      }
     }
-  }, [searchParams]);
+  }, [searchParams, opportunities, loading, deepLinkRetryCount]); // Add dependencies
 
   const handleNeedClick = (needId: string) => {
     console.log('[dashboard] Need clicked with ID:', needId);
