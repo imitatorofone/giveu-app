@@ -88,10 +88,10 @@ export default function NeedDetailModal({ needId, onClose, userId }: NeedDetailM
         return;
       }
 
-      // Check if the need is active
-      if (needData.status !== 'active') {
-        console.warn('[need-detail] Need is not active:', needData.status);
-        setError('This need is no longer active.');
+      // Check if the need is active or approved
+      if (needData.status !== 'active' && needData.status !== 'approved') {
+        console.warn('[need-detail] Need is not active or approved:', needData.status);
+        setError('This need is no longer available.');
         return;
       }
 

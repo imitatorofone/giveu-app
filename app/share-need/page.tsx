@@ -225,7 +225,7 @@ export default function ShareNeedScreen() {
           
           if (userProfile?.church_code) {
             // Get all leaders in the church
-            const { data: leaders } = await supabase.from('profiles').select('id').eq('church_code', (insertData[0].church_code ?? userProfile?.church_code ?? null)).eq('is_leader', true).neq('id', insertData[0].created_by);
+            const { data: leaders } = await supabase.from('profiles').select('id').eq('church_code', (insertData[0].church_code ?? userProfile?.church_code ?? null)).eq('is_leader', true);
             console.log('[ShareNeed] Recipients query result:', leaders);
 
             // Send notification to each leader
@@ -265,6 +265,68 @@ export default function ShareNeedScreen() {
                 }
               }
               console.log(`[ShareNeed] Sent notifications to ${leaders.length} leaders`);
+            }
+            
+            // After notifying leaders, check for gift matches
+            console.log('[ShareNeed] Checking for gift matches...');
+
+            // Get all members in the church (not just leaders)
+            const { data: members } = await supabase
+              .from('profiles')
+              .select('id, full_name, gift_selections')
+              .eq('church_code', userProfile?.church_code)
+              .not('gift_selections', 'is', null);
+
+            if (members && members.length > 0 && insertData[0].giftings_needed) {
+              const needGiftings = insertData[0].giftings_needed;
+              
+              for (const member of members) {
+                // Skip the person who created the need
+                if (member.id === user.id) continue;
+                
+                // Check if member's gifts match any needed giftings
+                const matchingGifts = member.gift_selections.filter((gift: string) =>
+                  needGiftings.some((neededGift: string) =>
+                    gift.toLowerCase().includes(neededGift.toLowerCase()) ||
+                    neededGift.toLowerCase().includes(gift.toLowerCase())
+                  )
+                );
+                
+                if (matchingGifts.length > 0) {
+                  console.log(`[ShareNeed] Gift match found for member ${member.id}:`, matchingGifts);
+                  
+                  // Create DIY in-app notification first
+                  await createNotification({
+                    userId: member.id,
+                    eventType: 'need.matches_gifting',
+                    title: 'New Opportunity Matches Your Gifts!',
+                    description: `${insertData[0].title} needs your ${matchingGifts.join(', ')}`,
+                    path: '/dashboard',
+                    needId: insertData[0].id,
+                    need_title: insertData[0].title
+                  });
+                  
+                  // Then trigger Knock workflow for gift match
+                  try {
+                    await fetch('/api/knock/trigger', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({
+                        workflow: 'need_matches_gifting',
+                        userId: member.id,
+                        data: {
+                          need_title: insertData[0].title,
+                          need_id: insertData[0].id,
+                          matching_gifts: matchingGifts.join(', ')
+                        }
+                      })
+                    });
+                    console.log('✅ Knock workflow triggered for need_matches_gifting:', member.id);
+                  } catch (error) {
+                    console.warn('Knock trigger failed for gift match:', error);
+                  }
+                }
+              }
             }
           }
         }

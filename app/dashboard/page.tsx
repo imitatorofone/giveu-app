@@ -167,7 +167,7 @@ export default function MemberDashboard() {
           *,
           commitments(count)
         `)
-        .eq('status', 'active')
+        .in('status', ['active', 'approved'])
         .order('created_at', { ascending: false });
       
       if (error) {
