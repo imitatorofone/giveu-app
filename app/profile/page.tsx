@@ -31,6 +31,14 @@ export default function ProfilePage() {
     availability: string[];
     gift_selections: string[];
     is_leader: boolean;
+    notification_preferences: {
+      volunteer_signed_up: boolean;
+      need_submitted: boolean;
+      need_matches_gifting: boolean;
+      need_approved: boolean;
+      need_fulfilled: boolean;
+      member_join_request: boolean;
+    };
   }>({
     full_name: '',
     email: '',
@@ -39,7 +47,15 @@ export default function ProfilePage() {
     age: '',
     availability: [],
     gift_selections: [],
-    is_leader: false
+    is_leader: false,
+    notification_preferences: {
+      volunteer_signed_up: true,
+      need_submitted: true,
+      need_matches_gifting: true,
+      need_approved: true,
+      need_fulfilled: true,
+      member_join_request: true
+    }
   });
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -69,10 +85,10 @@ export default function ProfilePage() {
         console.log('👤 User set:', session.user.id);
 
         console.log('📊 Querying profiles table...');
-        // Updated query to include new church-related columns
+        // Updated query to include new church-related columns and notification preferences
         const { data: profile, error } = await supabase
           .from('profiles')
-          .select('id, full_name, email, city, phone, age, availability, gift_selections, is_leader, church_code, role, approval_status')
+          .select('id, full_name, email, city, phone, age, availability, gift_selections, is_leader, church_code, role, approval_status, notification_preferences')
           .eq('id', session.user.id)
           .maybeSingle();
 
@@ -100,10 +116,29 @@ export default function ProfilePage() {
             age: '',
             availability: [],
             gift_selections: [],
-            is_leader: false
+            is_leader: false,
+            notification_preferences: {
+              volunteer_signed_up: true,
+              need_submitted: true,
+              need_matches_gifting: true,
+              need_approved: true,
+              need_fulfilled: true,
+              member_join_request: true
+            }
           });
         } else if (profile) {
           console.log('✅ Profile loaded successfully:', profile);
+          
+          // Default notification preferences (all ON)
+          const defaultNotificationPrefs = {
+            volunteer_signed_up: true,
+            need_submitted: true,
+            need_matches_gifting: true,
+            need_approved: true,
+            need_fulfilled: true,
+            member_join_request: true
+          };
+          
           setProfile({
             full_name: profile.full_name || '',
             email: profile.email || session.user.email,
@@ -112,7 +147,8 @@ export default function ProfilePage() {
             age: profile.age || '',
             availability: profile.availability || [],
             gift_selections: profile.gift_selections || [],
-            is_leader: profile.is_leader || false
+            is_leader: profile.is_leader || false,
+            notification_preferences: profile.notification_preferences || defaultNotificationPrefs
           });
         } else {
           // No profile found, set defaults
@@ -125,7 +161,15 @@ export default function ProfilePage() {
             age: '',
             availability: [],
             gift_selections: [],
-            is_leader: false
+            is_leader: false,
+            notification_preferences: {
+              volunteer_signed_up: true,
+              need_submitted: true,
+              need_matches_gifting: true,
+              need_approved: true,
+              need_fulfilled: true,
+              member_join_request: true
+            }
           });
         }
         
@@ -141,7 +185,15 @@ export default function ProfilePage() {
           age: '',
           availability: [],
           gift_selections: [],
-          is_leader: false
+          is_leader: false,
+          notification_preferences: {
+            volunteer_signed_up: true,
+            need_submitted: true,
+            need_matches_gifting: true,
+            need_approved: true,
+            need_fulfilled: true,
+            member_join_request: true
+          }
         });
       } finally {
         setLoading(false);
@@ -174,6 +226,7 @@ export default function ProfilePage() {
           age: profile.age,
           availability: profile.availability,
           gift_selections: profile.gift_selections,
+          notification_preferences: profile.notification_preferences,
           updated_at: new Date().toISOString()
         });
 
@@ -395,6 +448,26 @@ export default function ProfilePage() {
             }
           />
         </div>
+
+        {/* Notification Preferences Section - Only show in edit mode */}
+        {isEditing && (
+          <div style={{ backgroundColor: 'white', borderRadius: '12px', boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)', border: '1px solid #e5e7eb', padding: '24px', marginBottom: '24px' }}>
+            <h3 style={{ fontSize: '18px', fontWeight: '600', color: '#111827', fontFamily: 'Quicksand, sans-serif', marginBottom: '8px' }}>
+              Notification Preferences
+            </h3>
+            <p style={{ fontSize: '14px', color: '#6b7280', marginBottom: '20px', fontFamily: 'Quicksand, sans-serif' }}>
+              Choose which notifications you'd like to receive
+            </p>
+            
+            <NotificationPreferencesSection
+              preferences={profile.notification_preferences}
+              isLeader={profile.is_leader}
+              onChange={(newPreferences) => 
+                setProfile(prev => ({ ...prev, notification_preferences: newPreferences }))
+              }
+            />
+          </div>
+        )}
 
         {/* Leadership Dashboard Access */}
         {profile.is_leader && (
@@ -664,6 +737,7 @@ function AvailabilitySection({ availability, isEditing, onChange }: { availabili
 // Enhanced Gift Selection with Skill Bubbles
 function GiftSelectionSection({ selectedGifts, isEditing, onChange }: { selectedGifts: string[]; isEditing: boolean; onChange: (gifts: string[]) => void }) {
   const [expandedCategories, setExpandedCategories] = useState({});
+  const [isSectionCollapsed, setIsSectionCollapsed] = useState(true);
 
   const categories = {
     'hands-on-skills': {
@@ -777,12 +851,66 @@ function GiftSelectionSection({ selectedGifts, isEditing, onChange }: { selected
 
       {/* Category Selection - Only show in edit mode */}
       {isEditing && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-          <h4 style={{ fontSize: '14px', fontWeight: '600', color: '#374151', marginBottom: '12px', fontFamily: 'Quicksand, sans-serif' }}>
-            Add Skills by Category
-          </h4>
-          
-          {Object.entries(categories).map(([categoryId, category]) => {
+        <div>
+          {/* Collapsible Header */}
+          <button
+            onClick={() => setIsSectionCollapsed(!isSectionCollapsed)}
+            style={{
+              width: '100%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              padding: '16px',
+              backgroundColor: '#f9fafb',
+              border: '1px solid #e5e7eb',
+              borderRadius: '8px',
+              cursor: 'pointer',
+              fontFamily: quicksandFont,
+              marginBottom: isSectionCollapsed ? '0' : '16px',
+              transition: 'all 0.2s ease'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = '#f3f4f6';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = '#f9fafb';
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <span style={{ fontWeight: '500', color: '#111827', fontSize: '14px' }}>
+                Add Skills by Category
+              </span>
+              {selectedGifts.length > 0 && (
+                <span style={{
+                  fontSize: '12px',
+                  backgroundColor: '#20c997',
+                  color: 'white',
+                  padding: '2px 8px',
+                  borderRadius: '12px',
+                  fontWeight: '600'
+                }}>
+                  {selectedGifts.length} selected
+                </span>
+              )}
+            </div>
+            <div style={{ 
+              transform: isSectionCollapsed ? 'rotate(-90deg)' : 'rotate(0deg)',
+              transition: 'transform 0.2s ease'
+            }}>
+              <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
+              </svg>
+            </div>
+          </button>
+
+          {/* Collapsible Content */}
+          <div style={{ 
+            overflow: 'hidden',
+            transition: 'all 0.3s ease',
+            maxHeight: isSectionCollapsed ? '0' : '1000px',
+            opacity: isSectionCollapsed ? 0 : 1
+          }}>
+            {Object.entries(categories).map(([categoryId, category]) => {
             const isExpanded = (expandedCategories as any)[categoryId];
             const selectedInCategory = category.tags.filter(tag => selectedGifts.includes(tag));
 
@@ -863,7 +991,8 @@ function GiftSelectionSection({ selectedGifts, isEditing, onChange }: { selected
                 )}
               </div>
             );
-          })}
+            })}
+          </div>
         </div>
       )}
 
@@ -871,6 +1000,151 @@ function GiftSelectionSection({ selectedGifts, isEditing, onChange }: { selected
       {!isEditing && selectedGifts.length === 0 && (
         <p style={{ color: '#6b7280', fontStyle: 'italic' }}>No gifts selected yet. Click "Edit Profile" to add your skills.</p>
       )}
+    </div>
+  );
+}
+
+// Notification Preferences Section Component
+type NotificationPreferences = {
+  volunteer_signed_up: boolean;
+  need_submitted: boolean;
+  need_matches_gifting: boolean;
+  need_approved: boolean;
+  need_fulfilled: boolean;
+  member_join_request: boolean;
+};
+
+function NotificationPreferencesSection({ 
+  preferences, 
+  isLeader,
+  onChange 
+}: { 
+  preferences: NotificationPreferences;
+  isLeader: boolean;
+  onChange: (preferences: NotificationPreferences) => void;
+}) {
+  const allNotificationTypes = [
+    {
+      key: 'volunteer_signed_up' as const,
+      label: 'Volunteer Signups',
+      description: 'When someone signs up to help with a need you created',
+      leaderOnly: false
+    },
+    {
+      key: 'need_submitted' as const,
+      label: 'New Needs Submitted',
+      description: 'When members submit new needs for approval',
+      leaderOnly: true
+    },
+    {
+      key: 'need_matches_gifting' as const,
+      label: 'Gift Matches',
+      description: 'When new opportunities match your skills and gifts',
+      leaderOnly: false
+    },
+    {
+      key: 'need_approved' as const,
+      label: 'Needs Approved',
+      description: 'When your submitted needs are approved and go live',
+      leaderOnly: false
+    },
+    {
+      key: 'need_fulfilled' as const,
+      label: 'Needs Fulfilled',
+      description: 'When your needs have enough volunteers',
+      leaderOnly: false
+    },
+    {
+      key: 'member_join_request' as const,
+      label: 'New Members Joined',
+      description: 'When new members join your church community',
+      leaderOnly: true
+    }
+  ];
+
+  // Filter notification types based on user role
+  const notificationTypes = allNotificationTypes.filter(type => 
+    !type.leaderOnly || isLeader
+  );
+
+  const togglePreference = (key: keyof typeof preferences) => {
+    onChange({
+      ...preferences,
+      [key]: !preferences[key]
+    });
+  };
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+      {notificationTypes.map((type) => (
+        <div key={type.key} style={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          justifyContent: 'space-between',
+          padding: '12px 16px',
+          backgroundColor: '#f9fafb',
+          borderRadius: '8px',
+          border: '1px solid #e5e7eb'
+        }}>
+          <div style={{ flex: 1 }}>
+            <div style={{ 
+              fontSize: '14px', 
+              fontWeight: '500', 
+              color: '#111827', 
+              marginBottom: '4px',
+              fontFamily: quicksandFont
+            }}>
+              {type.label}
+            </div>
+            <div style={{ 
+              fontSize: '12px', 
+              color: '#6b7280',
+              fontFamily: quicksandFont
+            }}>
+              {type.description}
+            </div>
+          </div>
+          
+          <button
+            onClick={() => togglePreference(type.key)}
+            style={{
+              position: 'relative',
+              width: '44px',
+              height: '24px',
+              borderRadius: '12px',
+              border: 'none',
+              backgroundColor: preferences[type.key] ? '#20c997' : '#d1d5db',
+              cursor: 'pointer',
+              transition: 'all 0.2s ease',
+              outline: 'none'
+            }}
+            onMouseEnter={(e) => {
+              if (!preferences[type.key]) {
+                e.currentTarget.style.backgroundColor = '#9ca3af';
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (!preferences[type.key]) {
+                e.currentTarget.style.backgroundColor = '#d1d5db';
+              }
+            }}
+          >
+            <div
+              style={{
+                position: 'absolute',
+                top: '2px',
+                left: preferences[type.key] ? '22px' : '2px',
+                width: '20px',
+                height: '20px',
+                borderRadius: '50%',
+                backgroundColor: 'white',
+                transition: 'all 0.2s ease',
+                boxShadow: '0 1px 3px rgba(0, 0, 0, 0.2)'
+              }}
+            />
+          </button>
+        </div>
+      ))}
     </div>
   );
 }
