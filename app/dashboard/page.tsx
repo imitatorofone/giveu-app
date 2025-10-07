@@ -648,6 +648,8 @@ export default function MemberDashboard() {
               for (const leader of leaders) {
                 if (!notifiedUsers.has(leader.id)) {
                   console.log('🔔 Notifying leader:', leader.id);
+                  
+                  // Create DIY notification
                   await createNotification({
                     userId: leader.id,
                     eventType: 'volunteer.signed_up',
@@ -659,6 +661,30 @@ export default function MemberDashboard() {
                     volunteer_name: volunteerName,
                     volunteer_id: session.user.id
                   });
+                  
+                  // Trigger Knock workflow for push
+                  try {
+                    const knockResponse = await fetch('/api/knock/trigger', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({
+                        workflow: 'volunteer_signed_up',
+                        userId: leader.id,
+                        data: {
+                          need_title: needData.title,
+                          volunteer_name: volunteerName,
+                          volunteer_id: session.user.id
+                        }
+                      })
+                    });
+
+                    if (knockResponse.ok) {
+                      console.log('✅ Knock workflow triggered for leader:', leader.id);
+                    }
+                  } catch (knockError) {
+                    console.warn('Knock trigger failed:', knockError);
+                  }
+                  
                   notifiedUsers.add(leader.id);
                 } else {
                   console.log('🔔 Skipping duplicate notification for leader:', leader.id);
@@ -671,6 +697,8 @@ export default function MemberDashboard() {
                 needData.created_by !== session.user.id && 
                 !notifiedUsers.has(needData.created_by)) {
               console.log('🔔 Notifying need creator:', needData.created_by);
+              
+              // Create DIY notification
               await createNotification({
                 userId: needData.created_by,
                 eventType: 'volunteer.signed_up',
@@ -682,6 +710,29 @@ export default function MemberDashboard() {
                 volunteer_name: volunteerName,
                 volunteer_id: session.user.id
               });
+              
+              // Trigger Knock workflow for push
+              try {
+                const knockResponse = await fetch('/api/knock/trigger', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    workflow: 'volunteer_signed_up',
+                    userId: needData.created_by,
+                    data: {
+                      need_title: needData.title,
+                      volunteer_name: volunteerName,
+                      volunteer_id: session.user.id
+                    }
+                  })
+                });
+
+                if (knockResponse.ok) {
+                  console.log('✅ Knock workflow triggered for need creator:', needData.created_by);
+                }
+              } catch (knockError) {
+                console.warn('Knock trigger failed for need creator:', knockError);
+              }
             }
           }
         } catch (notificationError) {

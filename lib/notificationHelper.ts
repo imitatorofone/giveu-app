@@ -61,6 +61,32 @@ export async function createNotification({
     } else {
       console.log('🔔 Notification created successfully');
     }
+
+    // Also trigger Knock workflow for push notifications
+    try {
+      const knockResponse = await fetch('/api/knock/trigger', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          workflow: 'volunteer_signed_up',
+          userId: userId,
+          data: {
+            need_title: need_title,
+            volunteer_name: volunteer_name,
+            volunteer_id: volunteer_id
+          }
+        })
+      });
+
+      if (!knockResponse.ok) {
+        console.warn('Knock trigger failed:', await knockResponse.text());
+      } else {
+        console.log('✅ Knock workflow triggered for push notification');
+      }
+    } catch (knockError) {
+      console.warn('Knock trigger error:', knockError);
+      // Don't fail if Knock doesn't work
+    }
   } catch (error) {
     console.error('Error creating notification:', error);
   }
