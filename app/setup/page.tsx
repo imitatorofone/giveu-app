@@ -105,8 +105,8 @@ export default function ChurchSetup() {
       console.log('Profile update result:', { profileData, profileError });
       if (profileError) throw profileError;
 
-      // Redirect to pending page
-      router.push('/pending');
+      // Redirect to gift survey to complete profile
+      router.push('/survey');
       
     } catch (error) {
       console.error('Error joining church:', error);

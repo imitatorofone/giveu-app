@@ -34,10 +34,10 @@ export default function SurveyComplete() {
       }
       setUser(data.user);
 
-      // Get user's profile data including name and skills
+      // Get user's profile data including name, skills, and approval status
       const { data: profile } = await supabase
         .from('profiles')
-        .select('full_name, gift_selections')
+        .select('full_name, gift_selections, approval_status')
         .eq('id', data.user.id)
         .single();
 
@@ -87,8 +87,33 @@ export default function SurveyComplete() {
     };
   }, []);
 
-  const handleGetStarted = () => {
-    router.push('/dashboard');
+  const handleGetStarted = async () => {
+    // Check user's approval status to determine redirect
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        router.push('/');
+        return;
+      }
+
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('approval_status')
+        .eq('id', user.id)
+        .single();
+
+      // Redirect based on approval status
+      if (profile?.approval_status === 'approved') {
+        router.push('/dashboard');
+      } else {
+        // Pending, denied, or any other status goes to pending page
+        router.push('/pending');
+      }
+    } catch (error) {
+      console.error('Error checking approval status:', error);
+      // Fallback to pending page if check fails
+      router.push('/pending');
+    }
   };
 
 
