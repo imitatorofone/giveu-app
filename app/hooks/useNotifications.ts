@@ -70,6 +70,44 @@ export function useNotifications() {
     }
   };
 
+  // Mark all notifications as read
+  const markAllAsRead = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      // Get all unread notification IDs
+      const unreadIds = notifications
+        .filter(n => !n.read_at)
+        .map(n => n.id);
+
+      if (unreadIds.length === 0) {
+        console.log('🔔 No unread notifications to mark');
+        return;
+      }
+
+      console.log('🔔 Marking all notifications as read:', unreadIds.length);
+
+      // Update all unread notifications in Supabase
+      const { error } = await supabase
+        .from('notifications')
+        .update({ read_at: new Date().toISOString() })
+        .in('id', unreadIds);
+
+      if (error) throw error;
+
+      // Update local state - mark all as read
+      setNotifications(prev =>
+        prev.map(n => ({ ...n, read_at: n.read_at || new Date().toISOString() }))
+      );
+      setUnreadCount(0);
+
+      console.log('✅ All notifications marked as read');
+    } catch (error) {
+      console.error('Error marking all notifications as read:', error);
+    }
+  };
+
   // Polling: fetch on mount, on focus, and every 60 seconds
   useEffect(() => {
     fetchNotifications();
@@ -90,6 +128,7 @@ export function useNotifications() {
     unreadCount,
     isLoading,
     markAsRead,
+    markAllAsRead,
     refresh: fetchNotifications
   };
 }
