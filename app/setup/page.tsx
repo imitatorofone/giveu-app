@@ -35,21 +35,15 @@ export default function ChurchSetup() {
         return;
       }
 
-      // Load available churches
-      const { data: churchData, error: churchError } = await supabase
-        .from('orgs')
-        .select('*')
-        .order('name');
+      // Load beta churches (hard-coded for consistency)
+      const betaChurches = [
+        { id: 'harmony', name: 'Harmony Church', city: 'Harmony', state: 'IA' },
+        { id: 'brighton', name: 'Brighton Bible Church', city: 'Brighton', state: 'IA' },
+        { id: 'newlondon', name: 'New London Christian Church', city: 'New London', state: 'IA' }
+      ];
 
-      console.log('Church query result:', { churchData, churchError });
-      
-      if (churchError) {
-        console.error('Church query error:', churchError);
-        alert(`Error loading churches: ${churchError.message}`);
-        setChurches([]);
-      } else {
-        setChurches(churchData || []);
-      }
+      console.log('Beta churches loaded:', betaChurches);
+      setChurches(betaChurches);
       setLoading(false);
     };
 
@@ -61,6 +55,28 @@ export default function ChurchSetup() {
 
     try {
       console.log('Attempting to join church:', { selectedChurch, userId: user.id, role });
+
+      // Find the selected church to get its name
+      const selectedChurchData = churches.find(church => church.id === selectedChurch);
+      if (!selectedChurchData) {
+        alert('Selected church not found. Please try again.');
+        return;
+      }
+
+      // Map church name to correct church_code
+      let churchCode;
+      if (selectedChurchData.name === "Harmony Church") {
+        churchCode = "123harmony";
+      } else if (selectedChurchData.name === "Brighton Bible Church") {
+        churchCode = "456brighton";
+      } else if (selectedChurchData.name === "New London Christian Church") {
+        churchCode = "789newlondon";
+      } else {
+        alert('Invalid church selection. Please try again.');
+        return;
+      }
+
+      console.log('Church mapping:', { selectedChurch: selectedChurchData.name, churchCode });
 
       // Create pending membership (not approved yet)
       const { data: memberData, error: memberError } = await supabase
@@ -76,13 +92,13 @@ export default function ChurchSetup() {
       console.log('Member insert result:', { memberData, memberError });
       if (memberError) throw memberError;
 
-      // Update profile with org_id
+      // Update profile with church_code
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .upsert({
           id: user.id,
           email: user.email,
-          org_id: selectedChurch
+          church_code: churchCode
         })
         .select();
 
