@@ -609,44 +609,74 @@ export default function MemberDashboard() {
       console.log('🔄 Refreshing needs list...');
       fetchNeeds();
 
-      // Create notifications for leaders and need creator
-      console.log('🔔 Creating notifications...');
-      
-      try {
-        // Fetch the need details
-        const { data: needData, error: needError } = await supabase
-          .from('needs')
-          .select('id, title, description, church_code, created_by')
-          .eq('id', needId)
-          .single();
-
-        if (needError) {
-          console.error('❌ Error fetching need details:', needError);
-        } else if (needData) {
-          // Get user profile for volunteer name
-          const { data: userProfile } = await supabase
-            .from('profiles')
-            .select('full_name')
-            .eq('id', session.user.id)
+        // Create notifications for leaders and need creator
+        console.log('🔔 Creating notifications...');
+        
+        try {
+          // Fetch the need details
+          const { data: needData, error: needError } = await supabase
+            .from('needs')
+            .select('id, title, description, church_code, created_by')
+            .eq('id', needId)
             .single();
 
-          const volunteerName = userProfile?.full_name || 'A volunteer';
+          if (needError) {
+            console.error('❌ Error fetching need details:', needError);
+          } else if (needData) {
+            // Get user profile for volunteer name
+            const { data: userProfile } = await supabase
+              .from('profiles')
+              .select('full_name')
+              .eq('id', session.user.id)
+              .single();
 
-          // Notify leaders in the same church
-          const { data: leaders } = await supabase
-            .from('profiles')
-            .select('id')
-            .eq('church_code', needData.church_code)
-            .eq('is_leader', true);
+            const volunteerName = userProfile?.full_name || 'A volunteer';
 
-          if (leaders && leaders.length > 0) {
-            for (const leader of leaders) {
+            // Track who we've notified to prevent duplicates
+            const notifiedUsers = new Set<string>();
+
+            // Notify leaders in the same church
+            const { data: leaders } = await supabase
+              .from('profiles')
+              .select('id')
+              .eq('church_code', needData.church_code)
+              .eq('is_leader', true);
+
+            console.log('🔔 Found leaders to notify:', leaders?.length);
+
+            if (leaders && leaders.length > 0) {
+              for (const leader of leaders) {
+                if (!notifiedUsers.has(leader.id)) {
+                  console.log('🔔 Notifying leader:', leader.id);
+                  await createNotification({
+                    userId: leader.id,
+                    eventType: 'volunteer.signed_up',
+                    title: needData.title,
+                    description: `${volunteerName} signed up to help.`,
+                    path: '/leader/volunteer-responses',
+                    needId: needId,
+                    need_title: needData.title,
+                    volunteer_name: volunteerName,
+                    volunteer_id: session.user.id
+                  });
+                  notifiedUsers.add(leader.id);
+                } else {
+                  console.log('🔔 Skipping duplicate notification for leader:', leader.id);
+                }
+              }
+            }
+
+            // Notify the need creator (if not already notified and not the volunteer)
+            if (needData.created_by && 
+                needData.created_by !== session.user.id && 
+                !notifiedUsers.has(needData.created_by)) {
+              console.log('🔔 Notifying need creator:', needData.created_by);
               await createNotification({
-                userId: leader.id,
+                userId: needData.created_by,
                 eventType: 'volunteer.signed_up',
                 title: needData.title,
                 description: `${volunteerName} signed up to help.`,
-                path: '/leader/volunteer-responses',
+                path: '/commitments',
                 needId: needId,
                 need_title: needData.title,
                 volunteer_name: volunteerName,
@@ -654,26 +684,10 @@ export default function MemberDashboard() {
               });
             }
           }
-
-          // Notify the need creator (if different from volunteer)
-          if (needData.created_by && needData.created_by !== session.user.id) {
-            await createNotification({
-              userId: needData.created_by,
-              eventType: 'volunteer.signed_up',
-              title: needData.title,
-              description: `${volunteerName} signed up to help.`,
-              path: '/commitments',
-              needId: needId,
-              need_title: needData.title,
-              volunteer_name: volunteerName,
-              volunteer_id: session.user.id
-            });
-          }
+        } catch (notificationError) {
+          console.error('❌ Error creating notifications:', notificationError);
+          // Don't fail the main flow if notifications fail
         }
-      } catch (notificationError) {
-        console.error('❌ Error creating notifications:', notificationError);
-        // Don't fail the main flow if notifications fail
-      }
     }
   };
 

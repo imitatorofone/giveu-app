@@ -155,6 +155,15 @@ export default function ShareNeedScreen() {
       const isLeader = user.email === 'imitatorofone@gmail.com';
       console.log('[ShareNeed] isLeader:', isLeader);
       setIsLeaderUser(isLeader);
+
+      // Get user's church_code for the need
+      const { data: userProfile } = await supabase
+        .from('profiles')
+        .select('church_code')
+        .eq('id', user.id)
+        .single();
+      
+      console.log('[ShareNeed] User profile church_code:', userProfile?.church_code);
       
       // For MVP, we'll create a simple needs table structure
       // Let's try to create the table if it doesn't exist, or use a fallback
@@ -177,7 +186,8 @@ export default function ShareNeedScreen() {
         created_at: new Date().toISOString(),
         created_by: user.id,
         created_by_email: user.email,
-        is_leader_need: isLeader
+        is_leader_need: isLeader,
+        church_code: userProfile?.church_code || null // ← ADD THIS LINE
       };
 
       console.log('[ShareNeed] Final status being set:', isLeader ? 'approved' : 'pending');
@@ -206,10 +216,10 @@ export default function ShareNeedScreen() {
         if (insertData[0] && !error) {
           console.log('[ShareNeed] Need created, sending notifications to leaders...');
           
-          // Get user profile to get church_code
-          const { data: userProfile } = await supabase
+          // Get user profile to get full_name for notification
+          const { data: userProfileForNotification } = await supabase
             .from('profiles')
-            .select('church_code, full_name')
+            .select('full_name')
             .eq('id', user.id)
             .single();
           
@@ -225,7 +235,7 @@ export default function ShareNeedScreen() {
                   userId: leader.id,
                   eventType: 'need.submitted',
                   title: insertData[0].title,
-                  description: `New need submitted by ${userProfile.full_name || user.email}`,
+                  description: `New need submitted by ${userProfileForNotification?.full_name || user.email}`,
                   path: '/leader/pending-needs',
                   needId: insertData[0].id,
                   need_title: insertData[0].title

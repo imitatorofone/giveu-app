@@ -74,7 +74,7 @@ export function useNotifications() {
   useEffect(() => {
     fetchNotifications();
 
-    const interval = setInterval(fetchNotifications, 60000); // 60 seconds
+    const interval = setInterval(fetchNotifications, 60000);
     
     const handleFocus = () => fetchNotifications();
     window.addEventListener('focus', handleFocus);
@@ -83,7 +83,7 @@ export function useNotifications() {
       clearInterval(interval);
       window.removeEventListener('focus', handleFocus);
     };
-  }, []); // ← CRITICAL: Empty dependency array means this only runs once
+  }, []);
 
   return {
     notifications,
