@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '../../../lib/supabaseClient';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, ArrowRight, User, Calendar, MapPin, Phone, Clock, Key, Crown } from 'lucide-react';
+import { formatPhoneToE164 } from '../../../lib/phoneFormatter';
 
 // Survey-wide design constants
 const SURVEY_GREEN = '#20c997';
@@ -91,6 +92,9 @@ export default function SurveyStep1() {
       is_leader: role === 'leader'
     });
 
+    // Format phone number to E.164 format for Twilio compatibility
+    const formattedPhone = formatPhoneToE164(phone);
+
     const { data, error } = await supabase
       .from('profiles')
       .upsert({
@@ -98,7 +102,7 @@ export default function SurveyStep1() {
         full_name: fullName,
         age: parseInt(age),
         city: city,
-        phone: phone,
+        phone: formattedPhone,
         phone_last_four: phoneLastFour,
         email: user.email,
         availability: availability,

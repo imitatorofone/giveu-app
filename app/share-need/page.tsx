@@ -273,7 +273,7 @@ export default function ShareNeedScreen() {
             // Get all members in the church (not just leaders)
             const { data: members } = await supabase
               .from('profiles')
-              .select('id, full_name, gift_selections')
+              .select('id, full_name, gift_selections, phone, email')
               .eq('church_code', userProfile?.church_code)
               .not('gift_selections', 'is', null);
 
@@ -318,10 +318,14 @@ export default function ShareNeedScreen() {
                           need_title: insertData[0].title,
                           need_id: insertData[0].id,
                           matching_gifts: matchingGifts.join(', ')
+                        },
+                        recipient: {
+                          phone_number: member.phone,
+                          email: member.email
                         }
                       })
                     });
-                    console.log('✅ Knock workflow triggered for need_matches_gifting:', member.id);
+                    console.log('✅ Knock workflow triggered for need_matches_gifting:', member.id, 'with phone:', member.phone, 'and email:', member.email);
                   } catch (error) {
                     console.warn('Knock trigger failed for gift match:', error);
                   }

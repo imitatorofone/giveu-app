@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { supabaseBrowser as supabase } from '../../lib/supabaseBrowser';
 import { GIFT_CATEGORIES } from '../../constants/giftCategories.js';
+import { formatPhoneToE164, formatPhoneForDisplay } from '../../lib/phoneFormatter';
 import Footer from '../../components/Footer';
 import Header from '../../components/Header';
 import toast from "react-hot-toast";
@@ -215,6 +216,9 @@ export default function ProfilePage() {
         return;
       }
 
+      // Format phone number to E.164 format for Twilio compatibility
+      const formattedPhone = formatPhoneToE164(profile.phone);
+
       const { error } = await supabase
         .from('profiles')
         .upsert({
@@ -222,7 +226,7 @@ export default function ProfilePage() {
           full_name: profile.full_name,
           email: profile.email || session.user.email,
           city: profile.city,
-          phone: profile.phone,
+          phone: formattedPhone,
           age: profile.age,
           availability: profile.availability,
           gift_selections: profile.gift_selections,
@@ -673,7 +677,7 @@ function BasicInfoDisplay({ profile }: { profile: any }) {
       {profile.phone && (
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <Phone size={16} />
-          <span>{profile.phone}</span>
+          <span>{formatPhoneForDisplay(profile.phone)}</span>
         </div>
       )}
     </div>
