@@ -230,16 +230,39 @@ export default function ShareNeedScreen() {
 
             // Send notification to each leader
             if (leaders && leaders.length > 0) {
+              const memberName = userProfileForNotification?.full_name || 'A member';
+              
               for (const leader of leaders) {
+                // Create DIY notification
                 await createNotification({
                   userId: leader.id,
                   eventType: 'need.submitted',
                   title: insertData[0].title,
-                  description: `New need submitted by ${userProfileForNotification?.full_name || user.email}`,
+                  description: `New need submitted by ${memberName}`,
                   path: '/leader/pending-needs',
                   needId: insertData[0].id,
                   need_title: insertData[0].title
                 });
+                
+                // Trigger Knock workflow for push notification
+                try {
+                  await fetch('/api/knock/trigger', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                      workflow: 'need_submitted',
+                      userId: leader.id,
+                      data: {
+                        member_name: memberName,
+                        need_title: insertData[0].title,
+                        need_id: insertData[0].id
+                      }
+                    })
+                  });
+                  console.log('✅ Knock workflow triggered for need_submitted to leader:', leader.id);
+                } catch (error) {
+                  console.warn('Knock trigger failed for need_submitted:', error);
+                }
               }
               console.log(`[ShareNeed] Sent notifications to ${leaders.length} leaders`);
             }
