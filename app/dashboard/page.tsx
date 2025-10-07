@@ -609,6 +609,77 @@ export default function MemberDashboard() {
       console.log('🔄 Refreshing needs list...');
       fetchNeeds();
 
+      // Check if need is now fulfilled and notify creator
+      try {
+        console.log('🎯 Checking if need is fulfilled...');
+        
+        // Get the need with current volunteer count and requirements
+        const { data: needData, error: needError } = await supabase
+          .from('needs')
+          .select(`
+            id,
+            title,
+            people_needed,
+            created_by,
+            commitments(count)
+          `)
+          .eq('id', needId)
+          .single();
+
+        if (needError) {
+          console.error('❌ Error fetching need for fulfillment check:', needError);
+          return;
+        }
+
+        if (needData && needData.created_by) {
+          const volunteerCount = needData.commitments?.[0]?.count || 0;
+          const peopleNeeded = needData.people_needed || 1;
+          
+          console.log(`🎯 Need fulfillment check: ${volunteerCount}/${peopleNeeded} volunteers`);
+          
+          // Check if need is fulfilled (has enough volunteers)
+          if (volunteerCount >= peopleNeeded) {
+            console.log('🎉 Need is fulfilled! Notifying creator...');
+            
+            // Create DIY notification for the need creator
+            await createNotification({
+              userId: needData.created_by,
+              eventType: 'need.fulfilled',
+              title: 'Your Need Has Enough Volunteers!',
+              description: `${volunteerCount} people signed up for ${needData.title}`,
+              path: '/commitments',
+              needId: needData.id,
+              need_title: needData.title
+            });
+            
+            // Trigger Knock workflow for push notification
+            try {
+              await fetch('/api/knock/trigger', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  workflow: 'need_fulfilled',
+                  userId: needData.created_by,
+                  data: {
+                    need_title: needData.title,
+                    need_id: needData.id,
+                    volunteer_count: volunteerCount
+                  }
+                })
+              });
+              console.log('✅ Knock workflow triggered for need_fulfilled to creator:', needData.created_by);
+            } catch (knockError) {
+              console.warn('Knock trigger failed for need_fulfilled:', knockError);
+            }
+          } else {
+            console.log('📊 Need not yet fulfilled, no notification sent');
+          }
+        }
+      } catch (fulfillmentError) {
+        console.error('❌ Error checking need fulfillment:', fulfillmentError);
+        // Don't fail the main flow if fulfillment check fails
+      }
+
         // Create notifications for leaders and need creator
         console.log('🔔 Creating notifications...');
         
