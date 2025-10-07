@@ -64,42 +64,68 @@ export default function AuthPage() {
       if (session?.user) {
         console.log('[auth] Valid user found:', session.user.email);
         
-        // OPTIONAL: fetch profile name
+        // Fetch profile to check onboarding status
         try {
           console.log('[auth] Fetching profile for user:', session.user.id);
           const { data: profile, error: profileError } = await supabase
             .from('profiles')
-            .select('full_name')
+            .select('full_name, church_code')
             .eq('id', session.user.id)
             .maybeSingle();
           
           console.log('[auth] Profile fetch result:', { 
             profile: profile?.full_name, 
+            church_code: profile?.church_code,
             error: profileError?.message 
           });
           
           if (isMounted) setFullName(profile?.full_name ?? null);
+
+          if (isMounted) {
+            console.log('[auth] Setting state to authed');
+            setAuthState('authed');
+          }
+
+          // Determine redirect based on profile completeness
+          const hasChurchCode = profile?.church_code && profile.church_code.trim() !== '';
+          console.log('[auth] Profile completeness check:', { hasChurchCode, church_code: profile?.church_code });
+
+          // short, non-cancelable countdown → appropriate destination
+          const redirectPath = hasChurchCode ? '/dashboard' : '/setup';
+          console.log(`[auth] Starting 3-second countdown to ${redirectPath}`);
+          
+          let n = 3;
+          const id = setInterval(() => {
+            n--;
+            console.log('[auth] Countdown:', n);
+            if (n <= 0) {
+              clearInterval(id);
+              console.log(`[auth] Redirecting to ${redirectPath}`);
+              router.replace(redirectPath);
+            }
+          }, 1000);
+          
         } catch (e) {
           console.log('[auth] profile fetch exception:', e);
-        }
-
-        if (isMounted) {
-          console.log('[auth] Setting state to authed');
-          setAuthState('authed');
-        }
-
-        // short, non-cancelable countdown → dashboard
-        console.log('[auth] Starting 3-second countdown to dashboard');
-        let n = 3;
-        const id = setInterval(() => {
-          n--;
-          console.log('[auth] Countdown:', n);
-          if (n <= 0) {
-            clearInterval(id);
-            console.log('[auth] Redirecting to dashboard');
-            router.replace('/dashboard');
+          
+          // If profile fetch fails, default to setup for safety
+          if (isMounted) {
+            console.log('[auth] Setting state to authed (fallback)');
+            setAuthState('authed');
           }
-        }, 1000);
+          
+          console.log('[auth] Starting 3-second countdown to setup (fallback)');
+          let n = 3;
+          const id = setInterval(() => {
+            n--;
+            console.log('[auth] Countdown:', n);
+            if (n <= 0) {
+              clearInterval(id);
+              console.log('[auth] Redirecting to setup (fallback)');
+              router.replace('/setup');
+            }
+          }, 1000);
+        }
         return;
       }
 
@@ -268,11 +294,34 @@ export default function AuthPage() {
                 marginBottom: '24px',
                 fontWeight: '500'
               }}>
-                Redirecting to your dashboard…
+                Redirecting you to the right place…
               </p>
               
               <button
-                onClick={() => router.replace('/dashboard')}
+                onClick={async () => {
+                  // Get current user and profile to determine redirect
+                  const { data: { user } } = await supabase.auth.getUser();
+                  if (!user) {
+                    router.replace('/setup');
+                    return;
+                  }
+                  
+                  try {
+                    const { data: profile } = await supabase
+                      .from('profiles')
+                      .select('church_code')
+                      .eq('id', user.id)
+                      .maybeSingle();
+                    
+                    const hasChurchCode = profile?.church_code && profile.church_code.trim() !== '';
+                    const redirectPath = hasChurchCode ? '/dashboard' : '/setup';
+                    router.replace(redirectPath);
+                  } catch (error) {
+                    console.error('Profile check failed:', error);
+                    // Fallback to setup if profile check fails
+                    router.replace('/setup');
+                  }
+                }}
                 style={{
                   width: '100%',
                   padding: '16px 24px',
@@ -298,7 +347,7 @@ export default function AuthPage() {
                   e.currentTarget.style.opacity = '1';
                 }}
               >
-                Go to Dashboard now
+                Continue
               </button>
               
               <button
