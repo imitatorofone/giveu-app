@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabaseBrowser as supabase } from '@/lib/supabaseBrowser';
 import { getCategoryByTag } from '@/lib/giftingStructure';
+import { createNotification } from '@/lib/notificationHelper';
 import toast from 'react-hot-toast';
 import Header from '../../../components/Header';
 import Footer from '../../../components/Footer';
@@ -163,6 +164,48 @@ export default function PendingNeedsPage() {
 
       setPendingNeeds(prev => prev.filter(n => n.id !== needId));
       toast.success('Approved & published.');
+      
+      // Notify the need creator that their need was approved
+      const { data: needData } = await supabase
+        .from('needs')
+        .select('created_by, title')
+        .eq('id', needId)
+        .single();
+      
+      if (needData?.created_by) {
+        console.log('[PendingNeeds] Notifying need creator:', needData.created_by);
+        
+        // Create DIY notification for the need creator
+        await createNotification({
+          userId: needData.created_by,
+          eventType: 'need.approved',
+          title: 'Your Need Was Approved!',
+          description: `"${needData.title}" is now live and visible to volunteers.`,
+          path: '/dashboard',
+          needId: needId,
+          need_title: needData.title
+        });
+        
+        // Trigger Knock workflow for push notification
+        try {
+          await fetch('/api/knock/trigger', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              workflow: 'need_approved',
+              userId: needData.created_by,
+              data: {
+                need_title: needData.title,
+                need_id: needId
+              }
+            })
+          });
+          console.log('✅ Knock workflow triggered for need_approved to creator:', needData.created_by);
+        } catch (error) {
+          console.warn('Knock trigger failed for need_approved:', error);
+        }
+      }
+      
       fetchPendingNeeds();
     } finally {
       setActingId(null);
