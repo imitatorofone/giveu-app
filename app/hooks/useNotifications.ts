@@ -18,6 +18,16 @@ export function useNotifications() {
 
   const fetchNotifications = useCallback(async () => {
     console.log('🔔 Fetching notifications...');
+    
+    // Cleanup old notifications (runs once when hook mounts)
+    try {
+      await supabase.rpc('cleanup_old_notifications');
+      console.log('🗑️ Old notifications cleaned up');
+    } catch (cleanupError) {
+      // Silently fail if cleanup doesn't work - not critical
+      console.warn('Cleanup skipped:', cleanupError);
+    }
+    
     try {
       const { data: { user } } = await supabase.auth.getUser();
       console.log('🔔 User:', user?.id);
