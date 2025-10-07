@@ -1,5 +1,6 @@
 ﻿import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { createNotification } from '@/lib/notificationHelper';
 
 export const runtime = 'nodejs';
 
@@ -73,6 +74,74 @@ export async function GET(req: Request) {
         return NextResponse.json({ error: `Profile create failed: ${insErr.message}` }, { status: 500 });                                                       
       }
       me = inserted;
+
+      // Notify leaders about new member join request
+      try {
+        console.log('[Members API] New profile created, notifying leaders...');
+        
+        // Get all leaders in the same church
+        const { data: leaders, error: leadersError } = await svc
+          .from('profiles')
+          .select('id')
+          .eq('church_code', me.church_code)
+          .eq('is_leader', true);
+
+        if (leadersError) {
+          console.error('[Members API] Error fetching leaders:', leadersError);
+        } else if (leaders && leaders.length > 0) {
+          const memberName = me.full_name || 'A new member';
+          
+          for (const leader of leaders) {
+            // Skip notifying the new member if they're also a leader
+            if (leader.id === me.id) continue;
+            
+            console.log('[Members API] Notifying leader:', leader.id);
+            
+            // Create DIY in-app notification
+            await createNotification({
+              userId: leader.id,
+              eventType: 'member.join_request',
+              title: 'New Member Wants to Join',
+              description: `${memberName} wants to join your church community`,
+              path: '/leader/members',
+              needId: null,
+              need_title: null
+            });
+            
+            // Trigger Knock workflow for push notification
+            try {
+              const knockResponse = await fetch(`${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/api/knock/trigger`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  workflow: 'member_join_request',
+                  userId: leader.id,
+                  data: {
+                    member_name: memberName,
+                    member_id: me.id,
+                    church_code: me.church_code
+                  }
+                })
+              });
+
+              if (knockResponse.ok) {
+                console.log('[Members API] ✅ Knock workflow triggered for member_join_request to leader:', leader.id);
+              } else {
+                console.warn('[Members API] Knock trigger failed for leader:', leader.id, knockResponse.status);
+              }
+            } catch (knockError) {
+              console.warn('[Members API] Knock trigger error for leader:', leader.id, knockError);
+            }
+          }
+          
+          console.log(`[Members API] Sent member_join_request notifications to ${leaders.length} leaders`);
+        } else {
+          console.log('[Members API] No leaders found to notify');
+        }
+      } catch (notificationError) {
+        console.error('[Members API] Error in member join notification logic:', notificationError);
+        // Don't fail profile creation if notifications fail
+      }
     }
 
     // Guard: leader only
