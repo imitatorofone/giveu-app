@@ -22,15 +22,16 @@ export default function ChurchSetup() {
       }
       setUser(authData.user);
 
-      // Check if user is already assigned to a church
-      const { data: membership } = await supabase
-        .from('org_members')
-        .select('org_id, role, orgs(name)')
-        .eq('user_id', authData.user.id)
+      // Check if user already has a church_code in their profile
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('church_code')
+        .eq('id', authData.user.id)
         .single();
 
-      if (membership) {
+      if (profile?.church_code && profile.church_code.trim() !== '') {
         // User already has a church, redirect to dashboard
+        console.log('User already has church_code:', profile.church_code);
         router.push('/dashboard');
         return;
       }
@@ -78,27 +79,17 @@ export default function ChurchSetup() {
 
       console.log('Church mapping:', { selectedChurch: selectedChurchData.name, churchCode });
 
-      // Create pending membership (not approved yet)
-      const { data: memberData, error: memberError } = await supabase
-        .from('org_members')
-        .insert({
-          org_id: selectedChurch,
-          user_id: user.id,
-          role: role,
-          status: 'pending'
-        })
-        .select();
-
-      console.log('Member insert result:', { memberData, memberError });
-      if (memberError) throw memberError;
-
-      // Update profile with church_code
+      // Update profile with church_code and role information
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .upsert({
           id: user.id,
           email: user.email,
-          church_code: churchCode
+          church_code: churchCode,
+          role: role,
+          is_leader: role === 'leader',
+          approval_status: 'pending',
+          updated_at: new Date().toISOString()
         })
         .select();
 
@@ -154,7 +145,7 @@ export default function ChurchSetup() {
           }}>
             <Gift size={40} />
           </div>
-          <h1 style={{ fontSize: 28, fontWeight: 'bold', margin: '0 0 8px' }}>Welcome to Engage</h1>
+          <h1 style={{ fontSize: 28, fontWeight: 'bold', margin: '0 0 8px' }}>Welcome to giveU</h1>
           <p style={{ color: '#6b7280' }}>Let's connect you with your church community</p>
         </div>
 
@@ -226,7 +217,7 @@ export default function ChurchSetup() {
         <div style={{ marginTop: 24, padding: 16, backgroundColor: '#f9fafb', borderRadius: 8 }}>
           <p style={{ fontSize: 12, color: '#6b7280', margin: 0 }}>
             Don't see your church? This is currently in beta testing with select churches. 
-            Contact your church leadership about joining the Engage beta program.
+            Contact your church leadership about joining the giveU beta program.
           </p>
         </div>
       </div>

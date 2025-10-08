@@ -277,6 +277,61 @@ export default function MemberDashboard() {
     fetchNeeds();
   }, []);
 
+  // Profile completeness check - redirect incomplete users to onboarding
+  useEffect(() => {
+    async function checkProfileCompleteness() {
+      // Only run if we have a user ID
+      if (!currentUserId) return;
+      
+      console.log('[dashboard] 🔍 Checking profile completeness for user:', currentUserId);
+      
+      try {
+        // Fetch complete profile
+        const { data: profile, error } = await supabase
+          .from('profiles')
+          .select('church_code, gift_selections, full_name')
+          .eq('id', currentUserId)
+          .single();
+
+        if (error) {
+          console.error('[dashboard] Error fetching profile for completeness check:', error);
+          return;
+        }
+
+        // Check if profile is complete
+        const hasChurchCode = profile?.church_code && profile.church_code.trim() !== '';
+        const hasGifts = profile?.gift_selections && profile.gift_selections.length > 0;
+
+        console.log('[dashboard] Profile completeness:', { 
+          hasChurchCode, 
+          hasGifts,
+          church_code: profile?.church_code,
+          gifts_count: profile?.gift_selections?.length,
+          full_name: profile?.full_name
+        });
+
+        // Redirect to appropriate onboarding step
+        if (!hasChurchCode) {
+          console.log('[dashboard] Missing church_code, redirecting to /setup');
+          router.push('/setup');
+          return;
+        }
+
+        if (!hasGifts) {
+          console.log('[dashboard] Missing gifts, redirecting to /survey');
+          router.push('/survey');
+          return;
+        }
+
+        console.log('[dashboard] ✅ Profile complete, allowing dashboard access');
+      } catch (error) {
+        console.error('[dashboard] Error in profile completeness check:', error);
+      }
+    }
+
+    checkProfileCompleteness();
+  }, [currentUserId, router]);
+
   // Handle deep-link modal opening
   useEffect(() => {
     const needId = searchParams.get('needId');

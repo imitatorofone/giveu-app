@@ -5,6 +5,7 @@ import { supabaseBrowser as supabase } from '../../lib/supabaseBrowser';
 import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
 import Image from 'next/image';
+import { BRAND } from '../../lib/brandConfig';
 
 type AuthState = 'checking' | 'authed' | 'anon';
 
@@ -76,8 +77,22 @@ export default function AuthPage() {
           console.log('[auth] Profile fetch result:', { 
             profile: profile?.full_name, 
             church_code: profile?.church_code,
-            error: profileError?.message 
+            error: profileError?.message,
+            fullProfile: profile // DEBUG: Show complete profile object
           });
+          
+          // DEBUG: Check if profile exists and what data it contains
+          if (profile) {
+            console.log('[auth] 🔍 DEBUG: Profile exists with data:', {
+              id: profile.id,
+              full_name: profile.full_name,
+              church_code: profile.church_code,
+              hasChurchCode: !!(profile.church_code && profile.church_code.trim() !== ''),
+              profileKeys: Object.keys(profile)
+            });
+          } else {
+            console.log('[auth] 🔍 DEBUG: No profile found for user:', session.user.id);
+          }
           
           if (isMounted) setFullName(profile?.full_name ?? null);
 
@@ -161,7 +176,7 @@ export default function AuthPage() {
     const { error } = await supabase.auth.signInWithOtp({ 
       email,
       options: {
-        emailRedirectTo: `${window.location.origin}/dashboard`
+        emailRedirectTo: `${window.location.origin}/auth`
       }
     });
     
@@ -199,8 +214,8 @@ export default function AuthPage() {
               margin: '0 auto 24px'
             }}>
               <Image 
-                src="/giveu-logo.svg" 
-                alt="giveU Logo" 
+                src={BRAND.logo.path} 
+                alt={BRAND.logo.alt} 
                 width={90} 
                 height={90}
                 priority
@@ -244,8 +259,8 @@ export default function AuthPage() {
               margin: '0 auto 24px'
             }}>
               <Image 
-                src="/giveu-logo.svg" 
-                alt="giveU Logo" 
+                src={BRAND.logo.path} 
+                alt={BRAND.logo.alt} 
                 width={90} 
                 height={90}
                 priority
@@ -290,7 +305,7 @@ export default function AuthPage() {
             <div style={{ textAlign: 'center' }}>
               <p style={{ 
                 fontSize: '16px', 
-                color: '#20c997',
+                color: BRAND.colors.primary,
                 marginBottom: '24px',
                 fontWeight: '500'
               }}>
@@ -325,7 +340,7 @@ export default function AuthPage() {
                 style={{
                   width: '100%',
                   padding: '16px 24px',
-                  backgroundColor: '#20c997',
+                  backgroundColor: BRAND.colors.primary,
                   color: 'white',
                   borderRadius: '12px',
                   fontSize: '16px',
@@ -337,12 +352,12 @@ export default function AuthPage() {
                   marginBottom: '16px'
                 }}
                 onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = '#1ba085';
+                  e.currentTarget.style.backgroundColor = BRAND.colors.primaryHover;
                   e.currentTarget.style.transform = 'translateY(-1px)';
                   e.currentTarget.style.opacity = '0.9';
                 }}
                 onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = '#20c997';
+                  e.currentTarget.style.backgroundColor = BRAND.colors.primary;
                   e.currentTarget.style.transform = 'translateY(0)';
                   e.currentTarget.style.opacity = '1';
                 }}
@@ -409,7 +424,7 @@ export default function AuthPage() {
             margin: '0 auto 24px'
           }}>
             <Image 
-              src="/giveu-logo.svg" 
+              src={BRAND.logo.path} 
               alt="giveU Logo" 
               width={90} 
               height={90}
@@ -428,7 +443,7 @@ export default function AuthPage() {
             color: '#111827',
             lineHeight: '1.2'
           }}>
-            sign in to <span style={{ color: '#20c997', fontWeight: '700' }}>giveU</span>
+            sign in to <span style={{ color: BRAND.colors.primary, fontWeight: '700' }}>giveU</span>
           </h1>
           
           {/* Tagline */}
@@ -468,7 +483,7 @@ export default function AuthPage() {
                 backgroundColor: 'white'
               }}
               onFocus={(e) => {
-                e.target.style.borderColor = '#20c997';
+                e.target.style.borderColor = BRAND.colors.primary;
                 e.target.style.boxShadow = '0 0 0 3px rgba(32, 201, 151, 0.1)';
               }}
               onBlur={(e) => {
@@ -484,7 +499,7 @@ export default function AuthPage() {
             style={{
               width: '100%',
               padding: '16px 24px',
-              backgroundColor: loading ? '#9ca3af' : '#20c997',
+              backgroundColor: loading ? '#9ca3af' : BRAND.colors.primary,
               color: 'white',
               borderRadius: '12px',
               fontSize: '16px',
@@ -496,14 +511,14 @@ export default function AuthPage() {
             }}
             onMouseEnter={(e) => {
               if (!loading) {
-                e.currentTarget.style.backgroundColor = '#1ba085';
+                e.currentTarget.style.backgroundColor = BRAND.colors.primaryHover;
                 e.currentTarget.style.transform = 'translateY(-1px)';
                 e.currentTarget.style.opacity = '0.9';
               }
             }}
             onMouseLeave={(e) => {
               if (!loading) {
-                e.currentTarget.style.backgroundColor = '#20c997';
+                e.currentTarget.style.backgroundColor = BRAND.colors.primary;
                 e.currentTarget.style.transform = 'translateY(0)';
                 e.currentTarget.style.opacity = '1';
               }

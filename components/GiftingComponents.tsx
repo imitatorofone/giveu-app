@@ -1,5 +1,5 @@
 // components/GiftingComponents.tsx
-// Complete React components that use the ENGAGE gifting structure
+// Complete React components that use the giveU gifting structure
 
 'use client'
 
@@ -561,7 +561,7 @@ export function GiftingSystemDemo() {
   
   return (
     <div className="max-w-4xl mx-auto p-6 space-y-8">
-      <h2 className="text-2xl font-bold">ENGAGE Gifting System Demo</h2>
+      <h2 className="text-2xl font-bold">giveU Gifting System Demo</h2>
       
       {/* User Gifts Display */}
       <section className="space-y-2">

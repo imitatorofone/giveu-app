@@ -53,8 +53,11 @@ export async function GET(req: Request) {
       }
     }
 
-    // 3) Still missing? create it now with Harmony defaults for this beta      
+    // 3) Still missing? create it now WITHOUT church_code to preserve onboarding flow      
     if (!me) {
+      console.log('[members-api] 🚨 AUTO-CREATING PROFILE for user:', user.id, 'email:', user.email);
+      console.log('[members-api] ✅ Creating profile WITHOUT church_code to preserve onboarding flow');
+      
       const { data: inserted, error: insErr } = await svc
         .from('profiles')
         .upsert({
@@ -62,9 +65,9 @@ export async function GET(req: Request) {
           email: user.email,
           full_name: (user.email || '').split('@')[0],
           role: user.email === 'imitatorofone@gmail.com' ? 'leader' : 'member', 
-          approval_status: 'approved',
+          approval_status: 'pending', // Set to pending to require approval
           is_leader: user.email === 'imitatorofone@gmail.com',
-          church_code: '123harmony',
+          // church_code: null, // 🚨 FIXED: Don't auto-set church_code - let user complete onboarding
           updated_at: new Date().toISOString(),
         })
         .select()

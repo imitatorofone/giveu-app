@@ -189,7 +189,7 @@ export default function AdminDashboard() {
               <Gift size={24} />
             </div>
             <div>
-              <h2 style={{ margin: 0, fontSize: 20, color: '#1f2937', fontFamily: 'var(--font-quicksand)', fontWeight: 700 }}>Engage</h2>
+              <h2 style={{ margin: 0, fontSize: 20, color: '#1f2937', fontFamily: 'var(--font-quicksand)', fontWeight: 700 }}>giveU</h2>
               <p style={{ margin: 0, fontSize: 14, color: '#6b7280' }}>Admin Dashboard</p>
             </div>
           </div>
