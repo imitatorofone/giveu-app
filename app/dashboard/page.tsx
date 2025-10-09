@@ -412,6 +412,7 @@ export default function MemberDashboard() {
     }
   }, [searchParams, opportunities, loading, deepLinkRetryCount]); // Add dependencies
 
+  /* Disabled for MVP - modal functionality
   const handleNeedClick = (needId: string) => {
     console.log('[dashboard] Need clicked with ID:', needId);
     setSelectedNeedId(needId);
@@ -422,6 +423,7 @@ export default function MemberDashboard() {
     setSelectedNeedId(null);
     router.replace('/dashboard', { scroll: false });
   };
+  */
 
   // Close sort dropdown when clicking outside
   useEffect(() => {
@@ -1144,17 +1146,16 @@ export default function MemberDashboard() {
                 display: 'flex',
                 flexDirection: 'column',
                 minHeight: '280px', // Consistent card height
-                cursor: 'pointer',
                 transition: 'all 0.2s ease'
               }}
+              /* Disabled for MVP - modal functionality
               onClick={() => handleNeedClick(opportunity.id)}
+              */
               onMouseEnter={(e) => {
-                e.currentTarget.style.boxShadow = '0 8px 25px -5px rgba(0, 0, 0, 0.15)';
-                e.currentTarget.style.transform = 'translateY(-2px)';
+                e.currentTarget.style.boxShadow = '0 4px 12px -2px rgba(0, 0, 0, 0.12)';
               }}
               onMouseLeave={(e) => {
-                e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.1)';
-                e.currentTarget.style.transform = 'translateY(0)';
+                e.currentTarget.style.boxShadow = '0 1px 3px 0 rgba(0, 0, 0, 0.1)';
               }}
             >
               {/* Card Header */}
@@ -1402,12 +1403,13 @@ export default function MemberDashboard() {
       {/* Persistent Footer */}
       <Footer />
 
-      {/* Need Detail Modal */}
+      {/* Disabled for MVP - modal functionality
       <NeedDetailModal 
         needId={selectedNeedId}
         onClose={handleModalClose}
         userId={currentUserId || undefined}
       />
+      */}
     </div>
   );
 }
