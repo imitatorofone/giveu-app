@@ -1066,7 +1066,9 @@ export default function MemberDashboard() {
       <Header />
 
       {/* Main Content */}
-      <main style={{ maxWidth: '1200px', margin: '0 auto', padding: '20px 16px' }}>
+      <main style={{ maxWidth: '1200px', margin: '0 auto', padding: '16px' }}
+      className="sm:px-6 lg:px-8"
+      >
         <div style={{ marginBottom: '30px' }}>
           <h1 style={{ 
             fontSize: '28px', 
@@ -1183,9 +1185,11 @@ export default function MemberDashboard() {
 
         <div style={{ 
           display: 'grid', 
-          gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
-          gap: '20px'
-        }}>
+          gridTemplateColumns: '1fr',
+          gap: '16px'
+        }}
+        className="sm:grid-cols-2 lg:grid-cols-3"
+        >
           {sortedOpportunities.map((opportunity) => {
             const isHelping = opportunity.responses?.some(r => r.user_id === currentUserId && r.status === 'accepted') || 
                              userCommitments.includes(opportunity.id);
@@ -1201,19 +1205,13 @@ export default function MemberDashboard() {
                 overflow: 'hidden',
                 display: 'flex',
                 flexDirection: 'column',
-                minHeight: '280px', // Consistent card height
-                transition: 'all 0.2s ease',
-                position: 'relative'
+                minHeight: '280px',
+                position: 'relative',
+                boxShadow: '0 2px 8px rgba(0, 0, 0, 0.06)'
               }}
               /* Disabled for MVP - modal functionality
               onClick={() => handleNeedClick(opportunity.id)}
               */
-              onMouseEnter={(e) => {
-                e.currentTarget.style.boxShadow = '0 4px 12px -2px rgba(0, 0, 0, 0.12)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.boxShadow = '0 1px 3px 0 rgba(0, 0, 0, 0.1)';
-              }}
             >
               {/* Card Header */}
               <div style={{ padding: '16px 16px 0 16px' }}>
@@ -1242,12 +1240,12 @@ export default function MemberDashboard() {
                   justifyContent: 'space-between',
                   alignItems: 'flex-start',
                   marginBottom: '16px',
-                  fontSize: '14px',
+                  fontSize: '13px',
                   color: BRAND.colors.textLight,
                   borderBottom: '1px solid #f1f5f9',
                   paddingBottom: '12px',
                   minHeight: '44px',
-                  opacity: 0.65
+                  opacity: 0.7
                 }}>
                   {/* Column 1 - Date */}
                   <div style={{ 
@@ -1262,12 +1260,12 @@ export default function MemberDashboard() {
                       color: BRAND.colors.primary,
                       flexShrink: 0
                     }} />
-                    <div style={{ fontSize: '12px', lineHeight: '1.2', textAlign: 'center' }}>
+                    <div style={{ fontSize: '13px', lineHeight: '1.3', textAlign: 'center' }}>
                       <div style={{ fontWeight: '500', color: BRAND.colors.text }}>{opportunity.date}</div>
                       {opportunity.time && (
                         <div style={{ 
                           color: BRAND.colors.textLight, 
-                          fontSize: '11px', 
+                          fontSize: '12px', 
                           marginTop: '2px',
                           fontWeight: '400'
                         }}>
@@ -1290,11 +1288,11 @@ export default function MemberDashboard() {
                       color: BRAND.colors.primary,
                       flexShrink: 0
                     }} />
-                    <div style={{ fontSize: '12px', lineHeight: '1.2', textAlign: 'center' }}>
+                    <div style={{ fontSize: '13px', lineHeight: '1.3', textAlign: 'center' }}>
                       <div style={{ fontWeight: '500', color: BRAND.colors.text }}>
                         {getLocationLine1(opportunity.location)}
                       </div>
-                      <div style={{ color: BRAND.colors.textLight }}>
+                      <div style={{ color: BRAND.colors.textLight, fontSize: '12px' }}>
                         {getLocationLine2(opportunity.location)}
                       </div>
                     </div>
@@ -1313,7 +1311,7 @@ export default function MemberDashboard() {
                       color: BRAND.colors.primary,
                       flexShrink: 0
                     }} />
-                    <div style={{ fontSize: '12px', lineHeight: '1.3', textAlign: 'center' }}>
+                    <div style={{ fontSize: '13px', lineHeight: '1.3', textAlign: 'center' }}>
                       <div style={{ fontWeight: '500', color: BRAND.colors.text }}>
                         {(() => {
                           const peopleNeeded = opportunity.people_needed || 1;
@@ -1321,7 +1319,7 @@ export default function MemberDashboard() {
                           return needsText.includes('+') ? `${needsText} needed` : `${needsText}+ needed`;
                         })()}
                       </div>
-                      <div style={{ color: BRAND.colors.textLight, fontSize: '11px' }}>
+                      <div style={{ color: BRAND.colors.textLight, fontSize: '12px' }}>
                         {opportunity.volunteers_count || 0} committed
                       </div>
                     </div>
@@ -1391,24 +1389,27 @@ export default function MemberDashboard() {
                               <button
                                 onClick={() => toggleSkillsExpansion(opportunity.id)}
                                 style={{
-                                  padding: '6px 12px',
+                                  padding: '10px 16px',
                                   borderRadius: '16px',
-                                  fontSize: '12px',
+                                  fontSize: '13px',
                                   fontWeight: '500',
                                   fontFamily: BRAND.fonts.heading,
                                   backgroundColor: '#f3f4f6',
                                   color: BRAND.colors.text,
                                   border: 'none',
                                   cursor: 'pointer',
+                                  minHeight: '40px',
                                   transition: 'all 0.2s ease'
                                 }}
-                                onMouseEnter={(e) => {
+                                onTouchStart={(e) => {
                                   e.currentTarget.style.backgroundColor = BRAND.colors.primary;
                                   e.currentTarget.style.color = 'white';
                                 }}
-                                onMouseLeave={(e) => {
-                                  e.currentTarget.style.backgroundColor = '#f3f4f6';
-                                  e.currentTarget.style.color = BRAND.colors.text;
+                                onTouchEnd={(e) => {
+                                  setTimeout(() => {
+                                    e.currentTarget.style.backgroundColor = '#f3f4f6';
+                                    e.currentTarget.style.color = BRAND.colors.text;
+                                  }, 150);
                                 }}
                               >
                                 {isExpanded ? 'Show Less' : `+${sortedSkills.length - 6} more`}
@@ -1455,21 +1456,30 @@ export default function MemberDashboard() {
                         e.stopPropagation();
                         handleICanHelp(opportunity.id);
                       }}
-                      className="flex items-center gap-2 px-6 py-2 rounded-lg text-white font-medium transition-colors"
+                      className="flex items-center gap-2 px-6 py-2 rounded-lg text-white font-medium transition-colors active:scale-95"
                       style={{ 
                         backgroundColor: BRAND.colors.primary,
-                        minHeight: '44px',
+                        minHeight: '48px',
                         width: '100%',
                         justifyContent: 'center',
                         borderRadius: '8px',
                         fontWeight: '600',
                         fontFamily: BRAND.fonts.heading,
-                        fontSize: '15px',
+                        fontSize: '16px',
                         border: `2px solid ${BRAND.colors.primary}`,
-                        cursor: 'pointer'
+                        cursor: 'pointer',
+                        transition: 'all 0.15s ease'
                       }}
-                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = BRAND.colors.primaryHover}
-                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = BRAND.colors.primary}
+                      onTouchStart={(e) => {
+                        e.currentTarget.style.backgroundColor = BRAND.colors.primaryHover;
+                        e.currentTarget.style.transform = 'scale(0.98)';
+                      }}
+                      onTouchEnd={(e) => {
+                        setTimeout(() => {
+                          e.currentTarget.style.backgroundColor = BRAND.colors.primary;
+                          e.currentTarget.style.transform = 'scale(1)';
+                        }, 150);
+                      }}
                     >
                       I'm Available
                     </button>
