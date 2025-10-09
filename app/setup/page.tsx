@@ -3,7 +3,9 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabaseClient';
 import { useRouter } from 'next/navigation';
-import { Gift } from 'lucide-react';
+import { Gift, Check } from 'lucide-react';
+import { BRAND } from '../../lib/brandConfig';
+import Image from 'next/image';
 
 export default function ChurchSetup() {
   const [user, setUser] = useState<any>(null);
@@ -111,7 +113,18 @@ export default function ChurchSetup() {
     }
   };
 
-  if (loading) return <div style={{ padding: 40, textAlign: 'center' }}>Loading...</div>;
+  if (loading) return (
+    <div style={{ 
+      minHeight: '100vh',
+      backgroundColor: BRAND.colors.background,
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      fontFamily: BRAND.fonts.body
+    }}>
+      <div style={{ textAlign: 'center', color: BRAND.colors.textLight }}>Loading...</div>
+    </div>
+  );
 
   return (
     <div style={{ 
@@ -120,37 +133,60 @@ export default function ChurchSetup() {
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      fontFamily: 'sans-serif'
+      padding: '24px',
+      fontFamily: BRAND.fonts.body
     }}>
       <div style={{ 
         backgroundColor: 'white', 
-        padding: 48, 
-        borderRadius: 12, 
-        border: '1px solid #e5e7eb',
-        boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
-        maxWidth: 500,
+        padding: '32px 24px', 
+        borderRadius: '12px', 
+        border: '1px solid #f3f4f6',
+        boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)',
+        maxWidth: '500px',
         width: '100%'
       }}>
-        <div style={{ textAlign: 'center', marginBottom: 32 }}>
-          <div style={{ 
-            width: 80, 
-            height: 80, 
-            backgroundColor: '#4ECDC4', 
-            borderRadius: 20, 
-            display: 'flex', 
-            alignItems: 'center', 
-            justifyContent: 'center', 
-            margin: '0 auto 16px',
-            fontSize: 40 
-          }}>
-            <Gift size={40} />
+        <div style={{ textAlign: 'center', marginBottom: '32px' }}>
+          {/* giveU Logo */}
+          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '16px' }}>
+            <Image 
+              src={BRAND.logo.path}
+              alt={BRAND.logo.alt}
+              width={80}
+              height={80}
+              style={{ 
+                borderRadius: '12px',
+                objectFit: 'contain'
+              }}
+            />
           </div>
-          <h1 style={{ fontSize: 28, fontWeight: 'bold', margin: '0 0 8px' }}>Welcome to giveU</h1>
-          <p style={{ color: '#6b7280' }}>Let's connect you with your church community</p>
+          <h1 style={{ 
+            fontSize: '28px', 
+            fontWeight: '700', 
+            margin: '0 0 8px',
+            color: BRAND.colors.text,
+            fontFamily: 'Quicksand, sans-serif'
+          }}>
+            Welcome to giveU
+          </h1>
+          <p style={{ 
+            color: BRAND.colors.textLight,
+            fontSize: '16px',
+            margin: 0,
+            fontFamily: BRAND.fonts.body
+          }}>
+            Let's connect you with your church community
+          </p>
         </div>
 
-        <div style={{ marginBottom: 24 }}>
-          <label style={{ display: 'block', fontWeight: 500, marginBottom: 8 }}>
+        <div style={{ marginBottom: '24px' }}>
+          <label style={{ 
+            display: 'block', 
+            fontWeight: '600', 
+            marginBottom: '8px',
+            fontSize: '14px',
+            color: BRAND.colors.text,
+            fontFamily: BRAND.fonts.body
+          }}>
             Select Your Church:
           </label>
           <select
@@ -158,10 +194,24 @@ export default function ChurchSetup() {
             onChange={(e) => setSelectedChurch(e.target.value)}
             style={{ 
               width: '100%', 
-              padding: 12, 
-              border: '1px solid #d1d5db',
-              borderRadius: 8,
-              fontSize: 16
+              padding: '12px 16px', 
+              border: '1px solid #e5e7eb',
+              borderRadius: '8px',
+              fontSize: '14px',
+              minHeight: '44px',
+              color: BRAND.colors.text,
+              fontFamily: BRAND.fonts.body,
+              backgroundColor: 'white',
+              cursor: 'pointer',
+              outline: 'none'
+            }}
+            onFocus={(e) => {
+              e.currentTarget.style.borderColor = BRAND.colors.primary;
+              e.currentTarget.style.boxShadow = `0 0 0 3px ${BRAND.colors.primary}20`;
+            }}
+            onBlur={(e) => {
+              e.currentTarget.style.borderColor = '#e5e7eb';
+              e.currentTarget.style.boxShadow = 'none';
             }}
           >
             <option value="">Choose your church...</option>
@@ -173,25 +223,63 @@ export default function ChurchSetup() {
           </select>
         </div>
 
-        <div style={{ marginBottom: 32 }}>
-          <label style={{ display: 'block', fontWeight: 500, marginBottom: 8 }}>
+        <div style={{ marginBottom: '32px' }}>
+          <label style={{ 
+            display: 'block', 
+            fontWeight: '600', 
+            marginBottom: '12px',
+            fontSize: '14px',
+            color: BRAND.colors.text,
+            fontFamily: BRAND.fonts.body
+          }}>
             Your Role:
           </label>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
             {[
               { value: 'member', label: 'Member - I want to discover my gifts and serve' },
               { value: 'leader', label: 'Leader - I help coordinate ministry opportunities and manage church settings' }
             ].map(option => (
-              <label key={option.value} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <input
-                  type="radio"
-                  name="role"
-                  value={option.value}
-                  checked={role === option.value}
-                  onChange={(e) => setRole(e.target.value)}
-                />
-                <span style={{ fontSize: 14 }}>{option.label}</span>
-              </label>
+              <div 
+                key={option.value}
+                onClick={() => setRole(option.value)}
+                style={{ 
+                  display: 'flex', 
+                  alignItems: 'center',
+                  gap: '12px',
+                  cursor: 'pointer',
+                  padding: '16px',
+                  border: `2px solid ${role === option.value ? BRAND.colors.primary : '#e5e7eb'}`,
+                  borderRadius: '8px',
+                  backgroundColor: role === option.value ? BRAND.colors.primary : 'white',
+                  color: role === option.value ? 'white' : BRAND.colors.text,
+                  transition: 'all 0.2s',
+                  minHeight: '44px'
+                }}
+                onMouseEnter={(e) => {
+                  if (role !== option.value) {
+                    e.currentTarget.style.backgroundColor = '#f9fafb';
+                    e.currentTarget.style.borderColor = '#d1d5db';
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (role !== option.value) {
+                    e.currentTarget.style.backgroundColor = 'white';
+                    e.currentTarget.style.borderColor = '#e5e7eb';
+                  }
+                }}
+              >
+                {role === option.value && (
+                  <Check size={20} color="white" strokeWidth={3} />
+                )}
+                <span style={{ 
+                  fontSize: '14px',
+                  fontFamily: BRAND.fonts.body,
+                  lineHeight: '1.5',
+                  flex: 1
+                }}>
+                  {option.label}
+                </span>
+              </div>
             ))}
           </div>
         </div>
@@ -201,21 +289,47 @@ export default function ChurchSetup() {
           disabled={!selectedChurch}
           style={{
             width: '100%',
-            backgroundColor: selectedChurch ? '#4ECDC4' : '#e5e7eb',
-            color: selectedChurch ? 'white' : '#9ca3af',
+            backgroundColor: selectedChurch ? BRAND.colors.primary : '#d1d5db',
+            color: 'white',
             border: 'none',
-            padding: 16,
-            borderRadius: 8,
-            fontSize: 16,
-            fontWeight: 600,
-            cursor: selectedChurch ? 'pointer' : 'not-allowed'
+            padding: '12px 16px',
+            borderRadius: '8px',
+            fontSize: '16px',
+            fontWeight: '600',
+            fontFamily: BRAND.fonts.heading,
+            cursor: selectedChurch ? 'pointer' : 'not-allowed',
+            minHeight: '44px',
+            transition: 'all 0.2s',
+            opacity: selectedChurch ? 1 : 0.6
+          }}
+          onMouseEnter={(e) => {
+            if (selectedChurch) {
+              e.currentTarget.style.backgroundColor = BRAND.colors.primaryHover;
+            }
+          }}
+          onMouseLeave={(e) => {
+            if (selectedChurch) {
+              e.currentTarget.style.backgroundColor = BRAND.colors.primary;
+            }
           }}
         >
           Join Church & Continue
         </button>
 
-        <div style={{ marginTop: 24, padding: 16, backgroundColor: '#f9fafb', borderRadius: 8 }}>
-          <p style={{ fontSize: 12, color: '#6b7280', margin: 0 }}>
+        <div style={{ 
+          marginTop: '24px', 
+          padding: '16px', 
+          backgroundColor: '#f9fafb', 
+          borderRadius: '8px',
+          border: '1px solid #e5e7eb'
+        }}>
+          <p style={{ 
+            fontSize: '12px', 
+            color: BRAND.colors.textLight, 
+            margin: 0,
+            lineHeight: '1.5',
+            fontFamily: BRAND.fonts.body
+          }}>
             Don't see your church? This is currently in beta testing with select churches. 
             Contact your church leadership about joining the giveU beta program.
           </p>

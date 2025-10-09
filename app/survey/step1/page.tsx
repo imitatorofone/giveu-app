@@ -5,6 +5,7 @@ import { supabase } from '../../../lib/supabaseClient';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, ArrowRight, User, Calendar, MapPin, Phone, Clock } from 'lucide-react';
 import { formatPhoneToE164 } from '../../../lib/phoneFormatter';
+import { BRAND } from '../../../lib/brandConfig';
 
 // Survey-wide design constants
 const SURVEY_GREEN = '#20c997';
@@ -111,26 +112,26 @@ export default function SurveyStep1() {
   if (!user) return <div>Loading...</div>;
 
   return (
-    <main className="min-h-screen bg-gray-50 py-12 px-4">
-      <div className={SURVEY_CARD}>
+    <main style={{ minHeight: '100vh', backgroundColor: BRAND.colors.background, padding: '48px 16px' }}>
+      <div style={{ maxWidth: '672px', margin: '0 auto', backgroundColor: 'white', borderRadius: '12px', boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)', border: '1px solid #e5e7eb', padding: '32px 24px' }}>
         {/* Progress indicator */}
-        <div className={`w-full ${SURVEY_PROGRESS}`}>
-          <div className="bg-[#20c997] h-2 rounded-full transition-all" style={{ width: '25%' }}></div>
+        <div style={{ width: '100%', height: '8px', backgroundColor: '#e5e7eb', borderRadius: '9999px', marginBottom: '24px' }}>
+          <div style={{ backgroundColor: BRAND.colors.primary, height: '8px', borderRadius: '9999px', transition: 'all 0.3s', width: '25%' }}></div>
         </div>
 
-        <div className="text-center mb-6">
-          <p className="text-sm text-gray-500 mb-2">Step 1 of 4</p>
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">Tell us about yourself</h1>
+        <div style={{ textAlign: 'center', marginBottom: '24px' }}>
+          <p style={{ fontSize: '14px', color: BRAND.colors.textLight, marginBottom: '8px', fontFamily: BRAND.fonts.body }}>Step 1 of 4</p>
+          <h1 style={{ fontSize: '28px', fontWeight: '700', color: BRAND.colors.text, marginBottom: '8px', fontFamily: BRAND.fonts.heading }}>Tell us about yourself</h1>
         </div>
         {error && (
-          <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
-            <p className="text-red-600 text-sm">{error}</p>
+          <div style={{ marginBottom: '16px', padding: '16px', backgroundColor: '#fef2f2', border: `1px solid ${BRAND.colors.danger}`, borderRadius: '8px' }}>
+            <p style={{ color: BRAND.colors.danger, fontSize: '14px', fontFamily: BRAND.fonts.body }}>{error}</p>
           </div>
         )}
-        <div className="space-y-6">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
-              <User className="w-4 h-4" />
+            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px', fontWeight: '500', color: BRAND.colors.textLight, marginBottom: '8px', fontFamily: BRAND.fonts.body }}>
+              <User size={16} />
               Full Name *
             </label>
             <input
@@ -138,13 +139,13 @@ export default function SurveyStep1() {
               value={fullName}
               onChange={(e) => setFullName(e.target.value)}
               placeholder="Sarah Johnson"
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#20c997] focus:border-[#20c997]"
+              style={{ width: '100%', padding: '12px 16px', border: '1px solid #e5e7eb', borderRadius: '8px', fontSize: '14px', fontFamily: BRAND.fonts.body, minHeight: '44px' }}
             />
         </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
-              <Calendar className="w-4 h-4" />
+            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px', fontWeight: '500', color: BRAND.colors.textLight, marginBottom: '8px', fontFamily: BRAND.fonts.body }}>
+              <Calendar size={16} />
               Age *
             </label>
             <input
@@ -152,13 +153,13 @@ export default function SurveyStep1() {
               value={age}
               onChange={(e) => setAge(e.target.value)}
               placeholder="25"
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#20c997] focus:border-[#20c997]"
+              style={{ width: '100%', padding: '12px 16px', border: '1px solid #e5e7eb', borderRadius: '8px', fontSize: '14px', fontFamily: BRAND.fonts.body, minHeight: '44px' }}
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
-              <MapPin className="w-4 h-4" />
+            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px', fontWeight: '500', color: BRAND.colors.textLight, marginBottom: '8px', fontFamily: BRAND.fonts.body }}>
+              <MapPin size={16} />
               City *
             </label>
             <input
@@ -166,13 +167,13 @@ export default function SurveyStep1() {
               value={city}
               onChange={(e) => setCity(e.target.value)}
               placeholder="Austin"
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#20c997] focus:border-[#20c997]"
+              style={{ width: '100%', padding: '12px 16px', border: '1px solid #e5e7eb', borderRadius: '8px', fontSize: '14px', fontFamily: BRAND.fonts.body, minHeight: '44px' }}
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
-              <Phone className="w-4 h-4" />
+            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px', fontWeight: '500', color: BRAND.colors.textLight, marginBottom: '8px', fontFamily: BRAND.fonts.body }}>
+              <Phone size={16} />
               Phone Number *
             </label>
             <input
@@ -180,25 +181,49 @@ export default function SurveyStep1() {
               value={phone}
               onChange={handlePhoneChange}
               placeholder="(555) 123-4567"
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#20c997] focus:border-[#20c997]"
+              style={{ width: '100%', padding: '12px 16px', border: '1px solid #e5e7eb', borderRadius: '8px', fontSize: '14px', fontFamily: BRAND.fonts.body, minHeight: '44px' }}
             />
           </div>
 
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+            <label className="block text-sm font-medium mb-2 flex items-center gap-2" style={{ color: BRAND.colors.textLight }}>
               <Clock className="w-4 h-4" />
               When are you typically available?
             </label>
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-2 gap-3">
               {['Morning', 'Afternoon', 'Evening', 'Weekends'].map((time) => (
                 <button
                   key={time}
                   type="button"
                   onClick={() => toggleAvailability(time)}
-                  className={`px-3 py-2 rounded-lg border text-sm font-medium transition ${
-                    availability.includes(time) ? SELECTED_STYLE : UNSELECTED_STYLE
-                  }`}
+                  style={{
+                    backgroundColor: availability.includes(time) ? BRAND.colors.primary : '#f3f4f6',
+                    color: availability.includes(time) ? 'white' : BRAND.colors.text,
+                    border: availability.includes(time) ? `2px solid ${BRAND.colors.primary}` : '1px solid #e5e7eb',
+                    padding: '12px 16px',
+                    borderRadius: '8px',
+                    fontSize: '14px',
+                    fontWeight: '500',
+                    fontFamily: BRAND.fonts.heading,
+                    cursor: 'pointer',
+                    transition: 'all 0.2s',
+                    minHeight: '44px'
+                  }}
+                  onMouseEnter={(e) => {
+                    if (availability.includes(time)) {
+                      e.currentTarget.style.backgroundColor = BRAND.colors.primaryHover;
+                    } else {
+                      e.currentTarget.style.backgroundColor = '#e5e7eb';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (availability.includes(time)) {
+                      e.currentTarget.style.backgroundColor = BRAND.colors.primary;
+                    } else {
+                      e.currentTarget.style.backgroundColor = '#f3f4f6';
+                    }
+                  }}
                 >
                   {time}
                 </button>
@@ -209,17 +234,34 @@ export default function SurveyStep1() {
           <button
             onClick={handleNext}
             disabled={!fullName || !age || !city || !phone}
-            className="transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             style={{
-              backgroundColor: fullName && age && city && phone ? SURVEY_GREEN : '#9ca3af',
+              width: '100%',
+              backgroundColor: (fullName && age && city && phone) ? BRAND.colors.primary : '#9ca3af',
               color: 'white',
               padding: '12px 24px',
               borderRadius: '8px',
               border: 'none',
-              fontSize: 16,
-              fontWeight: 600,
-              cursor: fullName && age && city && phone ? 'pointer' : 'not-allowed',
-              width: '100%'
+              fontSize: '16px',
+              fontWeight: '600',
+              fontFamily: BRAND.fonts.heading,
+              cursor: (fullName && age && city && phone) ? 'pointer' : 'not-allowed',
+              minHeight: '44px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '8px',
+              transition: 'all 0.2s',
+              opacity: (fullName && age && city && phone) ? 1 : 0.5
+            }}
+            onMouseEnter={(e) => {
+              if (fullName && age && city && phone) {
+                e.currentTarget.style.backgroundColor = BRAND.colors.primaryHover;
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (fullName && age && city && phone) {
+                e.currentTarget.style.backgroundColor = BRAND.colors.primary;
+              }
             }}
           >
             Keep Going

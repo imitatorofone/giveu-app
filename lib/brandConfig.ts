@@ -16,8 +16,7 @@ export const BRAND = {
     body: 'Merriweather, Georgia, serif',
   },
   logo: {
-    // Add actual logo path when asset is ready
-    path: '/logo.png',
+    path: '/giveu-logo.svg',
     alt: 'giveU - Where your gifts meet needs',
   }
 };
