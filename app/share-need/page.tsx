@@ -4,8 +4,9 @@ import { useState, useEffect } from 'react';
 import { supabaseBrowser as supabase } from '../../lib/supabaseBrowser';
 import { useRouter } from 'next/navigation';
 import { Icon } from '../../icons/index';
-import { ArrowLeft, MapPin, Users, Calendar, Clock, AlertCircle, CheckCircle } from 'lucide-react';
+import { ArrowLeft, MapPin, Users, Calendar, Clock, AlertCircle, CheckCircle, FileText, Plus, Sun, Cloud, Moon } from 'lucide-react';
 import { createNotification } from '../../lib/notificationHelper';
+import { BRAND } from '../../lib/brandConfig';
 
 const primaryGiftings = [
   { id: 'hands-on', name: 'Hands-On Skills', skills: ['Carpentry', 'Repairs', 'Gardening', 'Sewing', 'Cooking', 'Decorating', 'Setup/Tear-down'] },
@@ -369,134 +370,356 @@ export default function ShareNeedScreen() {
   const renderStep = () => {
     const cardStyle = {
       backgroundColor: 'white',
-      padding: 'var(--space-8)',
-      borderRadius: 12,
-      border: '1px solid #e5e7eb',
-      boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
-      marginBottom: 'var(--space-8)'
+      padding: '32px',
+      borderRadius: '16px',
+      boxShadow: '0 4px 16px rgba(0, 0, 0, 0.08)',
+      maxWidth: '680px',
+      margin: '0 auto',
+      border: '1px solid #f3f4f6'
     };
 
     const inputStyle = {
       width: '100%',
-      padding: 'var(--space-3)',
-      border: '1px solid #d1d5db',
-      borderRadius: 8,
-      fontSize: 16
+      padding: '12px 16px',
+      border: '1px solid #e5e7eb',
+      borderRadius: '8px',
+      fontSize: '16px',
+      minHeight: '44px',
+      fontFamily: BRAND.fonts.body,
+      transition: 'border-color 0.2s, box-shadow 0.2s'
     };
 
-    const buttonStyle = {
-      padding: 'var(--space-3) var(--space-4)',
-      border: '1px solid #d1d5db',
-      borderRadius: 8,
-      cursor: 'pointer',
-      backgroundColor: 'white'
+    const labelStyle = {
+      display: 'flex',
+      alignItems: 'center',
+      gap: '8px',
+      marginBottom: '8px',
+      fontWeight: '600',
+      fontSize: '14px',
+      color: BRAND.colors.text,
+      fontFamily: BRAND.fonts.heading
     };
 
     switch (currentStep) {
       case 0:
         return (
           <div style={cardStyle}>
-            <h2 style={{ fontSize: 24, marginBottom: 'var(--space-2)', fontWeight: 'bold' }}>What's the need?</h2>
-            <p style={{ color: '#666666', marginBottom: 'var(--space-6)' }}>
-              Share a clear, encouraging description of how others can help
+            {/* Progress Bar */}
+            <div style={{ marginBottom: '24px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                <span style={{ fontSize: '14px', fontWeight: '500', color: BRAND.colors.textLight, fontFamily: BRAND.fonts.body }}>
+                  Step 1 of 3
+                </span>
+                <span style={{ fontSize: '14px', fontWeight: '500', color: BRAND.colors.textLight, fontFamily: BRAND.fonts.body }}>
+                  33% complete
+                </span>
+              </div>
+              <div style={{ width: '100%', backgroundColor: '#e5e7eb', borderRadius: '9999px', height: '8px' }}>
+                <div style={{ 
+                  width: '33%', 
+                  backgroundColor: '#20c997', 
+                  height: '8px', 
+                  borderRadius: '9999px',
+                  transition: 'width 0.3s ease'
+                }}></div>
+              </div>
+            </div>
+
+            <h2 style={{ fontSize: '28px', marginBottom: '8px', fontWeight: 'bold', color: BRAND.colors.text, fontFamily: BRAND.fonts.heading }}>
+              Share a Need
+            </h2>
+            <p style={{ color: BRAND.colors.textLight, marginBottom: '32px', fontSize: '16px', fontFamily: BRAND.fonts.body }}>
+              Making it easy for your church family to step in and help
             </p>
 
-            <div style={{ marginBottom: 'var(--space-6)' }}>
-              <label style={{ display: 'block', marginBottom: 'var(--space-2)', fontWeight: 500 }}>
-                Description:
-              </label>
-              <textarea
-                value={formData.title}
-                onChange={(e) => updateFormData('title', e.target.value)}
-                placeholder="Help with moving furniture, meal prep for family, tutoring kids…"
-                style={{ ...inputStyle, minHeight: 120, resize: 'vertical' }}
-              />
-            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+              {/* Description Field */}
+              <div>
+                <label style={labelStyle}>
+                  <FileText size={18} color='#20c997' />
+                  <span>Description</span>
+                </label>
+                <textarea
+                  value={formData.title}
+                  onChange={(e) => updateFormData('title', e.target.value)}
+                  placeholder="Help with moving furniture, meal prep for family, tutoring kids…"
+                  style={{ 
+                    ...inputStyle, 
+                    minHeight: '120px', 
+                    resize: 'vertical'
+                  }}
+                  onFocus={(e) => {
+                    e.currentTarget.style.borderColor = '#20c997';
+                    e.currentTarget.style.boxShadow = `0 0 0 3px #20c99720`;
+                  }}
+                  onBlur={(e) => {
+                    e.currentTarget.style.borderColor = '#e5e7eb';
+                    e.currentTarget.style.boxShadow = 'none';
+                  }}
+                />
+              </div>
 
-            <div style={{ marginBottom: 'var(--space-6)' }}>
-              <label style={{ display: 'block', marginBottom: 'var(--space-2)', fontWeight: 500 }}>
-                Additional details (optional):
-              </label>
-              <textarea
-                value={formData.notes}
-                onChange={(e) => updateFormData('notes', e.target.value)}
-                placeholder="Bring gloves and tools… Meals should be nut-free… Any special instructions…"
-                style={{ ...inputStyle, minHeight: 80, resize: 'vertical' }}
-              />
-            </div>
+              {/* Additional Details Field */}
+              <div>
+                <label style={labelStyle}>
+                  <Plus size={18} color='#20c997' />
+                  <span>Additional details (optional)</span>
+                </label>
+                <textarea
+                  value={formData.notes}
+                  onChange={(e) => updateFormData('notes', e.target.value)}
+                  placeholder="Bring gloves and tools… Meals should be nut-free… Any special instructions…"
+                  style={{ 
+                    ...inputStyle, 
+                    minHeight: '80px', 
+                    resize: 'vertical'
+                  }}
+                  onFocus={(e) => {
+                    e.currentTarget.style.borderColor = '#20c997';
+                    e.currentTarget.style.boxShadow = `0 0 0 3px #20c99720`;
+                  }}
+                  onBlur={(e) => {
+                    e.currentTarget.style.borderColor = '#e5e7eb';
+                    e.currentTarget.style.boxShadow = 'none';
+                  }}
+                />
+              </div>
 
-            <div style={{ borderTop: '1px solid #e5e7eb', paddingTop: 'var(--space-6)' }}>
-              <h3 style={{ fontSize: 20, marginBottom: 'var(--space-4)', fontWeight: 600 }}>When is this needed?</h3>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                {[
-                  { value: 'asap', label: 'Needs Help Soon ⏳' },
-                  { value: 'specific', label: 'Specific Date & Time' },
-                  { value: 'ongoing', label: 'Ongoing' }
-                ].map(option => (
-                  <label key={option.value} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              {/* When is this needed? */}
+              <div style={{ borderTop: '1px solid #e5e7eb', paddingTop: '24px' }}>
+                <div style={labelStyle}>
+                  <Clock size={18} color='#20c997' />
+                  <span>When is this needed?</span>
+                </div>
+                
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '12px' }}>
+                  {/* Needs Help Soon */}
+                  <label 
+                    style={{ display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer' }}
+                    onClick={() => updateFormData('urgency', 'asap')}
+                  >
+                    <div style={{
+                      width: '20px',
+                      height: '20px',
+                      borderRadius: '50%',
+                      border: `2px solid ${formData.urgency === 'asap' ? '#20c997' : '#d1d5db'}`,
+                      backgroundColor: formData.urgency === 'asap' ? '#20c997' : 'transparent',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      transition: 'all 0.2s ease',
+                      flexShrink: 0
+                    }}>
+                      {formData.urgency === 'asap' && (
+                        <div style={{
+                          width: '10px',
+                          height: '10px',
+                          backgroundColor: 'white',
+                          borderRadius: '50%'
+                        }} />
+                      )}
+                    </div>
                     <input
                       type="radio"
                       name="urgency"
-                      value={option.value}
-                      checked={formData.urgency === option.value}
+                      value="asap"
+                      checked={formData.urgency === 'asap'}
                       onChange={(e) => updateFormData('urgency', e.target.value)}
+                      style={{ position: 'absolute', opacity: 0, pointerEvents: 'none' }}
                     />
-                    {option.label}
+                    <span style={{ color: BRAND.colors.text, fontSize: '16px', fontFamily: BRAND.fonts.body }}>
+                      Needs Help Soon
+                    </span>
                   </label>
-                ))}
-              </div>
+
+                  {/* Specific Date & Time */}
+                  <label 
+                    style={{ display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer' }}
+                    onClick={() => updateFormData('urgency', 'specific')}
+                  >
+                    <div style={{
+                      width: '20px',
+                      height: '20px',
+                      borderRadius: '50%',
+                      border: `2px solid ${formData.urgency === 'specific' ? '#20c997' : '#d1d5db'}`,
+                      backgroundColor: formData.urgency === 'specific' ? '#20c997' : 'transparent',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      transition: 'all 0.2s ease',
+                      flexShrink: 0
+                    }}>
+                      {formData.urgency === 'specific' && (
+                        <div style={{
+                          width: '10px',
+                          height: '10px',
+                          backgroundColor: 'white',
+                          borderRadius: '50%'
+                        }} />
+                      )}
+                    </div>
+                    <input
+                      type="radio"
+                      name="urgency"
+                      value="specific"
+                      checked={formData.urgency === 'specific'}
+                      onChange={(e) => updateFormData('urgency', e.target.value)}
+                      style={{ position: 'absolute', opacity: 0, pointerEvents: 'none' }}
+                    />
+                    <span style={{ color: BRAND.colors.text, fontSize: '16px', fontFamily: BRAND.fonts.body }}>
+                      Specific Date & Time
+                    </span>
+                  </label>
+
+                  {/* Ongoing */}
+                  <label 
+                    style={{ display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer' }}
+                    onClick={() => updateFormData('urgency', 'ongoing')}
+                  >
+                    <div style={{
+                      width: '20px',
+                      height: '20px',
+                      borderRadius: '50%',
+                      border: `2px solid ${formData.urgency === 'ongoing' ? '#20c997' : '#d1d5db'}`,
+                      backgroundColor: formData.urgency === 'ongoing' ? '#20c997' : 'transparent',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      transition: 'all 0.2s ease',
+                      flexShrink: 0
+                    }}>
+                      {formData.urgency === 'ongoing' && (
+                        <div style={{
+                          width: '10px',
+                          height: '10px',
+                          backgroundColor: 'white',
+                          borderRadius: '50%'
+                        }} />
+                      )}
+                    </div>
+                    <input
+                      type="radio"
+                      name="urgency"
+                      value="ongoing"
+                      checked={formData.urgency === 'ongoing'}
+                      onChange={(e) => updateFormData('urgency', e.target.value)}
+                      style={{ position: 'absolute', opacity: 0, pointerEvents: 'none' }}
+                    />
+                    <span style={{ color: BRAND.colors.text, fontSize: '16px', fontFamily: BRAND.fonts.body }}>
+                      Ongoing
+                    </span>
+                  </label>
+                </div>
 
               {isHydrated && formData.urgency === 'specific' && (
-                <div style={{ marginTop: 'var(--space-6)', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16 }}>
+                <div style={{ marginTop: '20px', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
                   <div>
-                    <label style={{ display: 'block', marginBottom: 'var(--space-2)', fontWeight: 500 }}>Date:</label>
+                    <label style={{ ...labelStyle, marginBottom: '8px' }}>
+                      <Calendar size={16} color='#20c997' />
+                      <span>Date</span>
+                    </label>
                     <input
                       type="date"
                       value={formData.specificDate}
                       onChange={(e) => updateFormData('specificDate', e.target.value)}
+                      min={new Date().toISOString().split('T')[0]}
                       style={inputStyle}
+                      onFocus={(e) => {
+                        e.currentTarget.style.borderColor = BRAND.colors.primary;
+                        e.currentTarget.style.boxShadow = `0 0 0 3px ${BRAND.colors.primary}20`;
+                      }}
+                      onBlur={(e) => {
+                        e.currentTarget.style.borderColor = '#e5e7eb';
+                        e.currentTarget.style.boxShadow = 'none';
+                      }}
                     />
                   </div>
                   <div>
-                    <label style={{ display: 'block', marginBottom: 'var(--space-2)', fontWeight: 500 }}>Time:</label>
+                    <label style={{ ...labelStyle, marginBottom: '8px' }}>
+                      <Clock size={16} color='#20c997' />
+                      <span>Time</span>
+                    </label>
                     <input
                       type="time"
                       value={formData.specificTime}
                       onChange={(e) => updateFormData('specificTime', e.target.value)}
                       style={inputStyle}
+                      onFocus={(e) => {
+                        e.currentTarget.style.borderColor = BRAND.colors.primary;
+                        e.currentTarget.style.boxShadow = `0 0 0 3px ${BRAND.colors.primary}20`;
+                      }}
+                      onBlur={(e) => {
+                        e.currentTarget.style.borderColor = '#e5e7eb';
+                        e.currentTarget.style.boxShadow = 'none';
+                      }}
                     />
                   </div>
                 </div>
               )}
 
               {isHydrated && formData.urgency === 'ongoing' && (
-                <div style={{ marginTop: 'var(--space-6)' }}>
-                  <h3 style={{ fontSize: 18, marginBottom: 'var(--space-4)', fontWeight: 600 }}>Ongoing Schedule</h3>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 16, marginBottom: 'var(--space-4)' }}>
+                <div style={{ marginTop: '20px' }}>
+                  <h4 style={{ fontSize: '16px', marginBottom: '16px', fontWeight: '600', color: BRAND.colors.text, fontFamily: BRAND.fonts.heading }}>
+                    Ongoing Schedule
+                  </h4>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '16px', marginBottom: '12px' }}>
                     <div>
-                      <label style={{ display: 'block', marginBottom: 'var(--space-2)', fontWeight: 500 }}>Start Date:</label>
+                      <label style={{ ...labelStyle, marginBottom: '8px' }}>
+                        <Calendar size={16} color='#20c997' />
+                        <span>Start Date</span>
+                      </label>
                       <input
                         type="date"
                         value={formData.ongoingStartDate}
                         onChange={(e) => updateFormData('ongoingStartDate', e.target.value)}
+                        min={new Date().toISOString().split('T')[0]}
                         style={inputStyle}
+                        onFocus={(e) => {
+                          e.currentTarget.style.borderColor = BRAND.colors.primary;
+                          e.currentTarget.style.boxShadow = `0 0 0 3px ${BRAND.colors.primary}20`;
+                        }}
+                        onBlur={(e) => {
+                          e.currentTarget.style.borderColor = '#e5e7eb';
+                          e.currentTarget.style.boxShadow = 'none';
+                        }}
                       />
                     </div>
                     <div>
-                      <label style={{ display: 'block', marginBottom: 'var(--space-2)', fontWeight: 500 }}>Start Time:</label>
+                      <label style={{ ...labelStyle, marginBottom: '8px' }}>
+                        <Clock size={16} color='#20c997' />
+                        <span>Start Time</span>
+                      </label>
                       <input
                         type="time"
                         value={formData.ongoingStartTime}
                         onChange={(e) => updateFormData('ongoingStartTime', e.target.value)}
                         style={inputStyle}
+                        onFocus={(e) => {
+                          e.currentTarget.style.borderColor = BRAND.colors.primary;
+                          e.currentTarget.style.boxShadow = `0 0 0 3px ${BRAND.colors.primary}20`;
+                        }}
+                        onBlur={(e) => {
+                          e.currentTarget.style.borderColor = '#e5e7eb';
+                          e.currentTarget.style.boxShadow = 'none';
+                        }}
                       />
                     </div>
                     <div>
-                      <label style={{ display: 'block', marginBottom: 'var(--space-2)', fontWeight: 500 }}>Repeats:</label>
+                      <label style={{ ...labelStyle, marginBottom: '8px' }}>
+                        <span>Repeats</span>
+                      </label>
                       <select
                         value={formData.ongoingSchedule}
                         onChange={(e) => updateFormData('ongoingSchedule', e.target.value)}
                         style={inputStyle}
+                        onFocus={(e) => {
+                          e.currentTarget.style.borderColor = BRAND.colors.primary;
+                          e.currentTarget.style.boxShadow = `0 0 0 3px ${BRAND.colors.primary}20`;
+                        }}
+                        onBlur={(e) => {
+                          e.currentTarget.style.borderColor = '#e5e7eb';
+                          e.currentTarget.style.boxShadow = 'none';
+                        }}
                       >
                         <option value="weekly">Weekly</option>
                         <option value="monthly">Monthly</option>
@@ -504,34 +727,165 @@ export default function ShareNeedScreen() {
                       </select>
                     </div>
                   </div>
-                  <p style={{ fontSize: 14, color: '#666666' }}>
+                  <p style={{ fontSize: '14px', color: BRAND.colors.textLight, fontFamily: BRAND.fonts.body }}>
                     We'll automatically match people based on the start time you choose
                   </p>
                 </div>
               )}
 
               {isHydrated && formData.urgency === 'asap' && (
-                <div style={{ marginTop: 'var(--space-6)', borderTop: '1px solid #e5e7eb', paddingTop: 'var(--space-6)' }}>
-                  <h3 style={{ fontSize: 18, marginBottom: 'var(--space-4)', fontWeight: 600 }}>Preferred Time of Day</h3>
-                  <p style={{ fontSize: 14, color: '#666666', marginBottom: 'var(--space-4)' }}>
+                <div style={{ marginTop: '20px', borderTop: '1px solid #e5e7eb', paddingTop: '20px' }}>
+                  <h4 style={{ fontSize: '16px', marginBottom: '12px', fontWeight: '600', color: BRAND.colors.text, fontFamily: BRAND.fonts.heading }}>
+                    Preferred Time of Day
+                  </h4>
+                  <p style={{ fontSize: '14px', color: BRAND.colors.textLight, marginBottom: '16px', fontFamily: BRAND.fonts.body }}>
                     Since this is urgent, when would you prefer help?
                   </p>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                    {['Mornings', 'Afternoons', 'Nights', 'Anytime'].map((time) => (
-                      <label key={time} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <input
-                          type="radio"
-                          name="timePreference"
-                          value={time}
-                          checked={formData.timePreference === time}
-                          onChange={(e) => updateFormData('timePreference', e.target.value)}
-                        />
-                        {time}
-                      </label>
-                    ))}
+                  
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px' }}>
+                    {/* Morning */}
+                    <button
+                      type="button"
+                      onClick={() => updateFormData('timePreference', 'Mornings')}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '8px',
+                        padding: '12px 16px',
+                        borderRadius: '8px',
+                        fontWeight: '500',
+                        transition: 'all 0.2s ease',
+                        minHeight: '44px',
+                        backgroundColor: formData.timePreference === 'Mornings' ? '#20c997' : '#f3f4f6',
+                        color: formData.timePreference === 'Mornings' ? 'white' : '#374151',
+                        border: 'none',
+                        cursor: 'pointer',
+                        fontFamily: BRAND.fonts.heading
+                      }}
+                      onMouseEnter={(e) => {
+                        if (formData.timePreference !== 'Mornings') {
+                          e.currentTarget.style.backgroundColor = '#e5e7eb';
+                        }
+                      }}
+                      onMouseLeave={(e) => {
+                        if (formData.timePreference !== 'Mornings') {
+                          e.currentTarget.style.backgroundColor = '#f3f4f6';
+                        }
+                      }}
+                    >
+                      <Sun size={18} />
+                      Morning
+                    </button>
+
+                    {/* Afternoon */}
+                    <button
+                      type="button"
+                      onClick={() => updateFormData('timePreference', 'Afternoons')}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '8px',
+                        padding: '12px 16px',
+                        borderRadius: '8px',
+                        fontWeight: '500',
+                        transition: 'all 0.2s ease',
+                        minHeight: '44px',
+                        backgroundColor: formData.timePreference === 'Afternoons' ? '#20c997' : '#f3f4f6',
+                        color: formData.timePreference === 'Afternoons' ? 'white' : '#374151',
+                        border: 'none',
+                        cursor: 'pointer',
+                        fontFamily: BRAND.fonts.heading
+                      }}
+                      onMouseEnter={(e) => {
+                        if (formData.timePreference !== 'Afternoons') {
+                          e.currentTarget.style.backgroundColor = '#e5e7eb';
+                        }
+                      }}
+                      onMouseLeave={(e) => {
+                        if (formData.timePreference !== 'Afternoons') {
+                          e.currentTarget.style.backgroundColor = '#f3f4f6';
+                        }
+                      }}
+                    >
+                      <Cloud size={18} />
+                      Afternoon
+                    </button>
+
+                    {/* Evening */}
+                    <button
+                      type="button"
+                      onClick={() => updateFormData('timePreference', 'Nights')}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '8px',
+                        padding: '12px 16px',
+                        borderRadius: '8px',
+                        fontWeight: '500',
+                        transition: 'all 0.2s ease',
+                        minHeight: '44px',
+                        backgroundColor: formData.timePreference === 'Nights' ? '#20c997' : '#f3f4f6',
+                        color: formData.timePreference === 'Nights' ? 'white' : '#374151',
+                        border: 'none',
+                        cursor: 'pointer',
+                        fontFamily: BRAND.fonts.heading
+                      }}
+                      onMouseEnter={(e) => {
+                        if (formData.timePreference !== 'Nights') {
+                          e.currentTarget.style.backgroundColor = '#e5e7eb';
+                        }
+                      }}
+                      onMouseLeave={(e) => {
+                        if (formData.timePreference !== 'Nights') {
+                          e.currentTarget.style.backgroundColor = '#f3f4f6';
+                        }
+                      }}
+                    >
+                      <Moon size={18} />
+                      Evening
+                    </button>
+
+                    {/* Anytime */}
+                    <button
+                      type="button"
+                      onClick={() => updateFormData('timePreference', 'Anytime')}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '8px',
+                        padding: '12px 16px',
+                        borderRadius: '8px',
+                        fontWeight: '500',
+                        transition: 'all 0.2s ease',
+                        minHeight: '44px',
+                        backgroundColor: formData.timePreference === 'Anytime' ? '#20c997' : '#f3f4f6',
+                        color: formData.timePreference === 'Anytime' ? 'white' : '#374151',
+                        border: 'none',
+                        cursor: 'pointer',
+                        fontFamily: BRAND.fonts.heading
+                      }}
+                      onMouseEnter={(e) => {
+                        if (formData.timePreference !== 'Anytime') {
+                          e.currentTarget.style.backgroundColor = '#e5e7eb';
+                        }
+                      }}
+                      onMouseLeave={(e) => {
+                        if (formData.timePreference !== 'Anytime') {
+                          e.currentTarget.style.backgroundColor = '#f3f4f6';
+                        }
+                      }}
+                    >
+                      <Calendar size={18} />
+                      Anytime
+                    </button>
                   </div>
                 </div>
               )}
+            </div>
             </div>
           </div>
         );
@@ -825,44 +1179,7 @@ export default function ShareNeedScreen() {
       padding: 20 
     }}>
       <div style={{ maxWidth: 600, margin: '0 auto', paddingTop: 32 }}>
-        {/* Progress */}
-        <div style={{ marginBottom: 'var(--space-8)' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 'var(--space-2)' }}>
-            <span>Step {currentStep + 1} of {totalSteps}</span>
-            <span>{Math.round(((currentStep + 1) / totalSteps) * 100)}% complete</span>
-          </div>
-          <div style={{ width: '100%', height: 8, backgroundColor: '#e5e7eb', borderRadius: 4 }}>
-            <div style={{ 
-              width: `${((currentStep + 1) / totalSteps) * 100}%`, 
-              height: '100%', 
-              backgroundColor: '#2BB3A3', 
-              borderRadius: 4 
-            }}></div>
-          </div>
-        </div>
-
-        {/* Header */}
-        <div style={{ marginBottom: 'var(--space-8)' }}>
-          <button 
-            onClick={currentStep === 0 ? () => router.push('/dashboard') : handlePrevious}
-            style={{ 
-              background: 'none', 
-              border: 'none', 
-              cursor: 'pointer',
-              marginBottom: 'var(--space-4)',
-              display: 'flex',
-              alignItems: 'center',
-              gap: 'var(--space-2)',
-              color: '#666666',
-              transition: 'color 0.2s ease'
-            }}
-          >
-            <ArrowLeft size={16} strokeWidth={1.5} />
-            Back
-          </button>
-          <h1 style={{ fontSize: 'var(--text-2xl)', marginBottom: 'var(--space-2)', fontWeight: 'var(--font-bold)', color: '#333333' }}>Share a Need</h1>
-          <p style={{ color: '#666666', fontSize: 'var(--text-base)' }}>Help your community connect and serve together</p>
-        </div>
+        {/* Removed duplicate progress bar and back button - now only in modal */}
 
         {renderStep()}
 
@@ -885,22 +1202,31 @@ export default function ShareNeedScreen() {
             onClick={handleNext}
             disabled={!canContinue()}
             style={{
-              backgroundColor: canContinue() ? '#4ECDC4' : '#e5e7eb',
+              backgroundColor: canContinue() ? '#20c997' : '#e5e7eb',
               color: canContinue() ? 'white' : '#9ca3af',
               border: 'none',
               padding: '12px 20px',
               borderRadius: 8,
               cursor: canContinue() ? 'pointer' : 'not-allowed',
-              fontWeight: 600
+              fontWeight: 600,
+              minHeight: '44px',
+              fontFamily: BRAND.fonts.heading,
+              transition: 'background-color 0.2s ease'
+            }}
+            onMouseEnter={(e) => {
+              if (canContinue()) {
+                e.currentTarget.style.backgroundColor = '#1ba87f';
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (canContinue()) {
+                e.currentTarget.style.backgroundColor = '#20c997';
+              }
             }}
           >
             {currentStep === totalSteps - 1 ? 'Preview' : 'Next Step'} →
           </button>
         </div>
-
-        <p style={{ textAlign: 'center', color: '#666666', marginTop: 'var(--space-6)' }}>
-          Making it easy for your church family to step in and help
-        </p>
       </div>
 
       {/* Success Modal */}

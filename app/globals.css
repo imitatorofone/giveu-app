@@ -7,3 +7,56 @@
   -webkit-box-orient:vertical;
   overflow:hidden;
 }
+
+/* Brand green date/time picker styling */
+input[type="date"]::-webkit-calendar-picker-indicator,
+input[type="time"]::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+}
+
+/* Selected date/time highlighting in dropdowns */
+input[type="date"]::-webkit-datetime-edit-fields-wrapper,
+input[type="time"]::-webkit-datetime-edit-fields-wrapper {
+  padding: 0;
+}
+
+/* Brand green for date/time picker dropdown selected items */
+input[type="date"]:focus::-webkit-datetime-edit,
+input[type="time"]:focus::-webkit-datetime-edit {
+  color: #1e293b;
+}
+
+/* Custom styling for date/time picker popup (Chrome/Edge) */
+::-webkit-calendar-picker-indicator:hover {
+  background-color: rgba(32, 201, 151, 0.1);
+  border-radius: 4px;
+}
+
+/* Firefox date/time input styling */
+input[type="date"]::-moz-focus-inner,
+input[type="time"]::-moz-focus-inner {
+  border: 0;
+}
+
+/* Selected option styling for all browsers */
+option:checked,
+option:hover {
+  background-color: #20c997 !important;
+  color: white !important;
+}
+
+select option:checked {
+  background-color: #20c997 !important;
+  color: white !important;
+}
+
+/* For webkit browsers (Chrome, Safari, Edge) */
+select option {
+  background-color: white;
+  color: #1e293b;
+}
+
+select option:checked {
+  background: linear-gradient(#20c997, #20c997);
+  color: white;
+}
