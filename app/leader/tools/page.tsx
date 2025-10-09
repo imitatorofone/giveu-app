@@ -297,15 +297,15 @@ export default function LeaderToolsPage() {
             ariaLabel="Open Volunteer Responses"
           />
 
-          {/* Invite Leaders */}
-          <Row
+          {/* Invite Leaders - Hidden for MVP */}
+          {/* <Row
             icon={UserPlus}
             title="Invite Leaders"
             subtitle="Add leaders to help manage your community."
             badge={{ text: 'Coming Soon', color: 'gray' }}
             onClick={() => show('Invite Leaders is coming soon.')}
             ariaLabel="Invite Leaders (Coming Soon)"
-          />
+          /> */}
 
           {/* Feedback */}
           <Row

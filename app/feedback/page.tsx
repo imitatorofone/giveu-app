@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import toast from 'react-hot-toast';
 import { supabase } from '../../lib/supabaseClient';
@@ -8,6 +9,7 @@ import Footer from '../../components/Footer';
 import Header from '../../components/Header';
 import {
   ArrowBigUp,
+  ArrowLeft,
   MessageSquare,
   Filter,
   Lightbulb,
@@ -19,6 +21,7 @@ import {
   Send,
   X,
 } from 'lucide-react';
+import { BRAND } from '../../lib/brandConfig';
 
 type Item = {
   id: string;
@@ -48,6 +51,9 @@ const CAT_ICONS: Record<string, any> = {
 
 export default function FeedbackListPage() {
   console.log('FEEDBACK PAGE RENDER @', new Date().toLocaleTimeString());
+  
+  const router = useRouter();
+  const [isLeader, setIsLeader] = useState(false);
   
   // Strip category prefixes like "Bug: " / "Idea: " from titles
   function cleanTitle(raw?: string | null) {
@@ -157,6 +163,15 @@ export default function FeedbackListPage() {
       const { data: u } = await supabase.auth.getUser();
       const uid = u.user?.id ?? null;
       setUserId(uid);
+
+      if (uid) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('is_leader')
+          .eq('id', uid)
+          .single();
+        setIsLeader(profile?.is_leader || false);
+      }
 
       await Promise.all([fetchItems('all'), fetchMyVoteToday(uid)]);
       setLoading(false);
@@ -384,6 +399,23 @@ export default function FeedbackListPage() {
 
       <div className="max-w-4xl mx-auto px-4 py-6 space-y-6">
 
+        {/* Conditional Back Button for Leaders */}
+        {isLeader && (
+          <button
+            onClick={() => router.push('/leader/tools')}
+            className="flex items-center gap-2 px-4 py-2 text-white rounded-lg font-medium transition-colors"
+            style={{ 
+              minHeight: '44px',
+              backgroundColor: '#20c997'
+            }}
+            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#1ba87f'}
+            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#20c997'}
+          >
+            <ArrowLeft size={16} />
+            Back to Tools
+          </button>
+        )}
+
         {/* Sticky toolbar — light, compact, always reachable */}
         <div className="sticky top-16 z-20 mb-4">
           <div className="bg-white/85 backdrop-blur rounded-full px-3 py-2 shadow-sm ring-1 ring-gray-900/10 flex items-center gap-2">
@@ -472,7 +504,7 @@ export default function FeedbackListPage() {
               return (
                 <article
                   key={it.id}
-                  className="bg-white border border-gray-200 rounded-2xl shadow-sm hover:shadow-md transition-shadow p-5 md:p-6 flex items-start gap-5"
+                  className="bg-white border border-gray-200 rounded-xl shadow-sm hover:shadow-md transition-shadow p-5 md:p-6 flex items-start gap-5"
                 >
                   {/* Vote column (Product Hunt style) */}
                   <button
@@ -557,12 +589,12 @@ export default function FeedbackListPage() {
 
             {/* Dialog */}
             <div className="absolute inset-0 flex items-start justify-center pt-24 px-4">
-              <div className="w-full max-w-xl bg-white rounded-2xl shadow-xl">
+              <div className="w-full max-w-xl bg-white rounded-xl shadow-xl border border-gray-200">
                 {/* Modal header */}
                 <div className="flex items-center justify-between px-5 py-4 border-b">
                   <div className="flex items-center gap-2">
                     <Plus className="text-[#20c997]" size={18} />
-                    <h3 className="font-heading text-lg font-bold tracking-tight text-gray-900">
+                    <h3 className="font-heading text-lg font-bold tracking-tight text-gray-900" style={{ fontFamily: BRAND.fonts.heading }}>
                       Add feedback
                     </h3>
                   </div>
@@ -701,7 +733,10 @@ export default function FeedbackListPage() {
                     <button
                       type="submit"
                       disabled={submitting}
-                      className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-[#20c997] text-white hover:opacity-90 disabled:opacity-60"
+                      className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-white disabled:opacity-60"
+                      style={{ backgroundColor: BRAND.colors.primary }}
+                      onMouseEnter={(e) => !submitting && (e.currentTarget.style.backgroundColor = BRAND.colors.primaryHover)}
+                      onMouseLeave={(e) => !submitting && (e.currentTarget.style.backgroundColor = BRAND.colors.primary)}
                     >
                       <Send size={16} />
                       {submitting ? 'Submitting…' : 'Submit'}

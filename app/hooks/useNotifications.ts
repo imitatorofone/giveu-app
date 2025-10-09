@@ -14,14 +14,18 @@ export function useNotifications() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
-  // supabase is imported at the top of the file
+  const [cleanupDone, setCleanupDone] = useState(false);
 
   const fetchNotifications = useCallback(async () => {
-    // Cleanup old notifications (runs once when hook mounts)
-    try {
-      await supabase.rpc('cleanup_old_notifications');
-    } catch (cleanupError) {
-      // Silently fail if cleanup doesn't work - not critical
+    // Cleanup old notifications only once
+    if (!cleanupDone) {
+      try {
+        await supabase.rpc('cleanup_old_notifications');
+        setCleanupDone(true);
+      } catch (cleanupError) {
+        // Silently fail if cleanup doesn't work - not critical
+        setCleanupDone(true); // Mark as done even if it fails
+      }
     }
     
     try {
@@ -50,7 +54,7 @@ export function useNotifications() {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [cleanupDone]);
 
   // Mark notification as read
   const markAsRead = async (notificationId: string) => {

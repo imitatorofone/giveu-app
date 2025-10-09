@@ -20,10 +20,6 @@ const heading = Merriweather({
 export const metadata: Metadata = {
   title: "giveU - Where your gifts meet God's work",
   description: "Connect your gifts with meaningful opportunities to serve your community",
-  icons: {
-    icon: '/logo.png',
-    apple: '/logo.png',
-  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

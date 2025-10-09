@@ -10,6 +10,7 @@ import {
   Calendar, MapPin, Users, Mail, Phone, Wrench, ArrowLeft 
 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { BRAND } from '../../../lib/brandConfig';
 
 // Brand typography
 const quicksandFont = 'Quicksand, -apple-system, BlinkMacSystemFont, sans-serif';
@@ -404,15 +405,33 @@ export default function VolunteerResponsesPage() {
               <div className="flex items-center gap-4 mb-4">
                 <button
                   onClick={() => router.push('/leader/tools')}
-                  className="flex items-center gap-2 px-3 py-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
-                  title="Back to Leadership Tools"
+                  className="flex items-center gap-2 px-4 py-2 text-white rounded-lg font-medium transition-colors"
+                  style={{ 
+                    minHeight: '44px',
+                    backgroundColor: '#20c997'
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#1ba87f'}
+                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#20c997'}
                 >
-                  <ArrowLeft className="w-4 h-4" />
-                  <span className="text-sm font-medium">Back to Tools</span>
+                  <ArrowLeft size={16} />
+                  Back to Tools
                 </button>
               </div>
-              <h1 className="text-2xl font-bold text-gray-900 mb-2">Volunteer Responses</h1>
-              <p className="text-gray-600">Monitor volunteer commitments to community needs. New volunteers are auto-accepted but can be managed here.</p>
+              <h1 style={{ 
+                fontFamily: BRAND.fonts.heading,
+                fontSize: '28px',
+                fontWeight: '700',
+                color: BRAND.colors.text,
+                marginBottom: '8px'
+              }}>
+                Volunteer Responses
+              </h1>
+              <p style={{ 
+                color: BRAND.colors.textLight,
+                fontFamily: BRAND.fonts.body 
+              }}>
+                Monitor volunteer commitments to community needs. New volunteers are auto-accepted but can be managed here.
+              </p>
             </div>
 
             {/* Filters */}
@@ -431,9 +450,14 @@ export default function VolunteerResponsesPage() {
                     onClick={() => setFilter(filterOption.key as any)}
                     className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
                       filter === filterOption.key
-                        ? 'bg-[#20c997] text-white'
-                        : 'bg-white text-gray-600 border border-gray-300 hover:bg-gray-50'
+                        ? ''
+                        : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
                     }`}
+                    style={{
+                      backgroundColor: filter === filterOption.key ? BRAND.colors.primary : undefined,
+                      color: filter === filterOption.key ? 'white' : undefined,
+                      minHeight: '36px'
+                    }}
                   >
                     {filterOption.label}
                     {filterOption.key === 'cancelled' && responses.filter(r => r.status === 'cancelled').length > 0 && (
@@ -503,12 +527,12 @@ export default function VolunteerResponsesPage() {
                   );
 
                   return (
-                    <div key={response.id} className={`rounded-lg border border-gray-200 p-6 shadow-sm ${
+                    <div key={response.id} className={`border border-gray-200 rounded-xl shadow-md p-6 ${
                       response.status === 'cancelled' ? 'bg-gray-50' : 'bg-white'
                     }`}>
                       <div className="flex items-start justify-between mb-4">
                         <div className="flex items-center gap-3">
-                          <div className="w-12 h-12 bg-[#20c997] rounded-full flex items-center justify-center">
+                          <div className="w-12 h-12 rounded-full flex items-center justify-center" style={{ backgroundColor: BRAND.colors.primary }}>
                             <span className="text-white font-semibold text-lg">
                               {response.volunteer.full_name?.charAt(0) || 'V'}
                             </span>
@@ -565,7 +589,13 @@ export default function VolunteerResponsesPage() {
                           {response.volunteer.email && (
                             <div className="flex items-center gap-2">
                               <Mail className="w-4 h-4" />
-                              <a href={`mailto:${response.volunteer.email}`} className="hover:text-[#20c997]">
+                              <a 
+                                href={`mailto:${response.volunteer.email}`} 
+                                className="hover:underline"
+                                style={{ color: BRAND.colors.textLight }}
+                                onMouseEnter={(e) => e.currentTarget.style.color = BRAND.colors.primary}
+                                onMouseLeave={(e) => e.currentTarget.style.color = BRAND.colors.textLight}
+                              >
                                 {response.volunteer.email}
                               </a>
                             </div>
@@ -573,7 +603,13 @@ export default function VolunteerResponsesPage() {
                           {response.volunteer.phone && (
                             <div className="flex items-center gap-2">
                               <Phone className="w-4 h-4" />
-                              <a href={`tel:${response.volunteer.phone}`} className="hover:text-[#20c997]">
+                              <a 
+                                href={`tel:${response.volunteer.phone}`} 
+                                className="hover:underline"
+                                style={{ color: BRAND.colors.textLight }}
+                                onMouseEnter={(e) => e.currentTarget.style.color = BRAND.colors.primary}
+                                onMouseLeave={(e) => e.currentTarget.style.color = BRAND.colors.textLight}
+                              >
                                 {response.volunteer.phone}
                               </a>
                             </div>
@@ -592,7 +628,8 @@ export default function VolunteerResponsesPage() {
                             {matchingGifts.map((gift) => (
                               <span 
                                 key={gift} 
-                                className="px-3 py-1 bg-[#20c997] text-white rounded-full text-xs font-medium"
+                                className="px-3 py-1 text-white rounded-full text-xs font-medium"
+                                style={{ backgroundColor: BRAND.colors.primary }}
                               >
                                 {gift}
                               </span>
@@ -609,11 +646,11 @@ export default function VolunteerResponsesPage() {
                             {response.volunteer.gift_selections.map((gift) => (
                               <span 
                                 key={gift} 
-                                className={`px-3 py-1 rounded-full text-xs font-medium ${
-                                  matchingGifts.includes(gift)
-                                    ? 'bg-[#20c997] text-white'
-                                    : 'bg-gray-100 text-gray-700'
-                                }`}
+                                className="px-3 py-1 rounded-full text-xs font-medium"
+                                style={matchingGifts.includes(gift) 
+                                  ? { backgroundColor: BRAND.colors.primary, color: 'white' }
+                                  : { backgroundColor: '#f3f4f6', color: '#374151' }
+                                }
                               >
                                 {gift}
                               </span>
@@ -628,14 +665,42 @@ export default function VolunteerResponsesPage() {
                           <button
                             onClick={() => handleAccept(response.id)}
                             disabled={actingId === response.id}
-                            className="flex-1 px-4 py-2 bg-[#20c997] text-white rounded-lg text-sm font-medium hover:bg-[#1ba085] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="flex-1 px-4 py-2 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-white"
+                            style={{
+                              backgroundColor: BRAND.colors.primary,
+                              minHeight: '44px'
+                            }}
+                            onMouseEnter={(e) => {
+                              if (actingId !== response.id) {
+                                e.currentTarget.style.backgroundColor = BRAND.colors.primaryHover;
+                              }
+                            }}
+                            onMouseLeave={(e) => {
+                              if (actingId !== response.id) {
+                                e.currentTarget.style.backgroundColor = BRAND.colors.primary;
+                              }
+                            }}
                           >
                             {actingId === response.id ? 'Accepting...' : 'Accept'}
                           </button>
                           <button
                             onClick={() => handleDecline(response.id)}
                             disabled={actingId === response.id}
-                            className="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="flex-1 px-4 py-2 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-white"
+                            style={{
+                              backgroundColor: BRAND.colors.danger,
+                              minHeight: '44px'
+                            }}
+                            onMouseEnter={(e) => {
+                              if (actingId !== response.id) {
+                                e.currentTarget.style.backgroundColor = BRAND.colors.dangerHover;
+                              }
+                            }}
+                            onMouseLeave={(e) => {
+                              if (actingId !== response.id) {
+                                e.currentTarget.style.backgroundColor = BRAND.colors.danger;
+                              }
+                            }}
                           >
                             {actingId === response.id ? 'Declining...' : 'Decline'}
                           </button>

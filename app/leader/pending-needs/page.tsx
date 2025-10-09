@@ -8,6 +8,8 @@ import { createNotification } from '@/lib/notificationHelper';
 import toast from 'react-hot-toast';
 import Header from '../../../components/Header';
 import Footer from '../../../components/Footer';
+import { CheckCircle, ArrowLeft } from 'lucide-react';
+import { BRAND } from '../../../lib/brandConfig';
 
 // Helper function to format giftings (array or string)
 const formatGiftings = (giftings: string[] | string): string[] => {
@@ -242,8 +244,20 @@ export default function PendingNeedsPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-lg">Loading pending needs...</div>
+      <div style={{ 
+        minHeight: '100vh', 
+        backgroundColor: BRAND.colors.background,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        fontFamily: BRAND.fonts.body
+      }}>
+        <div style={{ 
+          fontSize: '16px',
+          color: BRAND.colors.textLight
+        }}>
+          Loading pending needs...
+        </div>
       </div>
     );
   }
@@ -257,23 +271,57 @@ export default function PendingNeedsPage() {
         <div className="max-w-4xl mx-auto px-4">
           <div className="p-6 space-y-4">
             
-            <h1 className="text-xl font-bold">Pending Needs</h1>
+            {/* Page Header */}
+            <div className="mb-6">
+              <div className="flex items-center gap-4 mb-4">
+                <button
+                  onClick={() => router.push('/leader/tools')}
+                  className="flex items-center gap-2 px-4 py-2 text-white rounded-lg font-medium transition-colors"
+                  style={{ 
+                    minHeight: '44px',
+                    backgroundColor: '#20c997'
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#1ba87f'}
+                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#20c997'}
+                >
+                  <ArrowLeft size={16} />
+                  Back to Tools
+                </button>
+              </div>
+              <h1 style={{ 
+                fontFamily: BRAND.fonts.heading,
+                fontSize: '28px',
+                fontWeight: '700',
+                color: BRAND.colors.text
+              }}>
+                Pending Needs
+              </h1>
+            </div>
 
           {/* Cards Grid - Exact copy of Ways to Serve layout */}
           {pendingNeeds.length === 0 ? (
-            <div className="bg-white rounded-lg shadow-sm border p-12 text-center">
-              <div className="text-gray-400 mb-4">
-                <svg className="mx-auto h-12 w-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                </svg>
-              </div>
-              <h3 className="text-lg font-medium text-gray-900 mb-2">All caught up!</h3>
-              <p className="text-gray-600">No pending needs to review at this time.</p>
+            <div className="bg-gray-50 border border-gray-200 rounded-xl p-12 text-center">
+              <CheckCircle size={48} style={{ 
+                color: BRAND.colors.success,
+                margin: '0 auto 16px'
+              }} />
+              <h3 className="text-xl font-semibold mb-2" style={{ 
+                fontFamily: BRAND.fonts.heading, 
+                color: BRAND.colors.text 
+              }}>
+                All Caught Up!
+              </h3>
+              <p style={{ 
+                color: BRAND.colors.textLight, 
+                fontFamily: BRAND.fonts.body 
+              }}>
+                No pending needs to review right now. Great job keeping up with requests!
+              </p>
             </div>
           ) : (
             <div className="grid md:grid-cols-2 gap-6">
               {pendingNeeds.map((need) => (
-                <div key={need.id} className="bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow border">
+                <div key={need.id} className="bg-white rounded-xl shadow-md hover:shadow-lg transition-shadow border border-gray-200">
                   
                   {/* Card Content - Exact Ways to Serve structure */}
                   <div className="p-6">
@@ -370,7 +418,21 @@ export default function PendingNeedsPage() {
                         onClick={() => approveNeed(need.id)}
                         disabled={actingId === need.id}
                         aria-busy={actingId === need.id}
-                        className="w-full bg-emerald-500 text-white py-3 px-4 rounded-lg font-semibold hover:bg-emerald-600 transition-colors text-center disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="w-full py-3 px-4 rounded-lg font-semibold text-center disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-white"
+                        style={{ 
+                          backgroundColor: BRAND.colors.primary,
+                          minHeight: '44px'
+                        }}
+                        onMouseEnter={(e) => {
+                          if (actingId !== need.id) {
+                            e.currentTarget.style.backgroundColor = BRAND.colors.primaryHover;
+                          }
+                        }}
+                        onMouseLeave={(e) => {
+                          if (actingId !== need.id) {
+                            e.currentTarget.style.backgroundColor = BRAND.colors.primary;
+                          }
+                        }}
                       >
                         {actingId === need.id ? 'Publishing…' : 'Approve & Publish'}
                       </button>
@@ -378,7 +440,21 @@ export default function PendingNeedsPage() {
                         onClick={() => rejectNeed(need.id)}
                         disabled={actingId === need.id}
                         aria-busy={actingId === need.id}
-                        className="w-full border border-red-200 text-red-600 py-2 px-4 rounded-lg hover:bg-red-50 transition-colors font-medium text-center disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="w-full py-2 px-4 rounded-lg font-medium text-center disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-white"
+                        style={{ 
+                          backgroundColor: BRAND.colors.danger,
+                          minHeight: '44px'
+                        }}
+                        onMouseEnter={(e) => {
+                          if (actingId !== need.id) {
+                            e.currentTarget.style.backgroundColor = BRAND.colors.dangerHover;
+                          }
+                        }}
+                        onMouseLeave={(e) => {
+                          if (actingId !== need.id) {
+                            e.currentTarget.style.backgroundColor = BRAND.colors.danger;
+                          }
+                        }}
                       >
                         {actingId === need.id ? 'Rejecting…' : 'Reject'}
                       </button>
