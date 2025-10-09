@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { 
   User, Mail, MapPin, Clock, Edit3, Save, X,
   Sun, Sunset, Moon, Calendar, Phone, Bell,
-  LogOut,
+  LogOut, Camera, Edit2, Check, Cloud,
   // Category Icons
   Wrench, Users, Lightbulb, Heart, BookOpen, Palette, 
   Crown, Settings, Activity, Compass
@@ -33,6 +33,7 @@ export default function ProfilePage() {
     availability: string[];
     gift_selections: string[];
     is_leader: boolean;
+    avatar_url?: string;
     notification_preferences: {
       volunteer_signed_up: boolean;
       need_submitted: boolean;
@@ -50,6 +51,7 @@ export default function ProfilePage() {
     availability: [],
     gift_selections: [],
     is_leader: false,
+    avatar_url: '',
     notification_preferences: {
       volunteer_signed_up: true,
       need_submitted: true,
@@ -62,6 +64,8 @@ export default function ProfilePage() {
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [avatarUrl, setAvatarUrl] = useState('');
   const router = useRouter();
 
   // Load user data on component mount
@@ -90,7 +94,7 @@ export default function ProfilePage() {
         // Updated query to include new church-related columns and notification preferences
         const { data: profile, error } = await supabase
           .from('profiles')
-          .select('id, full_name, email, city, phone, age, availability, gift_selections, is_leader, church_code, role, approval_status, notification_preferences')
+          .select('id, full_name, email, city, phone, age, availability, gift_selections, is_leader, church_code, role, approval_status, notification_preferences, avatar_url')
           .eq('id', session.user.id)
           .maybeSingle();
 
@@ -150,8 +154,11 @@ export default function ProfilePage() {
             availability: profile.availability || [],
             gift_selections: profile.gift_selections || [],
             is_leader: profile.is_leader || false,
+            avatar_url: profile.avatar_url || '',
             notification_preferences: profile.notification_preferences || defaultNotificationPrefs
           });
+          
+          setAvatarUrl(profile.avatar_url || '');
         } else {
           // No profile found, set defaults
           console.log('ℹ️ No profile found, setting defaults');
@@ -204,6 +211,69 @@ export default function ProfilePage() {
 
     loadProfile();
   }, []);
+
+  const handleAvatarUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    try {
+      setUploading(true);
+      
+      const file = event.target.files?.[0];
+      if (!file) return;
+
+      // Validate file type
+      if (!file.type.startsWith('image/')) {
+        toast.error('Please upload an image file');
+        return;
+      }
+
+      // Validate file size (max 2MB)
+      if (file.size > 2 * 1024 * 1024) {
+        toast.error('Image must be less than 2MB');
+        return;
+      }
+
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('No user found');
+
+      // Create unique filename
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${user.id}-${Date.now()}.${fileExt}`;
+      const filePath = `avatars/${fileName}`;
+
+      // Upload to Supabase Storage
+      const { error: uploadError } = await supabase.storage
+        .from('profile-pictures')
+        .upload(filePath, file, {
+          cacheControl: '3600',
+          upsert: false
+        });
+
+      if (uploadError) throw uploadError;
+
+      // Get public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from('profile-pictures')
+        .getPublicUrl(filePath);
+
+      // Update profile with new avatar URL
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .update({ avatar_url: publicUrl })
+        .eq('id', user.id);
+
+      if (updateError) throw updateError;
+
+      // Update local state
+      setAvatarUrl(publicUrl);
+      setProfile(prev => ({ ...prev, avatar_url: publicUrl }));
+      toast.success('Profile picture updated!');
+
+    } catch (error) {
+      console.error('Error uploading avatar:', error);
+      toast.error('Failed to upload profile picture');
+    } finally {
+      setUploading(false);
+    }
+  };
 
   const handleSaveProfile = async () => {
     setSaving(true);
@@ -266,43 +336,53 @@ export default function ProfilePage() {
 
   return (
     <>
-      <Header />
-      <div style={{ 
-        backgroundColor: '#f9fafb', 
-        minHeight: '100vh', 
-        paddingBottom: '80px',
-        fontFamily: merriweatherFont
-      }}>
-
-      {/* Profile Header with Edit Controls */}
-      <div style={{ backgroundColor: 'white', boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)', borderBottom: '1px solid #e5e7eb' }}>
-        <div style={{ maxWidth: '1024px', margin: '0 auto', padding: '24px 16px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <h1 className="text-3xl font-bold mb-2" style={{ fontFamily: BRAND.fonts.heading, color: BRAND.colors.text }}>
-              {profile.full_name || 'Your Profile'}
-            </h1>
-            {!isEditing ? (
-              <div style={{ display: 'flex', gap: '12px' }}>
+      <Header 
+        profileActions={
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            {isEditing ? (
+              <>
                 <button
-                  onClick={() => setIsEditing(true)}
-                  className="px-6 py-2 rounded-lg text-white font-medium transition-colors"
-                  style={{
+                  onClick={() => setIsEditing(false)}
+                  className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                  style={{ minHeight: '44px', color: BRAND.colors.text, fontFamily: BRAND.fonts.heading }}
+                >
+                  <X size={16} />
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSaveProfile}
+                  disabled={saving}
+                  className="flex items-center gap-2 px-4 py-2 rounded-lg text-white font-medium transition-colors"
+                  style={{ 
                     backgroundColor: BRAND.colors.primary,
                     minHeight: '44px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '8px',
-                    border: 'none',
-                    cursor: 'pointer',
+                    fontFamily: BRAND.fonts.heading,
+                    opacity: saving ? 0.5 : 1,
+                    cursor: saving ? 'not-allowed' : 'pointer'
+                  }}
+                  onMouseEnter={(e) => !saving && (e.currentTarget.style.backgroundColor = BRAND.colors.primaryHover)}
+                  onMouseLeave={(e) => !saving && (e.currentTarget.style.backgroundColor = BRAND.colors.primary)}
+                >
+                  <Check size={16} />
+                  {saving ? 'Saving...' : 'Save'}
+                </button>
+              </>
+            ) : (
+              <>
+                <button
+                  onClick={() => setIsEditing(true)}
+                  className="flex items-center gap-2 px-4 py-2 rounded-lg text-white font-medium transition-colors"
+                  style={{ 
+                    backgroundColor: BRAND.colors.primary,
+                    minHeight: '44px',
                     fontFamily: BRAND.fonts.heading
                   }}
                   onMouseEnter={(e) => e.currentTarget.style.backgroundColor = BRAND.colors.primaryHover}
                   onMouseLeave={(e) => e.currentTarget.style.backgroundColor = BRAND.colors.primary}
                 >
-                  <Edit3 size={18} />
+                  <Edit2 size={16} />
                   Edit Profile
                 </button>
-                
                 <button
                   onClick={async () => {
                     console.log('[Profile] Sign out requested');
@@ -323,106 +403,303 @@ export default function ProfilePage() {
                       console.log('[Profile] User cancelled sign out');
                     }
                   }}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '8px',
-                    padding: '8px 16px',
-                    backgroundColor: 'transparent',
-                    color: '#6b7280',
-                    borderRadius: '8px',
-                    border: '1px solid #e5e7eb',
-                    cursor: 'pointer',
-                    fontFamily: quicksandFont,
-                    fontWeight: '500',
-                    transition: 'all 0.2s ease'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.backgroundColor = '#f9fafb';
-                    e.currentTarget.style.borderColor = '#d1d5db';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.backgroundColor = 'transparent';
-                    e.currentTarget.style.borderColor = '#e5e7eb';
-                  }}
+                  className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                  style={{ minHeight: '44px', color: '#6b7280', fontFamily: BRAND.fonts.heading }}
                 >
-                  <LogOut size={18} />
+                  <LogOut size={16} />
                   Sign out
                 </button>
-              </div>
-            ) : (
-              <div style={{ display: 'flex', gap: '8px' }}>
-                <button
-                  onClick={() => setIsEditing(false)}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '8px',
-                    padding: '8px 16px',
-                    backgroundColor: '#e5e7eb',
-                    color: '#374151',
-                    borderRadius: '8px',
-                    border: 'none',
-                    cursor: 'pointer',
-                    fontFamily: quicksandFont,
-                    fontWeight: '500'
-                  }}
-                >
-                  <X size={18} />
-                  Cancel
-                </button>
-                <button
-                  onClick={handleSaveProfile}
-                  disabled={saving}
-                  className="px-6 py-2 rounded-lg text-white font-medium transition-colors"
-                  style={{
-                    backgroundColor: BRAND.colors.primary,
-                    minHeight: '44px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '8px',
-                    border: 'none',
-                    cursor: saving ? 'not-allowed' : 'pointer',
-                    fontFamily: BRAND.fonts.heading,
-                    opacity: saving ? 0.5 : 1
-                  }}
-                  onMouseEnter={(e) => !saving && (e.currentTarget.style.backgroundColor = BRAND.colors.primaryHover)}
-                  onMouseLeave={(e) => !saving && (e.currentTarget.style.backgroundColor = BRAND.colors.primary)}
-                >
-                  <Save size={18} />
-                  {saving ? 'Saving...' : 'Save'}
-                </button>
-              </div>
+              </>
             )}
           </div>
-        </div>
-      </div>
+        }
+      />
+      <div style={{ 
+        backgroundColor: '#f9fafb', 
+        minHeight: '100vh', 
+        paddingBottom: '80px',
+        fontFamily: merriweatherFont
+      }}>
 
       {/* Profile Content */}
       <div style={{ maxWidth: '1024px', margin: '0 auto', padding: '24px 16px' }}>
         
-        {/* Basic Information Card */}
-        <div className="bg-white border border-gray-200 rounded-xl shadow-md p-6" style={{ marginBottom: '24px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '24px' }}>
-            <div style={{ width: '64px', height: '64px', backgroundColor: '#d1fae5', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <User style={{ color: '#20c997' }} size={24} />
+        {/* Top Section - Avatar and Name */}
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '32px' }}>
+          {/* Avatar Display */}
+          <div style={{ position: 'relative', marginBottom: '16px' }}>
+            {isEditing ? (
+              <>
+                {avatarUrl ? (
+                  <img 
+                    src={avatarUrl}
+                    alt="Profile"
+                    style={{
+                      width: '128px',
+                      height: '128px',
+                      borderRadius: '50%',
+                      objectFit: 'cover',
+                      border: '4px solid white',
+                      boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)'
+                    }}
+                  />
+                ) : (
+                  <div 
+                    style={{
+                      width: '128px',
+                      height: '128px',
+                      borderRadius: '50%',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      color: 'white',
+                      fontSize: '48px',
+                      fontWeight: 'bold',
+                      fontFamily: BRAND.fonts.heading,
+                      backgroundColor: BRAND.colors.primary,
+                      border: '4px solid white',
+                      boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)'
+                    }}
+                  >
+                    {profile?.full_name?.charAt(0)?.toUpperCase() || 'U'}
+                  </div>
+                )}
+                
+                {/* Upload Button with tooltip */}
+                <label 
+                  htmlFor="avatar-upload"
+                  className="group"
+                  style={{
+                    position: 'absolute',
+                    bottom: '0',
+                    right: '0',
+                    backgroundColor: 'white',
+                    border: `2px solid ${BRAND.colors.primary}`,
+                    borderRadius: '50%',
+                    padding: '10px',
+                    cursor: uploading ? 'not-allowed' : 'pointer',
+                    boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+                    transition: 'all 0.2s'
+                  }}
+                  title="Change profile picture"
+                  onMouseEnter={(e) => !uploading && (e.currentTarget.style.boxShadow = '0 4px 6px rgba(0,0,0,0.15)')}
+                  onMouseLeave={(e) => !uploading && (e.currentTarget.style.boxShadow = '0 2px 4px rgba(0,0,0,0.1)')}
+                >
+                  <Camera size={18} style={{ color: BRAND.colors.primary }} />
+                  <input
+                    id="avatar-upload"
+                    type="file"
+                    accept="image/*"
+                    onChange={handleAvatarUpload}
+                    disabled={uploading}
+                    style={{ display: 'none' }}
+                  />
+                </label>
+              </>
+            ) : (
+              <>
+                {avatarUrl ? (
+                  <img 
+                    src={avatarUrl}
+                    alt="Profile"
+                    style={{
+                      width: '128px',
+                      height: '128px',
+                      borderRadius: '50%',
+                      objectFit: 'cover',
+                      border: '4px solid white',
+                      boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)'
+                    }}
+                  />
+                ) : (
+                  <div 
+                    style={{
+                      width: '128px',
+                      height: '128px',
+                      borderRadius: '50%',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      color: 'white',
+                      fontSize: '48px',
+                      fontWeight: 'bold',
+                      fontFamily: BRAND.fonts.heading,
+                      backgroundColor: BRAND.colors.primary,
+                      border: '4px solid white',
+                      boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)'
+                    }}
+                  >
+                    {profile?.full_name?.charAt(0)?.toUpperCase() || 'U'}
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+          
+          {uploading && (
+            <p style={{ fontSize: '14px', marginBottom: '8px', color: BRAND.colors.primary }}>
+              Uploading...
+            </p>
+          )}
+          
+          {/* Name - ONLY place name appears */}
+          <h1 style={{ 
+            fontSize: '28px',
+            fontWeight: 'bold',
+            fontFamily: BRAND.fonts.heading, 
+            color: BRAND.colors.text,
+            marginBottom: '4px'
+          }}>
+            {profile?.full_name || 'User'}
+          </h1>
+          
+          {/* Email - Small and subtle */}
+          <p style={{ fontSize: '14px', color: BRAND.colors.textLight }}>
+            {profile?.email}
+          </p>
+        </div>
+        
+        {/* Profile Info Card - No avatar, no name, just details */}
+        <div className="bg-white rounded-xl shadow-md border border-gray-200 p-6" style={{ marginBottom: '24px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
+            {/* City */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <div style={{ 
+                flexShrink: 0, 
+                width: '40px', 
+                height: '40px', 
+                borderRadius: '50%', 
+                backgroundColor: '#f3f4f6', 
+                display: 'flex', 
+                alignItems: 'center', 
+                justifyContent: 'center' 
+              }}>
+                <MapPin size={18} style={{ color: BRAND.colors.primary }} />
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <p style={{ fontSize: '12px', fontWeight: '500', color: '#6b7280', marginBottom: '2px' }}>City</p>
+                {isEditing ? (
+                  <input
+                    type="text"
+                    value={profile.city}
+                    onChange={(e) => setProfile(prev => ({ ...prev, city: e.target.value }))}
+                    placeholder="Enter city"
+                    style={{
+                      fontSize: '14px',
+                      width: '100%',
+                      border: '1px solid #e5e7eb',
+                      borderRadius: '6px',
+                      padding: '6px 8px',
+                      color: BRAND.colors.text,
+                      fontFamily: BRAND.fonts.body
+                    }}
+                  />
+                ) : (
+                  <p style={{ 
+                    fontSize: '14px', 
+                    fontWeight: '500', 
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
+                    color: BRAND.colors.text,
+                    fontFamily: BRAND.fonts.body
+                  }}>
+                    {profile?.city || 'Not set'}
+                  </p>
+                )}
+              </div>
             </div>
-            <div>
-              <h2 style={{ fontSize: '20px', fontWeight: '600', color: '#111827', fontFamily: quicksandFont, margin: 0 }}>
-                {profile.full_name || 'Your Name'}
-              </h2>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#6b7280' }}>
-                <Mail size={16} />
-                <span>{profile.email}</span>
+            
+            {/* Age */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <div style={{ 
+                flexShrink: 0, 
+                width: '40px', 
+                height: '40px', 
+                borderRadius: '50%', 
+                backgroundColor: '#f3f4f6', 
+                display: 'flex', 
+                alignItems: 'center', 
+                justifyContent: 'center' 
+              }}>
+                <User size={18} style={{ color: BRAND.colors.primary }} />
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <p style={{ fontSize: '12px', fontWeight: '500', color: '#6b7280', marginBottom: '2px' }}>Age</p>
+                {isEditing ? (
+                  <input
+                    type="number"
+                    value={profile.age}
+                    onChange={(e) => setProfile(prev => ({ ...prev, age: e.target.value }))}
+                    placeholder="Age"
+                    style={{
+                      fontSize: '14px',
+                      width: '100%',
+                      border: '1px solid #e5e7eb',
+                      borderRadius: '6px',
+                      padding: '6px 8px',
+                      color: BRAND.colors.text,
+                      fontFamily: BRAND.fonts.body
+                    }}
+                  />
+                ) : (
+                  <p style={{ 
+                    fontSize: '14px', 
+                    fontWeight: '500',
+                    color: BRAND.colors.text,
+                    fontFamily: BRAND.fonts.body
+                  }}>
+                    {profile?.age ? `${profile.age} years` : 'Not set'}
+                  </p>
+                )}
+              </div>
+            </div>
+            
+            {/* Phone */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <div style={{ 
+                flexShrink: 0, 
+                width: '40px', 
+                height: '40px', 
+                borderRadius: '50%', 
+                backgroundColor: '#f3f4f6', 
+                display: 'flex', 
+                alignItems: 'center', 
+                justifyContent: 'center' 
+              }}>
+                <Phone size={18} style={{ color: BRAND.colors.primary }} />
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <p style={{ fontSize: '12px', fontWeight: '500', color: '#6b7280', marginBottom: '2px' }}>Phone</p>
+                {isEditing ? (
+                  <input
+                    type="tel"
+                    value={profile.phone}
+                    onChange={(e) => setProfile(prev => ({ ...prev, phone: e.target.value }))}
+                    placeholder="Phone number"
+                    style={{
+                      fontSize: '14px',
+                      width: '100%',
+                      border: '1px solid #e5e7eb',
+                      borderRadius: '6px',
+                      padding: '6px 8px',
+                      color: BRAND.colors.text,
+                      fontFamily: BRAND.fonts.body
+                    }}
+                  />
+                ) : (
+                  <p style={{ 
+                    fontSize: '14px', 
+                    fontWeight: '500',
+                    color: BRAND.colors.text,
+                    fontFamily: BRAND.fonts.body
+                  }}>
+                    {profile?.phone || 'Not set'}
+                  </p>
+                )}
               </div>
             </div>
           </div>
-
-          {isEditing ? (
-            <BasicInfoForm profile={profile} setProfile={setProfile} />
-          ) : (
-            <BasicInfoDisplay profile={profile} />
-          )}
         </div>
 
         {/* Availability Card */}
@@ -440,7 +717,7 @@ export default function ProfilePage() {
         </div>
 
         {/* Enhanced Interactive Gifts Section */}
-        <div className="bg-white border border-gray-200 rounded-xl shadow-md p-6">
+        <div className="bg-white border border-gray-200 rounded-xl shadow-md p-6" style={{ marginBottom: '24px' }}>
           <h3 style={{ fontSize: '18px', fontWeight: '600', color: '#111827', fontFamily: 'Quicksand, sans-serif', marginBottom: '16px' }}>
             My Gifts & Skills
           </h3>
@@ -474,102 +751,6 @@ export default function ProfilePage() {
           </div>
         )}
 
-        {/* Leadership Dashboard Access */}
-        {profile.is_leader && (
-          <div style={{ 
-            backgroundColor: '#eff6ff', 
-            borderRadius: '12px', 
-            boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)', 
-            border: '1px solid #bfdbfe', 
-            padding: '24px', 
-            marginBottom: '24px' 
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
-              <div style={{ 
-                width: '40px', 
-                height: '40px', 
-                backgroundColor: '#3b82f6', 
-                borderRadius: '50%', 
-                display: 'flex', 
-                alignItems: 'center', 
-                justifyContent: 'center' 
-              }}>
-                <Crown size={20} color="white" />
-              </div>
-              <h3 style={{ 
-                fontSize: '18px', 
-                fontWeight: '600', 
-                color: '#1e40af', 
-                fontFamily: quicksandFont, 
-                margin: 0 
-              }}>
-                Leadership Dashboard
-              </h3>
-            </div>
-            <p style={{ 
-              color: '#1e40af', 
-              fontSize: '14px', 
-              marginBottom: '16px',
-              fontFamily: quicksandFont
-            }}>
-              Access leadership tools to manage community needs and members.
-            </p>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              <button
-                onClick={() => window.location.href = '/leader'}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  padding: '12px 16px',
-                  backgroundColor: '#3b82f6',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '8px',
-                  cursor: 'pointer',
-                  fontFamily: quicksandFont,
-                  fontWeight: '500',
-                  fontSize: '14px',
-                  transition: 'background-color 0.2s'
-                }}
-                onMouseEnter={(e) => (e.target as HTMLButtonElement).style.backgroundColor = '#2563eb'}
-                onMouseLeave={(e) => (e.target as HTMLButtonElement).style.backgroundColor = '#3b82f6'}
-              >
-                <Crown size={16} />
-                Leadership Overview
-              </button>
-              <button
-                onClick={() => window.location.href = '/leader/pending-needs'}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  padding: '12px 16px',
-                  backgroundColor: '#f8fafc',
-                  color: '#1e40af',
-                  border: '1px solid #3b82f6',
-                  borderRadius: '8px',
-                  cursor: 'pointer',
-                  fontFamily: quicksandFont,
-                  fontWeight: '500',
-                  fontSize: '14px',
-                  transition: 'all 0.2s'
-                }}
-                onMouseEnter={(e) => {
-                  (e.target as HTMLButtonElement).style.backgroundColor = '#3b82f6';
-                  (e.target as HTMLButtonElement).style.color = 'white';
-                }}
-                onMouseLeave={(e) => {
-                  (e.target as HTMLButtonElement).style.backgroundColor = '#f8fafc';
-                  (e.target as HTMLButtonElement).style.color = '#1e40af';
-                }}
-              >
-                <Settings size={16} />
-                Approve Pending Needs
-              </button>
-            </div>
-          </div>
-        )}
       </div>
 
         {/* Persistent Footer */}
@@ -693,7 +874,7 @@ function BasicInfoDisplay({ profile }: { profile: any }) {
 function AvailabilitySection({ availability, isEditing, onChange }: { availability: string[]; isEditing: boolean; onChange: (availability: string[]) => void }) {
   const timeSlots = [
     { id: 'Morning', label: 'Morning', icon: Sun },
-    { id: 'Afternoon', label: 'Afternoon', icon: Sunset },
+    { id: 'Afternoon', label: 'Afternoon', icon: Cloud },
     { id: 'Evening', label: 'Evening', icon: Moon },
     { id: 'Weekends', label: 'Weekends', icon: Calendar }
   ];
@@ -719,19 +900,24 @@ function AvailabilitySection({ availability, isEditing, onChange }: { availabili
             key={slot.id}
             onClick={() => toggleAvailability(slot.id)}
             disabled={!isEditing}
+            className={isSelected 
+              ? 'text-white shadow-md' 
+              : 'bg-white text-gray-700 border-2 border-gray-300 hover:border-gray-400 hover:shadow-sm'
+            }
             style={{
               display: 'flex',
               alignItems: 'center',
+              justifyContent: 'center',
               gap: '8px',
-              padding: '8px 16px',
+              padding: '10px 16px',
               borderRadius: '8px',
-              border: `1px solid ${isSelected ? '#20c997' : '#d1d5db'}`,
-              backgroundColor: isSelected ? '#20c997' : '#f9fafb',
-              color: isSelected ? 'white' : '#6b7280',
+              backgroundColor: isSelected ? BRAND.colors.primary : undefined,
               cursor: isEditing ? 'pointer' : 'default',
-              fontFamily: quicksandFont,
+              fontFamily: BRAND.fonts.heading,
               fontWeight: '500',
-              fontSize: '14px'
+              fontSize: '14px',
+              minHeight: '44px',
+              transition: 'all 0.2s'
             }}
           >
             <Icon size={18} />

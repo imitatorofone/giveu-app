@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { usePathname } from 'next/navigation';
 import { supabaseBrowser as supabase } from '../lib/supabaseBrowser';
 import NotificationDropdown from './NotificationDropdown';
 
@@ -8,9 +9,15 @@ import NotificationDropdown from './NotificationDropdown';
 const quicksandFont = 'Quicksand, -apple-system, BlinkMacSystemFont, sans-serif';
 const merriweatherFont = 'Merriweather, Georgia, serif';
 
-export default function Header() {
+interface HeaderProps {
+  profileActions?: React.ReactNode;
+}
+
+export default function Header({ profileActions }: HeaderProps = {}) {
   const [userId, setUserId] = useState<string | null>(null);
   const [isLeader, setIsLeader] = useState(false);
+  const pathname = usePathname();
+  const isProfilePage = pathname === '/profile';
 
   useEffect(() => {
     const checkUser = async () => {
@@ -60,6 +67,7 @@ export default function Header() {
         </div>
         
         <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+          {isProfilePage && profileActions}
           {userId && (
             <NotificationDropdown />
           )}

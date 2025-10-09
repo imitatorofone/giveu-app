@@ -6,6 +6,7 @@ import { supabaseBrowser as supabase } from '@/lib/supabaseBrowser';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import { ArrowLeft } from 'lucide-react';
+import { BRAND } from '@/lib/brandConfig';
 
 export default function MembersPage() {
   const [loading, setLoading] = useState(true);
@@ -35,7 +36,7 @@ export default function MembersPage() {
       // Load user profile
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
-        .select('*')
+        .select('*, avatar_url')
         .eq('id', session.user.id)
         .single();
 
@@ -230,7 +231,7 @@ export default function MembersPage() {
     <div className="min-h-screen bg-gray-50">
       <Header />
       
-      <main className="py-8">
+      <main className="py-8 pb-32">
         <div className="max-w-4xl mx-auto px-4">
           <div className="p-6 space-y-4">
             
@@ -261,7 +262,12 @@ export default function MembersPage() {
                 placeholder="Search by name or email..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                style={{
+                  fontFamily: BRAND.fonts.body
+                }}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:border-transparent"
+                onFocus={(e) => e.currentTarget.style.boxShadow = `0 0 0 2px ${BRAND.colors.primary}`}
+                onBlur={(e) => e.currentTarget.style.boxShadow = 'none'}
               />
             </div>
 
@@ -275,9 +281,13 @@ export default function MembersPage() {
                     onClick={() => setRoleFilter(role)}
                     className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
                       roleFilter === role
-                        ? 'bg-emerald-500 text-white'
+                        ? 'text-white'
                         : 'bg-white text-gray-600 border border-gray-300 hover:bg-gray-50'
                     }`}
+                    style={{
+                      backgroundColor: roleFilter === role ? BRAND.colors.primary : undefined,
+                      fontFamily: BRAND.fonts.heading
+                    }}
                   >
                     {role}
                   </button>
@@ -295,9 +305,13 @@ export default function MembersPage() {
                     onClick={() => setStatusFilter(status)}
                     className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
                       statusFilter === status
-                        ? 'bg-emerald-500 text-white'
+                        ? 'text-white'
                         : 'bg-white text-gray-600 border border-gray-300 hover:bg-gray-50'
                     }`}
+                    style={{
+                      backgroundColor: statusFilter === status ? BRAND.colors.primary : undefined,
+                      fontFamily: BRAND.fonts.heading
+                    }}
                   >
                     {status}
                   </button>
@@ -318,29 +332,59 @@ export default function MembersPage() {
                       <div key={member.id} className="bg-white rounded-lg border border-gray-200 p-4">
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 bg-emerald-100 rounded-full flex items-center justify-center">
-                              <span className="text-emerald-600 font-semibold text-sm">
-                                {getInitials(member.full_name || member.email || 'U')}
-                              </span>
-                            </div>
+                            {member.avatar_url ? (
+                              <img 
+                                src={member.avatar_url}
+                                alt={member.full_name || 'Profile'}
+                                className="w-10 h-10 rounded-full object-cover border border-gray-200"
+                              />
+                            ) : (
+                              <div 
+                                className="w-10 h-10 rounded-full flex items-center justify-center"
+                                style={{ 
+                                  backgroundColor: BRAND.colors.primary,
+                                  color: 'white'
+                                }}
+                              >
+                                <span className="font-semibold text-sm" style={{ fontFamily: BRAND.fonts.heading }}>
+                                  {getInitials(member.full_name || member.email || 'U')}
+                                </span>
+                              </div>
+                            )}
                             <div>
-                              <h3 className="font-semibold text-gray-900">{member.full_name}</h3>
-                              <p className="text-sm text-gray-600">Member</p>
+                              <h3 className="font-semibold text-gray-900" style={{ fontFamily: BRAND.fonts.heading }}>
+                                {member.full_name}
+                              </h3>
+                              <p className="text-sm text-gray-600" style={{ fontFamily: BRAND.fonts.body }}>Member</p>
                             </div>
                           </div>
                           <div className="flex items-center gap-3">
-                            <span className="px-3 py-1 bg-emerald-100 text-emerald-700 rounded-full text-xs font-medium">
+                            <span 
+                              className="px-3 py-1 rounded-full text-xs font-medium"
+                              style={{ 
+                                backgroundColor: `${BRAND.colors.primary}20`,
+                                color: BRAND.colors.primary,
+                                fontFamily: BRAND.fonts.heading
+                              }}
+                            >
                               PENDING
                             </span>
                             <button
                               onClick={() => approveMember(member.id)}
-                              className="px-4 py-2 bg-emerald-500 text-white rounded-lg text-sm font-medium hover:bg-emerald-600 transition-colors"
+                              className="px-4 py-2 text-white rounded-lg text-sm font-medium transition-colors"
+                              style={{ 
+                                backgroundColor: BRAND.colors.primary,
+                                fontFamily: BRAND.fonts.heading
+                              }}
+                              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = BRAND.colors.primaryHover}
+                              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = BRAND.colors.primary}
                             >
                               Approve
                             </button>
                             <button
                               onClick={() => denyMember(member.id)}
                               className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-300 transition-colors"
+                              style={{ fontFamily: BRAND.fonts.heading }}
                             >
                               Deny
                             </button>
@@ -363,19 +407,48 @@ export default function MembersPage() {
                       <div key={member.id} className="bg-white rounded-lg border border-gray-200 p-4">
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 bg-emerald-100 rounded-full flex items-center justify-center">
-                              <span className="text-emerald-600 font-semibold text-sm">
-                                {getInitials(member.full_name || member.email || 'U')}
-                              </span>
-                            </div>
+                            {member.avatar_url ? (
+                              <img 
+                                src={member.avatar_url}
+                                alt={member.full_name || 'Profile'}
+                                className="w-10 h-10 rounded-full object-cover border border-gray-200"
+                              />
+                            ) : (
+                              <div 
+                                className="w-10 h-10 rounded-full flex items-center justify-center"
+                                style={{ 
+                                  backgroundColor: BRAND.colors.primary,
+                                  color: 'white'
+                                }}
+                              >
+                                <span className="font-semibold text-sm" style={{ fontFamily: BRAND.fonts.heading }}>
+                                  {getInitials(member.full_name || member.email || 'U')}
+                                </span>
+                              </div>
+                            )}
                             <div>
-                              <h3 className="font-semibold text-gray-900">{member.full_name}</h3>
-                              <p className={`text-sm ${member.is_leader ? 'text-emerald-600' : 'text-gray-600'}`}>
+                              <h3 className="font-semibold text-gray-900" style={{ fontFamily: BRAND.fonts.heading }}>
+                                {member.full_name}
+                              </h3>
+                              <p 
+                                className="text-sm"
+                                style={{ 
+                                  color: member.is_leader ? BRAND.colors.primary : BRAND.colors.textLight,
+                                  fontFamily: BRAND.fonts.body
+                                }}
+                              >
                                 {member.is_leader ? 'Leader' : 'Member'}
                               </p>
                             </div>
                           </div>
-                          <span className="px-3 py-1 bg-emerald-100 text-emerald-700 rounded-full text-xs font-medium">
+                          <span 
+                            className="px-3 py-1 rounded-full text-xs font-medium"
+                            style={{ 
+                              backgroundColor: `${BRAND.colors.primary}20`,
+                              color: BRAND.colors.primary,
+                              fontFamily: BRAND.fonts.heading
+                            }}
+                          >
                             ACTIVE
                           </span>
                         </div>
