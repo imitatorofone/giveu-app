@@ -125,6 +125,28 @@ const formatOngoingSchedule = (need: any): string => {
   return parts.join(' ');
 };
 
+const getLocationLine1 = (address: string | null | undefined) => {
+  if (!address) return 'Location TBD';
+  
+  const parts = address.split(',');
+  if (parts.length > 1) {
+    return parts[0].trim();
+  }
+  
+  return address;
+};
+
+const getLocationLine2 = (address: string | null | undefined) => {
+  if (!address) return '';
+  
+  const parts = address.split(',');
+  if (parts.length > 1) {
+    return parts.slice(1).join(',').trim();
+  }
+  
+  return '';
+};
+
 export default function MemberDashboard() {
   const [opportunities, setOpportunities] = useState<Opportunity[]>([]);
   const [loading, setLoading] = useState(true);
@@ -1231,7 +1253,12 @@ export default function MemberDashboard() {
                       flexShrink: 0
                     }} />
                     <div style={{ fontSize: '12px', lineHeight: '1.2', textAlign: 'center' }}>
-                      {opportunity.location}
+                      <div style={{ fontWeight: '500', color: BRAND.colors.text }}>
+                        {getLocationLine1(opportunity.location)}
+                      </div>
+                      <div style={{ color: BRAND.colors.textLight }}>
+                        {getLocationLine2(opportunity.location)}
+                      </div>
                     </div>
                   </div>
                   

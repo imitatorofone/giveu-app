@@ -4,9 +4,62 @@ import { useState, useEffect } from 'react';
 import { supabaseBrowser as supabase } from '../../lib/supabaseBrowser';
 import { useRouter } from 'next/navigation';
 import { Icon } from '../../icons/index';
-import { ArrowLeft, MapPin, Users, Calendar, Clock, AlertCircle, CheckCircle, FileText, Plus, Sun, Cloud, Moon, Home, ArrowRight } from 'lucide-react';
+import { ArrowLeft, MapPin, Users, Calendar, Clock, AlertCircle, CheckCircle, FileText, Plus, Sun, Cloud, Moon, Home, ArrowRight, Wrench, Lightbulb, Heart, BookOpen, Palette, Target, Settings, Activity, Compass, ChevronDown } from 'lucide-react';
 import { createNotification } from '../../lib/notificationHelper';
 import { BRAND } from '../../lib/brandConfig';
+
+const giftCategories = [
+  {
+    name: 'Hands-On Skills',
+    icon: Wrench,
+    tags: ['Carpentry', 'Repairs', 'Gardening', 'Sewing', 'Cooking', 'Decorating', 'Setup/Tear Down', 'Automotive', 'Painting']
+  },
+  {
+    name: 'People & Relationships',
+    icon: Users,
+    tags: ['Hospitality', 'Listening', 'Mentoring', 'Counseling', 'Welcoming', 'Hosting']
+  },
+  {
+    name: 'Problem-Solving & Organizing',
+    icon: Lightbulb,
+    tags: ['Planning', 'Budgeting', 'Logistics', 'Strategy', 'Administration', 'Research']
+  },
+  {
+    name: 'Care & Comfort',
+    icon: Heart,
+    tags: ['Visiting the Sick', 'Meal Prep', 'Childcare', 'Encouragement', 'Prayer', 'Compassionate Care']
+  },
+  {
+    name: 'Learning & Teaching',
+    icon: BookOpen,
+    tags: ['Tutoring', 'Bible Study Leading', 'Coaching', 'Skill Training', 'Public Speaking', 'Mentoring']
+  },
+  {
+    name: 'Creativity & Expression',
+    icon: Palette,
+    tags: ['Art', 'Music', 'Writing', 'Photography', 'Design', 'Storytelling', 'Media Production']
+  },
+  {
+    name: 'Leadership & Motivation',
+    icon: Target,
+    tags: ['Facilitating Groups', 'Casting Vision', 'Mentoring Teams', 'Event Leadership', 'Preaching', 'Strategic Planning']
+  },
+  {
+    name: 'Behind-the-Scenes Support',
+    icon: Settings,
+    tags: ['Tech Support', 'AV/Production', 'Finance', 'Cleaning', 'Setup Crew', 'Admin Tasks']
+  },
+  {
+    name: 'Physical & Active',
+    icon: Activity,
+    tags: ['Sports Coaching', 'Outdoor Projects', 'Moving Help', 'Fitness Activities', 'Recreation Leading', 'Disaster Relief']
+  },
+  {
+    name: 'Pioneering & Connecting',
+    icon: Compass,
+    tags: ['Evangelism', 'Community Outreach', 'Starting Ministries', 'Networking', 'Fundraising', 'Advocacy']
+  }
+];
 
 const primaryGiftings = [
   { id: 'hands-on', name: 'Hands-On Skills', skills: ['Carpentry', 'Repairs', 'Gardening', 'Sewing', 'Cooking', 'Decorating', 'Setup/Tear-down'] },
@@ -129,7 +182,7 @@ export default function ShareNeedScreen() {
     }));
   };
 
-  const toggleExpanded = (giftingId: unknown) => {
+  const toggleExpanded = (giftingId: string) => {
     setExpandedGiftings(prev => {
       const newSet = new Set(prev);
       if (newSet.has(giftingId)) {
@@ -174,6 +227,52 @@ export default function ShareNeedScreen() {
     } else if (currentStep > 0) {
       setCurrentStep(currentStep - 1);
     }
+  };
+
+  const formatDate = (urgency: string, specificDate: string, ongoingStartDate: string) => {
+    if (urgency === 'asap') return 'As Soon As Possible';
+    if (urgency === 'ongoing') return ongoingStartDate ? new Date(ongoingStartDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'Ongoing';
+    if (!specificDate) return 'Date TBD';
+    
+    const d = new Date(specificDate);
+    return d.toLocaleDateString('en-US', { 
+      month: 'short', 
+      day: 'numeric', 
+      year: 'numeric' 
+    });
+  };
+
+  const formatTime = (time: string) => {
+    if (!time) return '';
+    
+    const [hours, minutes] = time.split(':');
+    const hour = parseInt(hours);
+    const ampm = hour >= 12 ? 'PM' : 'AM';
+    const displayHour = hour % 12 || 12;
+    
+    return `${displayHour}:${minutes} ${ampm}`;
+  };
+
+  const getLocationLine1 = (address: string | null) => {
+    if (!address) return 'Location TBD';
+    
+    const parts = address.split(',');
+    if (parts.length > 1) {
+      return parts[0].trim();
+    }
+    
+    return address;
+  };
+
+  const getLocationLine2 = (address: string | null) => {
+    if (!address) return '';
+    
+    const parts = address.split(',');
+    if (parts.length > 1) {
+      return parts.slice(1).join(',').trim();
+    }
+    
+    return '';
   };
 
   const handleSubmit = async () => {
@@ -478,11 +577,11 @@ export default function ShareNeedScreen() {
                 <label style={labelStyle}>
                   <FileText size={18} color='#20c997' />
                   <span>Description</span>
-                </label>
-                <textarea
-                  value={formData.title}
-                  onChange={(e) => updateFormData('title', e.target.value)}
-                  placeholder="Help with moving furniture, meal prep for family, tutoring kids…"
+              </label>
+              <textarea
+                value={formData.title}
+                onChange={(e) => updateFormData('title', e.target.value)}
+                placeholder="Help with moving furniture, meal prep for family, tutoring kids…"
                   style={{ 
                     ...inputStyle, 
                     minHeight: '120px', 
@@ -496,19 +595,19 @@ export default function ShareNeedScreen() {
                     e.currentTarget.style.borderColor = '#e5e7eb';
                     e.currentTarget.style.boxShadow = 'none';
                   }}
-                />
-              </div>
+              />
+            </div>
 
               {/* Additional Details Field */}
               <div>
                 <label style={labelStyle}>
                   <Plus size={18} color='#20c997' />
                   <span>Additional details (optional)</span>
-                </label>
-                <textarea
-                  value={formData.notes}
-                  onChange={(e) => updateFormData('notes', e.target.value)}
-                  placeholder="Bring gloves and tools… Meals should be nut-free… Any special instructions…"
+              </label>
+              <textarea
+                value={formData.notes}
+                onChange={(e) => updateFormData('notes', e.target.value)}
+                placeholder="Bring gloves and tools… Meals should be nut-free… Any special instructions…"
                   style={{ 
                     ...inputStyle, 
                     minHeight: '80px', 
@@ -522,8 +621,8 @@ export default function ShareNeedScreen() {
                     e.currentTarget.style.borderColor = '#e5e7eb';
                     e.currentTarget.style.boxShadow = 'none';
                   }}
-                />
-              </div>
+              />
+            </div>
 
               {/* When is this needed? */}
               <div style={{ borderTop: '1px solid #e5e7eb', paddingTop: '24px' }}>
@@ -589,7 +688,7 @@ export default function ShareNeedScreen() {
                       transition: 'all 0.2s ease',
                       flexShrink: 0
                     }}>
-                      {formData.urgency === 'specific' && (
+              {formData.urgency === 'specific' && (
                         <div style={{
                           width: '10px',
                           height: '10px',
@@ -967,11 +1066,11 @@ export default function ShareNeedScreen() {
                 <label style={labelStyle}>
                   <MapPin size={18} color='#20c997' />
                   <span>Location</span>
-                </label>
-                <select
-                  value={formData.location}
-                  onChange={(e) => updateFormData('location', e.target.value)}
-                  style={inputStyle}
+              </label>
+              <select
+                value={formData.location}
+                onChange={(e) => updateFormData('location', e.target.value)}
+                style={inputStyle}
                   onFocus={(e) => {
                     e.currentTarget.style.borderColor = '#20c997';
                     e.currentTarget.style.boxShadow = `0 0 0 3px #20c99720`;
@@ -980,11 +1079,11 @@ export default function ShareNeedScreen() {
                     e.currentTarget.style.borderColor = '#e5e7eb';
                     e.currentTarget.style.boxShadow = 'none';
                   }}
-                >
-                  <option value="">Choose location</option>
-                  <option value="church">Church</option>
-                  <option value="custom">Custom Address</option>
-                </select>
+              >
+                <option value="">Choose location</option>
+                <option value="church">Church</option>
+                <option value="custom">Custom Address</option>
+              </select>
 
                 {/* Show church address when church selected */}
                 {formData.location === 'church' && churchAddress && (
@@ -1011,15 +1110,15 @@ export default function ShareNeedScreen() {
                 )}
 
                 {/* Show address input if custom selected */}
-                {formData.location === 'custom' && (
+              {formData.location === 'custom' && (
                   <div style={{ marginTop: '12px' }}>
                     <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '500', color: BRAND.colors.text, fontFamily: BRAND.fonts.heading }}>
                       Street Address
                     </label>
-                    <input
-                      type="text"
-                      value={formData.customLocation}
-                      onChange={(e) => updateFormData('customLocation', e.target.value)}
+                <input
+                  type="text"
+                  value={formData.customLocation}
+                  onChange={(e) => updateFormData('customLocation', e.target.value)}
                       placeholder="123 Main St, City, State ZIP"
                       style={inputStyle}
                       onFocus={(e) => {
@@ -1032,8 +1131,8 @@ export default function ShareNeedScreen() {
                       }}
                     />
                   </div>
-                )}
-              </div>
+              )}
+            </div>
 
               {/* People Needed Section */}
               <div style={{ borderTop: '1px solid #e5e7eb', paddingTop: '24px' }}>
@@ -1041,15 +1140,15 @@ export default function ShareNeedScreen() {
                   <Users size={18} color='#20c997' />
                   <span>How many people are needed?</span>
                 </label>
-                <select
-                  value={formData.peopleNeeded}
+              <select
+                value={formData.peopleNeeded}
                   onChange={(e) => {
                     updateFormData('peopleNeeded', e.target.value);
                     if (e.target.value !== '5+') {
                       updateFormData('customPeopleCount', '');
                     }
                   }}
-                  style={inputStyle}
+                style={inputStyle}
                   onFocus={(e) => {
                     e.currentTarget.style.borderColor = '#20c997';
                     e.currentTarget.style.boxShadow = `0 0 0 3px #20c99720`;
@@ -1060,13 +1159,13 @@ export default function ShareNeedScreen() {
                   }}
                 >
                   <option value="">Select number needed</option>
-                  <option value="1">1 person</option>
-                  <option value="2">2 people</option>
-                  <option value="3">3 people</option>
-                  <option value="4">4 people</option>
+                <option value="1">1 person</option>
+                <option value="2">2 people</option>
+                <option value="3">3 people</option>
+                <option value="4">4 people</option>
                   <option value="5">5 people</option>
                   <option value="5+">5+ people (specify below)</option>
-                </select>
+              </select>
 
                 {/* Show custom number input when 5+ selected */}
                 {formData.peopleNeeded === '5+' && (
@@ -1100,40 +1199,93 @@ export default function ShareNeedScreen() {
       case 2:
         return (
           <div style={cardStyle}>
-            <h2 style={{ fontSize: 24, marginBottom: 'var(--space-2)', fontWeight: 'bold' }}>What skills are needed?</h2>
-            <p style={{ color: '#666666', marginBottom: 'var(--space-6)' }}>
+            {/* Progress Bar */}
+            <div style={{ marginBottom: '24px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                <span style={{ fontSize: '14px', fontWeight: '500', color: BRAND.colors.textLight, fontFamily: BRAND.fonts.body }}>
+                  Step 3 of 3
+                </span>
+                <span style={{ fontSize: '14px', fontWeight: '500', color: BRAND.colors.textLight, fontFamily: BRAND.fonts.body }}>
+                  100% complete
+                </span>
+              </div>
+              <div style={{ width: '100%', backgroundColor: '#e5e7eb', borderRadius: '9999px', height: '8px' }}>
+                <div style={{ 
+                  width: '100%', 
+                  backgroundColor: '#20c997', 
+                  height: '8px', 
+                  borderRadius: '9999px',
+                  transition: 'width 0.3s ease'
+                }}></div>
+              </div>
+            </div>
+
+            <h2 style={{ fontSize: '28px', marginBottom: '8px', fontWeight: 'bold', color: BRAND.colors.text, fontFamily: BRAND.fonts.heading }}>
+              What skills are needed?
+            </h2>
+            <p style={{ color: BRAND.colors.textLight, marginBottom: '32px', fontSize: '16px', fontFamily: BRAND.fonts.body }}>
               Select the gift areas and specific skills that would be most helpful
             </p>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-              {primaryGiftings.map((gifting) => {
-                const isExpanded = expandedGiftings.has(gifting.id);
-                const hasSelectedSkills = gifting.skills.some(skill => formData.giftingsNeeded.includes(skill));
+            {/* Gift Categories */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: '24px' }}>
+              {giftCategories.map((category) => {
+                const IconComponent = category.icon;
+                const isExpanded = expandedGiftings.has(category.name);
+                const selectedInCategory = category.tags.filter(tag => formData.giftingsNeeded.includes(tag)).length;
                 
                 return (
-                  <div key={gifting.id} style={{ border: '1px solid #e5e7eb', borderRadius: 8, overflow: 'hidden' }}>
+                  <div key={category.name} style={{ border: '1px solid #e5e7eb', borderRadius: '12px', overflow: 'hidden' }}>
+                    {/* Category Header */}
                     <button
-                      onClick={() => toggleExpanded(gifting.id)}
+                      onClick={() => toggleExpanded(category.name)}
                       style={{
                         width: '100%',
-                        padding: '16px',
-                        border: 'none',
-                        backgroundColor: hasSelectedSkills ? '#f0fdfa' : 'white',
-                        color: hasSelectedSkills ? '#2BB3A3' : '#333333',
-                        cursor: 'pointer',
-                        textAlign: 'left',
                         display: 'flex',
-                        justifyContent: 'space-between',
                         alignItems: 'center',
-                        fontWeight: hasSelectedSkills ? 500 : 400
+                        justifyContent: 'space-between',
+                        padding: '16px',
+                        backgroundColor: 'white',
+                        border: 'none',
+                        cursor: 'pointer',
+                        transition: 'background-color 0.2s'
                       }}
+                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f9fafb'}
+                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'white'}
                     >
-                      <span>{gifting.name}</span>
-                      <span style={{ fontSize: 18 }}>
-                        {isExpanded ? '−' : '+'}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        <IconComponent size={20} color='#20c997' />
+                        <span style={{ fontWeight: '600', color: BRAND.colors.text, fontFamily: BRAND.fonts.heading }}>
+                          {category.name}
                       </span>
+                        {selectedInCategory > 0 && (
+                          <span style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            width: '24px',
+                            height: '24px',
+                            borderRadius: '9999px',
+                            fontSize: '12px',
+                            fontWeight: '500',
+                            color: 'white',
+                            backgroundColor: '#20c997'
+                          }}>
+                            {selectedInCategory}
+                          </span>
+                        )}
+                      </div>
+                      <ChevronDown 
+                        size={20} 
+                        color='#9ca3af'
+                        style={{
+                          transition: 'transform 0.2s',
+                          transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)'
+                        }}
+                      />
                     </button>
                     
+                    {/* Category Tags */}
                     {isExpanded && (
                       <div style={{ 
                         padding: '16px', 
@@ -1141,29 +1293,41 @@ export default function ShareNeedScreen() {
                         borderTop: '1px solid #e5e7eb'
                       }}>
                         <div style={{ 
-                          display: 'grid', 
-                          gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', 
-                          gap: 8 
+                          display: 'flex',
+                          flexWrap: 'wrap',
+                          gap: '8px'
                         }}>
-                          {gifting.skills.map((skill) => {
-                            const isSelected = formData.giftingsNeeded.includes(skill);
+                          {category.tags.map((tag) => {
+                            const isSelected = formData.giftingsNeeded.includes(tag);
                             return (
                               <button
-                                key={skill}
-                                onClick={() => toggleGifting(skill)}
+                                key={tag}
+                                onClick={() => toggleGifting(tag)}
                                 style={{
-                                  padding: '8px 12px',
-                                  border: '1px solid #d1d5db',
-                                  borderRadius: 6,
+                                  padding: '8px 16px',
+                                  borderRadius: '9999px',
+                                  fontSize: '14px',
+                                  fontWeight: '500',
                                   cursor: 'pointer',
-                                  backgroundColor: isSelected ? '#3b82f6' : 'white',
-                                  color: isSelected ? 'white' : '#333333',
-                                  fontWeight: isSelected ? 500 : 400,
-                                  textAlign: 'center',
-                                  fontSize: 14
+                                  minHeight: '36px',
+                                  border: isSelected ? 'none' : '1px solid #e5e7eb',
+                                  backgroundColor: isSelected ? '#20c997' : 'white',
+                                  color: isSelected ? 'white' : '#4b5563',
+                                  transition: 'all 0.2s',
+                                  fontFamily: BRAND.fonts.heading
+                                }}
+                                onMouseEnter={(e) => {
+                                  if (!isSelected) {
+                                    e.currentTarget.style.borderColor = '#d1d5db';
+                                  }
+                                }}
+                                onMouseLeave={(e) => {
+                                  if (!isSelected) {
+                                    e.currentTarget.style.borderColor = '#e5e7eb';
+                                  }
                                 }}
                               >
-                                {skill}
+                                {tag}
                               </button>
                             );
                           })}
@@ -1175,9 +1339,14 @@ export default function ShareNeedScreen() {
               })}
             </div>
 
-            <p style={{ textAlign: 'center', marginTop: 16, color: '#666666' }}>
-              Selected: {formData.giftingsNeeded.length} skill{formData.giftingsNeeded.length !== 1 ? 's' : ''}
-            </p>
+            {/* Selected Count */}
+            <div style={{ textAlign: 'center', marginBottom: '24px' }}>
+              <p style={{ fontSize: '14px', color: BRAND.colors.textLight, fontFamily: BRAND.fonts.body }}>
+                Selected: <span style={{ fontWeight: '600', color: BRAND.colors.text }}>
+                  {formData.giftingsNeeded.length} skill{formData.giftingsNeeded.length !== 1 ? 's' : ''}
+                </span>
+              </p>
+            </div>
           </div>
         );
 
@@ -1205,117 +1374,240 @@ export default function ShareNeedScreen() {
   if (!user) return <div>Loading...</div>;
 
   if (showPreview) {
+    const displayPeopleNeeded = formData.peopleNeeded === '5+' && formData.customPeopleCount 
+      ? formData.customPeopleCount 
+      : formData.peopleNeeded;
+    
+    const displayLocation = formData.location === 'custom' ? formData.customLocation : churchAddress;
+
     return (
       <div style={{ 
         minHeight: '100vh', 
         backgroundColor: '#FDFBF7',
-        padding: 'var(--space-6)' 
+        padding: '24px' 
       }}>
-        <div style={{ maxWidth: 600, margin: '0 auto', paddingTop: 'var(--space-8)' }}>
-          <div style={{ marginBottom: 'var(--space-8)' }}>
-            <button 
-              onClick={handlePrevious}
-              style={{ 
-                background: 'none', 
-                border: 'none', 
-                fontSize: 'var(--text-base)', 
-                cursor: 'pointer',
-                marginBottom: 'var(--space-4)',
-                color: 'var(--gray-600)',
-                transition: 'color 0.2s ease'
-              }}
-            >
-              ← Back
-            </button>
-            <h1 style={{ fontSize: 'var(--text-2xl)', marginBottom: 'var(--space-2)', fontWeight: 'var(--font-bold)' }}>Preview Your Need</h1>
-            <p style={{ color: 'var(--gray-600)' }}>This is how it will appear on the Ways to Serve board</p>
-          </div>
+        <div style={{ maxWidth: '32rem', margin: '0 auto', paddingTop: '32px' }}>
+          {/* Title */}
+          <h2 style={{ fontSize: '28px', marginBottom: '8px', fontWeight: 'bold', color: BRAND.colors.text, fontFamily: BRAND.fonts.heading }}>
+            Preview Your Need
+          </h2>
+          <p style={{ color: BRAND.colors.textLight, marginBottom: '32px', fontSize: '14px', fontFamily: BRAND.fonts.body }}>
+            This is how your need will appear to members on the dashboard
+          </p>
 
+          {/* Need Card Preview - EXACT DASHBOARD MATCH */}
           <div style={{ 
-            backgroundColor: 'white', 
-            padding: 'var(--space-8)', 
-            borderRadius: 'var(--radius-lg)', 
-            border: '1px solid var(--gray-200)',
-            boxShadow: 'var(--shadow-md)',
-            marginBottom: 'var(--space-8)'
+            backgroundColor: 'white',
+            border: '1px solid #e5e7eb',
+            borderRadius: '12px',
+            boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
+            padding: '24px',
+            marginBottom: '32px',
+            maxWidth: '28rem',
+            margin: '0 auto 32px'
           }}>
-            {isHydrated && formData.urgency === 'asap' && (
-              <div style={{ 
-                backgroundColor: 'var(--error-light)', 
-                color: 'var(--error)', 
-                padding: 'var(--space-4)', 
-                borderRadius: 'var(--radius-md)',
-                marginBottom: 'var(--space-6)',
-                fontWeight: 'var(--font-semibold)'
+            {/* Title */}
+            <h3 style={{ 
+              fontSize: '20px', 
+              marginBottom: '12px', 
+              fontWeight: 'bold',
+              color: BRAND.colors.text,
+              fontFamily: BRAND.fonts.heading,
+              lineHeight: '1.4'
+            }}>
+              {formData.title || 'Need Title'}
+            </h3>
+
+            {/* Description */}
+            {formData.notes && (
+              <p style={{ 
+                fontSize: '14px', 
+                marginBottom: '16px',
+                color: BRAND.colors.textLight,
+                fontFamily: BRAND.fonts.body,
+                lineHeight: '1.6'
               }}>
-                Needs Help Soon ⏳
+                {formData.notes}
+              </p>
+            )}
+
+            {/* Metadata Row - Icons ABOVE text */}
+            <div style={{ 
+              display: 'grid', 
+              gridTemplateColumns: 'repeat(3, 1fr)',
+              gap: '16px', 
+              marginBottom: '16px',
+              paddingBottom: '16px',
+              borderBottom: '1px solid #f3f4f6'
+            }}>
+              {/* Date */}
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
+                <Calendar size={20} color='#9ca3af' style={{ marginBottom: '4px' }} />
+                <span style={{ fontSize: '12px', fontWeight: '500', color: BRAND.colors.text, display: 'block' }}>
+                  {formatDate(formData.urgency, formData.specificDate, formData.ongoingStartDate)}
+                </span>
+                <span style={{ fontSize: '12px', color: BRAND.colors.textLight, display: 'block' }}>
+                  {formatTime(formData.specificTime || formData.ongoingStartTime) || 'Time TBD'}
+                </span>
+              </div>
+
+              {/* Location */}
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
+                <MapPin size={20} color='#9ca3af' style={{ marginBottom: '4px' }} />
+                <span style={{ fontSize: '12px', fontWeight: '500', color: BRAND.colors.text, display: 'block' }}>
+                  {getLocationLine1(displayLocation)}
+                </span>
+                <span style={{ fontSize: '12px', color: BRAND.colors.textLight, display: 'block' }}>
+                  {getLocationLine2(displayLocation)}
+                </span>
+              </div>
+
+              {/* People Needed */}
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
+                <Users size={20} color='#9ca3af' style={{ marginBottom: '4px' }} />
+                <span style={{ fontSize: '12px', fontWeight: '500', color: BRAND.colors.text, display: 'block' }}>
+                  {displayPeopleNeeded}+ needed
+                </span>
+                <span style={{ fontSize: '12px', color: BRAND.colors.textLight, display: 'block' }}>
+                  0 committed
+                </span>
+              </div>
+            </div>
+
+            {/* Skills Needed */}
+            {formData.giftingsNeeded && formData.giftingsNeeded.length > 0 && (
+              <div style={{ marginBottom: '16px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                  <span style={{ fontSize: '12px', fontWeight: '600', color: BRAND.colors.text }}>
+                    Skills needed:
+                  </span>
+                </div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                  {formData.giftingsNeeded.slice(0, 4).map((gift: string) => (
+                    <span
+                      key={gift}
+                      style={{
+                        padding: '6px 12px',
+                        borderRadius: '9999px',
+                        fontSize: '12px',
+                        fontWeight: '500',
+                        color: 'white',
+                        backgroundColor: BRAND.colors.primary,
+                        fontFamily: BRAND.fonts.heading
+                      }}
+                    >
+                      {gift}
+                    </span>
+                  ))}
+                  {formData.giftingsNeeded.length > 4 && (
+                    <span
+                      style={{
+                        padding: '6px 12px',
+                        borderRadius: '9999px',
+                        fontSize: '12px',
+                        fontWeight: '500',
+                        backgroundColor: '#e5e7eb',
+                        color: BRAND.colors.text
+                      }}
+                    >
+                      +{formData.giftingsNeeded.length - 4} more
+                    </span>
+                  )}
+                </div>
               </div>
             )}
 
-            <h3 style={{ fontSize: 'var(--text-xl)', marginBottom: 'var(--space-4)', fontWeight: 'var(--font-bold)' }}>{formData.title}</h3>
-            
-            <div style={{ marginBottom: 'var(--space-4)' }}>
-              <p style={{ fontWeight: 'var(--font-medium)', marginBottom: 'var(--space-2)' }}>Skills needed:</p>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--space-2)' }}>
-                {formData.giftingsNeeded.map((gifting) => (
-                  <span key={gifting} style={{ 
-                    backgroundColor: 'var(--brand-primary-50)', 
-                    color: 'var(--brand-primary-600)', 
-                    padding: 'var(--space-1) var(--space-2)', 
-                    borderRadius: 'var(--radius-sm)', 
-                    fontSize: 'var(--text-xs)' 
-                  }}>
-                    {gifting}
-                  </span>
-                ))}
-              </div>
-            </div>
-
-            <div style={{ backgroundColor: '#f0fdfa', padding: 'var(--space-4)', borderRadius: 'var(--radius-md)', border: '1px solid #2BB3A3' }}>
-              <div style={{ marginBottom: 'var(--space-2)', display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
-                <Calendar size={16} strokeWidth={1.5} color="#2BB3A3" />
-                <span style={{ color: '#333333' }}>{getTimeDisplay()}</span>
-              </div>
-              <div style={{ marginBottom: 'var(--space-2)', display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
-                <MapPin size={16} strokeWidth={1.5} color="#2BB3A3" />
-                <span style={{ color: '#333333' }}>{getLocationDisplay()}</span>
-              </div>
-              <div style={{ marginBottom: 'var(--space-2)', display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
-                <Users size={16} strokeWidth={1.5} color="#2BB3A3" />
-                <span style={{ color: '#333333' }}>{formData.peopleNeeded} people needed</span>
-              </div>
-              {formData.notes && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
-                  <AlertCircle size={16} strokeWidth={1.5} color="#2BB3A3" />
-                  <span style={{ color: '#333333' }}>{formData.notes}</span>
-                </div>
-              )}
-            </div>
+            {/* I Can Help Button (Preview - Disabled) */}
+            <button
+              disabled
+              style={{
+                width: '100%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '8px',
+                padding: '12px 24px',
+                borderRadius: '8px',
+                fontSize: '16px',
+                fontWeight: '500',
+                color: 'white',
+                backgroundColor: BRAND.colors.primary,
+                border: 'none',
+                minHeight: '44px',
+                opacity: 0.75,
+                cursor: 'not-allowed',
+                fontFamily: BRAND.fonts.heading
+              }}
+            >
+              I Can Help
+            </button>
           </div>
 
-          <button 
-            onClick={() => {
-              console.log('[ShareNeed] Button clicked');
-              handleSubmit();
-            }}
-            style={{
-              width: '100%',
-              backgroundColor: '#2BB3A3',
-              color: 'white',
-              border: 'none',
-              padding: '16px',
-              borderRadius: 8,
-              fontSize: 16,
-              fontWeight: 600,
-              cursor: 'pointer',
-              marginBottom: 'var(--space-4)'
-            }}
-          >
-            Share This Need
-          </button>
-          <p style={{ textAlign: 'center', color: '#666666' }}>
-            Your need will be reviewed by leaders before being shared
-          </p>
+          {/* Action Buttons - Side by side */}
+          <div style={{ 
+            display: 'flex', 
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: '16px',
+            maxWidth: '28rem',
+            margin: '0 auto'
+          }}>
+            <button
+              onClick={handlePrevious}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '8px',
+                padding: '12px 24px',
+                border: '1px solid #d1d5db',
+                borderRadius: '8px',
+                backgroundColor: 'white',
+                color: BRAND.colors.text,
+                cursor: 'pointer',
+                minHeight: '44px',
+                fontWeight: '500',
+                fontFamily: BRAND.fonts.heading,
+                transition: 'background-color 0.2s',
+                flex: 1
+              }}
+              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f9fafb'}
+              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'white'}
+            >
+              <ArrowLeft size={16} />
+              Edit Need
+            </button>
+            
+            <button
+              onClick={() => {
+                console.log('[ShareNeed] Post button clicked');
+                handleSubmit();
+              }}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '8px',
+                padding: '12px 24px',
+                borderRadius: '8px',
+                fontSize: '16px',
+                fontWeight: '500',
+                color: 'white',
+                backgroundColor: BRAND.colors.primary,
+                border: 'none',
+                cursor: 'pointer',
+                minHeight: '44px',
+                fontFamily: BRAND.fonts.heading,
+                transition: 'background-color 0.2s',
+                flex: 1
+              }}
+              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = BRAND.colors.primaryHover}
+              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = BRAND.colors.primary}
+            >
+              <CheckCircle size={16} />
+              Post Need
+            </button>
+          </div>
         </div>
       </div>
     );
