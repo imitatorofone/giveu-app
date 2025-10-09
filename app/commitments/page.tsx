@@ -310,20 +310,23 @@ function CalendarView({ commitments, currentMonth, onMonthChange }: {
         <div className="flex gap-1">
           <button
             onClick={() => onMonthChange(subMonths(currentMonth, 1))}
-            className="w-8 h-8 hover:bg-gray-100 rounded-lg transition-colors flex items-center justify-center"
+            className="w-10 h-10 active:bg-gray-100 rounded-lg transition-colors flex items-center justify-center"
+            style={{ minWidth: '44px', minHeight: '44px' }}
             aria-label="Previous month"
           >
             <span className="text-sm font-medium">←</span>
           </button>
           <button
             onClick={() => onMonthChange(new Date())}
-            className="px-2 py-1 text-xs bg-[#20c997] text-white rounded-lg hover:bg-[#1bb085] transition-colors font-quicksand"
+            className="px-3 py-2 text-sm bg-[#20c997] text-white rounded-lg active:bg-[#1bb085] transition-colors font-quicksand"
+            style={{ minHeight: '44px' }}
           >
             Today
           </button>
           <button
             onClick={() => onMonthChange(addMonths(currentMonth, 1))}
-            className="w-8 h-8 hover:bg-gray-100 rounded-lg transition-colors flex items-center justify-center"
+            className="w-10 h-10 active:bg-gray-100 rounded-lg transition-colors flex items-center justify-center"
+            style={{ minWidth: '44px', minHeight: '44px' }}
             aria-label="Next month"
           >
             <span className="text-sm font-medium">→</span>
@@ -350,11 +353,10 @@ function CalendarView({ commitments, currentMonth, onMonthChange }: {
           return (
             <div
               key={day.toISOString()}
-              className={`w-10 h-10 flex flex-col items-center justify-center relative rounded-lg ${
+              className={`w-12 h-12 flex flex-col items-center justify-center relative rounded-lg ${
                 isCurrentMonth ? 'bg-white' : 'bg-gray-50'
-              } ${
-                isCurrentMonth && !isToday ? 'hover:bg-gray-50' : ''
-              } transition-colors cursor-pointer`}
+              } active:bg-gray-100 transition-colors cursor-pointer`}
+              style={{ minWidth: '48px', minHeight: '48px' }}
               onClick={() => {
                 if (dayCommitments.length > 0) {
                   window.open(generateCalendarLink(dayCommitments[0]), '_blank');
@@ -418,26 +420,35 @@ function CommitmentCard({ commitment, onCantMakeIt }: {
 
 
   return (
-    <div className="bg-white border border-gray-200 rounded-xl shadow-md p-6">
-      <div className="flex justify-between items-start mb-3">
-        <h3 className="text-lg font-bold flex-1 pr-4" style={{ fontFamily: BRAND.fonts.heading, color: BRAND.colors.text }}>
-          {need.title || 'Untitled Need'}
-        </h3>
-        
-        {/* Action Buttons - Compact in top right */}
-        <div className="flex flex-col gap-2 sm:flex-row">
+    <div className="bg-white border border-gray-200 rounded-xl shadow-md p-4 sm:p-6">
+      {/* Title */}
+      <h3 className="text-lg font-bold mb-4" style={{ fontFamily: BRAND.fonts.heading, color: BRAND.colors.text }}>
+        {need.title || 'Untitled Need'}
+      </h3>
+      
+      {/* Action Buttons - Stack vertically on mobile, horizontal on tablet+ */}
+      <div className="flex flex-col gap-3 mb-4 sm:flex-row">
           <a
             href={generateCalendarLink(commitment)}
             target="_blank"
             rel="noopener noreferrer"
-            className="px-6 py-2 rounded-lg text-white font-medium transition-colors flex items-center gap-1 justify-center"
+            className="px-6 py-3 rounded-lg text-white font-medium transition-all flex items-center gap-2 justify-center active:scale-95"
             style={{ 
               backgroundColor: BRAND.colors.primary,
-              minHeight: '44px',
-              fontFamily: BRAND.fonts.heading
+              minHeight: '48px',
+              fontFamily: BRAND.fonts.heading,
+              fontSize: '15px'
             }}
-            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = BRAND.colors.primaryHover}
-            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = BRAND.colors.primary}
+            onTouchStart={(e) => {
+              e.currentTarget.style.backgroundColor = BRAND.colors.primaryHover;
+              e.currentTarget.style.transform = 'scale(0.98)';
+            }}
+            onTouchEnd={(e) => {
+              setTimeout(() => {
+                e.currentTarget.style.backgroundColor = BRAND.colors.primary;
+                e.currentTarget.style.transform = 'scale(1)';
+              }, 150);
+            }}
             title="Add to Google Calendar"
             onClick={() => toast.success('Opening Google Calendar...')}
           >
@@ -446,29 +457,38 @@ function CommitmentCard({ commitment, onCantMakeIt }: {
           </a>
           <button
             onClick={() => onCantMakeIt(commitment.id)}
-            className="px-6 py-2 rounded-lg text-white font-medium transition-colors flex items-center gap-1 justify-center"
+            className="px-6 py-3 rounded-lg text-white font-medium transition-all flex items-center gap-2 justify-center active:scale-95"
             style={{ 
               backgroundColor: BRAND.colors.danger,
-              minHeight: '44px',
-              fontFamily: BRAND.fonts.heading
+              minHeight: '48px',
+              fontFamily: BRAND.fonts.heading,
+              fontSize: '15px'
             }}
-            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = BRAND.colors.dangerHover}
-            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = BRAND.colors.danger}
+            onTouchStart={(e) => {
+              e.currentTarget.style.backgroundColor = BRAND.colors.dangerHover;
+              e.currentTarget.style.transform = 'scale(0.98)';
+            }}
+            onTouchEnd={(e) => {
+              setTimeout(() => {
+                e.currentTarget.style.backgroundColor = BRAND.colors.danger;
+                e.currentTarget.style.transform = 'scale(1)';
+              }, 150);
+            }}
             title="Cancel this commitment"
           >
             <X className="w-4 h-4" />
             <span>Can't Make It</span>
           </button>
-        </div>
       </div>
       
-      <p className="text-gray-600 mb-4">
+      {/* Description */}
+      <p className="text-gray-600 mb-4" style={{ fontSize: '15px', lineHeight: '1.5', fontFamily: BRAND.fonts.body }}>
         {need.description || 'No description available'}
       </p>
       
       <div className="space-y-3">
         {/* Date and Time Info */}
-        <div className="flex items-center gap-6 text-sm text-gray-600">
+        <div className="flex items-center gap-6 text-gray-600" style={{ fontSize: '14px' }}>
           <div className="flex items-center gap-2">
             <Calendar className="w-4 h-4" />
             <span>
@@ -1030,7 +1050,7 @@ export default function CommitmentsPage() {
       <Header />
 
       {/* Page title section - match dashboard style */}
-      <div className="bg-white px-6 pt-6 pb-4">
+      <div className="bg-white px-4 pt-6 pb-4 sm:px-6">
         <div className="flex justify-between items-center mb-4">
           <div>
             <h1 className="text-3xl font-bold mb-6" style={{ fontFamily: BRAND.fonts.heading, color: BRAND.colors.text }}>
@@ -1156,7 +1176,7 @@ export default function CommitmentsPage() {
       </div>
 
       {/* Commitments count - match dashboard pattern */}
-      <div className="px-6 py-4">
+      <div className="px-4 py-4 sm:px-6">
         <p className="text-sm text-gray-600">
           {filteredAndSortedCommitments.length} commitments
           {searchTerm && ` matching "${searchTerm}"`}
@@ -1165,7 +1185,7 @@ export default function CommitmentsPage() {
       </div>
 
       {/* Content area */}
-      <div className="px-6 pb-20">
+      <div className="px-4 pb-20 sm:px-6">
         {filteredAndSortedCommitments.length === 0 ? (
           <div className="text-center py-12">
             <Calendar className="w-16 h-16 text-gray-400 mx-auto mb-4" />
