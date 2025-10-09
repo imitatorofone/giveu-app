@@ -8,6 +8,7 @@ import { ArrowLeft, MapPin, Users, Calendar, Clock, AlertCircle, CheckCircle, Fi
 import { createNotification } from '../../lib/notificationHelper';
 import { BRAND } from '../../lib/brandConfig';
 import { GIFT_CATEGORIES } from '../../lib/giftsConfig';
+import toast from 'react-hot-toast';
 
 const primaryGiftings = [
   { id: 'hands-on', name: 'Hands-On Skills', skills: ['Carpentry', 'Repairs', 'Gardening', 'Sewing', 'Cooking', 'Decorating', 'Setup/Tear-down'] },
@@ -446,8 +447,29 @@ export default function ShareNeedScreen() {
       // Show custom success modal
       console.log('[ShareNeed] Submission successful, showing success modal');
       console.log('[ShareNeed] Setting showSuccessModal to true');
-      setShowSuccessModal(true);
-      console.log('[ShareNeed] showSuccessModal state set');
+      
+      // Show toast notification
+      toast.success('Need submitted successfully! 🎉', {
+        duration: 3000,
+        position: 'top-center',
+        style: {
+          background: BRAND.colors.primary,
+          color: 'white',
+          fontFamily: BRAND.fonts.heading,
+          fontSize: '16px',
+          fontWeight: '600',
+          padding: '16px 24px',
+          borderRadius: '12px',
+          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)'
+        },
+        icon: '✓'
+      });
+      
+      // Redirect to dashboard after a brief delay
+      setTimeout(() => {
+        router.push('/dashboard');
+      }, 1500);
+      
     } catch (error) {
       console.error('Error:', error);
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
