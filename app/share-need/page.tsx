@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { supabaseBrowser as supabase } from '../../lib/supabaseBrowser';
 import { useRouter } from 'next/navigation';
 import { Icon } from '../../icons/index';
-import { ArrowLeft, MapPin, Users, Calendar, Clock, AlertCircle, CheckCircle, FileText, Plus, Sun, Cloud, Moon } from 'lucide-react';
+import { ArrowLeft, MapPin, Users, Calendar, Clock, AlertCircle, CheckCircle, FileText, Plus, Sun, Cloud, Moon, Home, ArrowRight } from 'lucide-react';
 import { createNotification } from '../../lib/notificationHelper';
 import { BRAND } from '../../lib/brandConfig';
 
@@ -41,6 +41,7 @@ export default function ShareNeedScreen() {
     ongoingSchedule: 'weekly', // weekly, monthly, quarterly
     notes: '',
     peopleNeeded: '1',
+    customPeopleCount: '', // For 5+ people custom number
     giftingsNeeded: [] as string[],
     location: '',
     customLocation: ''
@@ -48,10 +49,44 @@ export default function ShareNeedScreen() {
 
   const [expandedGiftings, setExpandedGiftings] = useState(new Set());
   const [isHydrated, setIsHydrated] = useState(false);
+  const [churchName, setChurchName] = useState('');
+  const [churchAddress, setChurchAddress] = useState('');
 
   // Fix hydration mismatch by ensuring client-side rendering
   useEffect(() => {
     setIsHydrated(true);
+  }, []);
+
+  // Fetch church address for user
+  useEffect(() => {
+    async function fetchChurchInfo() {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('church_code')
+            .eq('id', user.id)
+            .single();
+          
+          if (profile?.church_code) {
+            const { data: church } = await supabase
+              .from('churches')
+              .select('name, address, city, state, zip')
+              .eq('code', profile.church_code)
+              .single();
+            
+            if (church) {
+              setChurchName(church.name);
+              setChurchAddress(`${church.address}, ${church.city}, ${church.state} ${church.zip}`);
+            }
+          }
+        }
+      } catch (err) {
+        console.error('Error fetching church info:', err);
+      }
+    }
+    fetchChurchInfo();
   }, []);
 
   useEffect(() => {
@@ -116,7 +151,8 @@ export default function ShareNeedScreen() {
         return basicValid && specificValid && ongoingValid && asapValid;
       case 1: 
         return formData.location !== '' && formData.peopleNeeded !== '' &&
-               (formData.location !== 'custom' || formData.customLocation.trim() !== '');
+               (formData.location !== 'custom' || formData.customLocation.trim() !== '') &&
+               (formData.peopleNeeded !== '5+' || formData.customPeopleCount.trim() !== '');
       case 2: 
         return formData.giftingsNeeded.length > 0;
       default: 
@@ -174,8 +210,12 @@ export default function ShareNeedScreen() {
         title: formData.title,
         description: formData.notes || formData.title,
         giftings_needed: Array.isArray(formData.giftingsNeeded) ? formData.giftingsNeeded : [],
-        people_needed: parseInt(formData.peopleNeeded) || 1,
-        location: formData.location === 'custom' ? formData.customLocation : formData.location,
+        people_needed: formData.peopleNeeded === '5+' && formData.customPeopleCount 
+          ? parseInt(formData.customPeopleCount) 
+          : parseInt(formData.peopleNeeded) || 1,
+        location: formData.location === 'custom' ? formData.customLocation : churchAddress,
+        location_type: formData.location,
+        address: formData.location === 'custom' ? formData.customLocation : churchAddress,
         urgency: formData.urgency,
         time_preference: formData.timePreference || null,
         specific_date: formData.specificDate || null,
@@ -893,57 +933,166 @@ export default function ShareNeedScreen() {
       case 1:
         return (
           <div style={cardStyle}>
-            <h2 style={{ fontSize: 24, marginBottom: 'var(--space-2)', fontWeight: 'bold' }}>Where & How Many?</h2>
-            <p style={{ color: '#666666', marginBottom: 'var(--space-6)' }}>
+            {/* Progress Bar */}
+            <div style={{ marginBottom: '24px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                <span style={{ fontSize: '14px', fontWeight: '500', color: BRAND.colors.textLight, fontFamily: BRAND.fonts.body }}>
+                  Step 2 of 3
+                </span>
+                <span style={{ fontSize: '14px', fontWeight: '500', color: BRAND.colors.textLight, fontFamily: BRAND.fonts.body }}>
+                  67% complete
+                </span>
+              </div>
+              <div style={{ width: '100%', backgroundColor: '#e5e7eb', borderRadius: '9999px', height: '8px' }}>
+                <div style={{ 
+                  width: '67%', 
+                  backgroundColor: '#20c997', 
+                  height: '8px', 
+                  borderRadius: '9999px',
+                  transition: 'width 0.3s ease'
+                }}></div>
+              </div>
+            </div>
+
+            <h2 style={{ fontSize: '28px', marginBottom: '8px', fontWeight: 'bold', color: BRAND.colors.text, fontFamily: BRAND.fonts.heading }}>
+              Where & How Many?
+            </h2>
+            <p style={{ color: BRAND.colors.textLight, marginBottom: '32px', fontSize: '16px', fontFamily: BRAND.fonts.body }}>
               Let people know where to meet and how many helpers you need
             </p>
 
-            <div style={{ marginBottom: 'var(--space-6)' }}>
-              <label style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', marginBottom: 'var(--space-2)', fontWeight: 'var(--font-medium)', color: '#333333' }}>
-                <MapPin size={16} strokeWidth={1.5} color="#2BB3A3" />
-                Location:
-              </label>
-              <select
-                value={formData.location}
-                onChange={(e) => updateFormData('location', e.target.value)}
-                style={inputStyle}
-              >
-                <option value="">Choose location</option>
-                <option value="church">Church</option>
-                <option value="home">Home Visit</option>
-                <option value="community">Community Space</option>
-                <option value="virtual">Virtual/Online</option>
-                <option value="custom">Custom Address</option>
-              </select>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+              {/* Location Section */}
+              <div>
+                <label style={labelStyle}>
+                  <MapPin size={18} color='#20c997' />
+                  <span>Location</span>
+                </label>
+                <select
+                  value={formData.location}
+                  onChange={(e) => updateFormData('location', e.target.value)}
+                  style={inputStyle}
+                  onFocus={(e) => {
+                    e.currentTarget.style.borderColor = '#20c997';
+                    e.currentTarget.style.boxShadow = `0 0 0 3px #20c99720`;
+                  }}
+                  onBlur={(e) => {
+                    e.currentTarget.style.borderColor = '#e5e7eb';
+                    e.currentTarget.style.boxShadow = 'none';
+                  }}
+                >
+                  <option value="">Choose location</option>
+                  <option value="church">Church</option>
+                  <option value="custom">Custom Address</option>
+                </select>
 
-              {formData.location === 'custom' && (
-                <input
-                  type="text"
-                  value={formData.customLocation}
-                  onChange={(e) => updateFormData('customLocation', e.target.value)}
-                  placeholder="Enter specific address or location details"
-                  style={{ ...inputStyle, marginTop: 'var(--space-3)' }}
-                />
-              )}
-            </div>
+                {/* Show church address when church selected */}
+                {formData.location === 'church' && churchAddress && (
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'flex-start',
+                    gap: '12px',
+                    padding: '16px',
+                    backgroundColor: '#f9fafb',
+                    borderRadius: '8px',
+                    marginTop: '12px',
+                    border: '1px solid #e5e7eb'
+                  }}>
+                    <Home size={18} color='#20c997' style={{ marginTop: '2px', flexShrink: 0 }} />
+                    <div>
+                      <p style={{ fontSize: '14px', fontWeight: '500', marginBottom: '4px', color: BRAND.colors.text, fontFamily: BRAND.fonts.heading }}>
+                        {churchName}
+                      </p>
+                      <p style={{ fontSize: '14px', color: BRAND.colors.textLight, fontFamily: BRAND.fonts.body }}>
+                        {churchAddress}
+                      </p>
+                    </div>
+                  </div>
+                )}
 
-            <div style={{ borderTop: '1px solid var(--gray-200)', paddingTop: 'var(--space-6)' }}>
-              <h3 style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', fontSize: 'var(--text-lg)', marginBottom: 'var(--space-4)', fontWeight: 'var(--font-semibold)', color: '#333333' }}>
-                <Users size={18} strokeWidth={1.5} color="#2BB3A3" />
-                How many people are needed?
-              </h3>
-              <select
-                value={formData.peopleNeeded}
-                onChange={(e) => updateFormData('peopleNeeded', e.target.value)}
-                style={inputStyle}
-              >
-                <option value="1">1 person</option>
-                <option value="2">2 people</option>
-                <option value="3">3 people</option>
-                <option value="4">4 people</option>
-                <option value="5+">5+ people</option>
-                <option value="flexible">Flexible</option>
-              </select>
+                {/* Show address input if custom selected */}
+                {formData.location === 'custom' && (
+                  <div style={{ marginTop: '12px' }}>
+                    <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '500', color: BRAND.colors.text, fontFamily: BRAND.fonts.heading }}>
+                      Street Address
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.customLocation}
+                      onChange={(e) => updateFormData('customLocation', e.target.value)}
+                      placeholder="123 Main St, City, State ZIP"
+                      style={inputStyle}
+                      onFocus={(e) => {
+                        e.currentTarget.style.borderColor = '#20c997';
+                        e.currentTarget.style.boxShadow = `0 0 0 3px #20c99720`;
+                      }}
+                      onBlur={(e) => {
+                        e.currentTarget.style.borderColor = '#e5e7eb';
+                        e.currentTarget.style.boxShadow = 'none';
+                      }}
+                    />
+                  </div>
+                )}
+              </div>
+
+              {/* People Needed Section */}
+              <div style={{ borderTop: '1px solid #e5e7eb', paddingTop: '24px' }}>
+                <label style={labelStyle}>
+                  <Users size={18} color='#20c997' />
+                  <span>How many people are needed?</span>
+                </label>
+                <select
+                  value={formData.peopleNeeded}
+                  onChange={(e) => {
+                    updateFormData('peopleNeeded', e.target.value);
+                    if (e.target.value !== '5+') {
+                      updateFormData('customPeopleCount', '');
+                    }
+                  }}
+                  style={inputStyle}
+                  onFocus={(e) => {
+                    e.currentTarget.style.borderColor = '#20c997';
+                    e.currentTarget.style.boxShadow = `0 0 0 3px #20c99720`;
+                  }}
+                  onBlur={(e) => {
+                    e.currentTarget.style.borderColor = '#e5e7eb';
+                    e.currentTarget.style.boxShadow = 'none';
+                  }}
+                >
+                  <option value="">Select number needed</option>
+                  <option value="1">1 person</option>
+                  <option value="2">2 people</option>
+                  <option value="3">3 people</option>
+                  <option value="4">4 people</option>
+                  <option value="5">5 people</option>
+                  <option value="5+">5+ people (specify below)</option>
+                </select>
+
+                {/* Show custom number input when 5+ selected */}
+                {formData.peopleNeeded === '5+' && (
+                  <div style={{ marginTop: '12px' }}>
+                    <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '500', color: BRAND.colors.text, fontFamily: BRAND.fonts.heading }}>
+                      Exact number needed
+                    </label>
+                    <input
+                      type="number"
+                      min="6"
+                      value={formData.customPeopleCount || ''}
+                      onChange={(e) => updateFormData('customPeopleCount', e.target.value)}
+                      placeholder="Enter number (6 or more)"
+                      style={inputStyle}
+                      onFocus={(e) => {
+                        e.currentTarget.style.borderColor = '#20c997';
+                        e.currentTarget.style.boxShadow = `0 0 0 3px #20c99720`;
+                      }}
+                      onBlur={(e) => {
+                        e.currentTarget.style.borderColor = '#e5e7eb';
+                        e.currentTarget.style.boxShadow = 'none';
+                      }}
+                    />
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         );
