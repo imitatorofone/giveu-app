@@ -7,7 +7,7 @@ export const BRAND = {
     danger: '#ef4444',       // Soft red
     dangerHover: '#dc2626',  // Darker red for hover
     success: '#10b981',      // Success green
-    background: '#f9fafb',   // Light gray background
+    background: '#FAFAF8',   // Warm cream background
     text: '#1e293b',         // Dark text
     textLight: '#64748b',    // Light text
   },

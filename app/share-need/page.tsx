@@ -1359,7 +1359,7 @@ export default function ShareNeedScreen() {
             <h3 style={{ 
               fontSize: '20px', 
               marginBottom: '12px', 
-              fontWeight: 'bold',
+              fontWeight: '600',
               color: BRAND.colors.text,
               fontFamily: BRAND.fonts.heading,
               lineHeight: '1.4',
@@ -1371,11 +1371,11 @@ export default function ShareNeedScreen() {
             {/* Description */}
             {formData.notes && (
               <p style={{ 
-                fontSize: '14px', 
+                fontSize: '15px', 
                 marginBottom: '16px',
-                color: BRAND.colors.textLight,
+                color: '#424242',
                 fontFamily: BRAND.fonts.body,
-                lineHeight: '1.6'
+                lineHeight: '1.5'
               }}>
                 {formData.notes}
               </p>
@@ -1427,11 +1427,6 @@ export default function ShareNeedScreen() {
             {/* Skills Needed */}
             {formData.giftingsNeeded && formData.giftingsNeeded.length > 0 && (
               <div style={{ marginBottom: '16px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-                  <span style={{ fontSize: '12px', fontWeight: '600', color: BRAND.colors.text }}>
-                    Skills needed:
-                  </span>
-                </div>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
                   {(() => {
                     const visibleSkills = showAllSkills ? formData.giftingsNeeded : formData.giftingsNeeded.slice(0, 6);
@@ -1444,7 +1439,7 @@ export default function ShareNeedScreen() {
                             key={gift}
                             style={{
                               padding: '6px 12px',
-                              borderRadius: '9999px',
+                              borderRadius: '16px',
                               fontSize: '12px',
                               fontWeight: '500',
                               color: 'white',

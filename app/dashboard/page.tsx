@@ -239,13 +239,13 @@ export default function MemberDashboard() {
     return {
       isMatch,
       styles: isMatch ? {
-        backgroundColor: '#20c997', // Solid brand green background
-        color: 'white',             // White text (like "All" button)
-        border: '1px solid #20c997' // Same color border
+        backgroundColor: BRAND.colors.primary, // Brand green background
+        color: 'white',                        // White text
+        border: '1px solid ' + BRAND.colors.primary // Same color border
       } : {
-        backgroundColor: '#f8fafc',   // Light grey background
-        color: '#64748b',             // Grey text
-        border: '1px solid #cbd5e1'   // Grey border
+        backgroundColor: '#F5F5F5',   // Light gray background
+        color: '#757575',             // Medium gray text
+        border: '1px solid #F5F5F5'   // Same color border
       }
     };
   };
@@ -1190,18 +1190,24 @@ export default function MemberDashboard() {
           gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
           gap: '20px'
         }}>
-          {sortedOpportunities.map((opportunity) => (
+          {sortedOpportunities.map((opportunity) => {
+            const isHelping = opportunity.responses?.some(r => r.user_id === currentUserId && r.status === 'accepted') || 
+                             userCommitments.includes(opportunity.id);
+            
+            return (
             <div 
               key={opportunity.id} 
+              data-card-id={opportunity.id}
               style={{ 
                 backgroundColor: 'white',
                 borderRadius: '12px',
-                border: '1px solid #e2e8f0',
+                border: isHelping ? '2px solid #E0F2F1' : '1px solid #e2e8f0',
                 overflow: 'hidden',
                 display: 'flex',
                 flexDirection: 'column',
                 minHeight: '280px', // Consistent card height
-                transition: 'all 0.2s ease'
+                transition: 'all 0.2s ease',
+                position: 'relative'
               }}
               /* Disabled for MVP - modal functionality
               onClick={() => handleNeedClick(opportunity.id)}
@@ -1217,7 +1223,7 @@ export default function MemberDashboard() {
               <div style={{ padding: '16px 16px 0 16px' }}>
                 <h3 style={{ 
                   fontSize: '18px', 
-                  fontWeight: '700',
+                  fontWeight: '600',
                   marginBottom: '12px',
                   color: BRAND.colors.text,
                   lineHeight: '1.3',
@@ -1244,7 +1250,8 @@ export default function MemberDashboard() {
                   color: BRAND.colors.textLight,
                   borderBottom: '1px solid #f1f5f9',
                   paddingBottom: '12px',
-                  minHeight: '44px'
+                  minHeight: '44px',
+                  opacity: 0.65
                 }}>
                   {/* Column 1 - Date */}
                   <div style={{ 
@@ -1254,7 +1261,7 @@ export default function MemberDashboard() {
                     flex: 1,
                     minHeight: '44px'
                   }}>
-                    <Calendar size={16} style={{ 
+                    <Calendar size={18} style={{ 
                       marginBottom: '4px', 
                       color: BRAND.colors.primary,
                       flexShrink: 0
@@ -1282,7 +1289,7 @@ export default function MemberDashboard() {
                     flex: 1,
                     minHeight: '44px'
                   }}>
-                    <MapPin size={16} style={{ 
+                    <MapPin size={18} style={{ 
                       marginBottom: '4px', 
                       color: BRAND.colors.primary,
                       flexShrink: 0
@@ -1305,7 +1312,7 @@ export default function MemberDashboard() {
                     flex: 1,
                     minHeight: '44px'
                   }}>
-                    <Users size={16} style={{ 
+                    <Users size={18} style={{ 
                       marginBottom: '4px', 
                       color: BRAND.colors.primary,
                       flexShrink: 0
@@ -1334,8 +1341,8 @@ export default function MemberDashboard() {
                 flexDirection: 'column'
               }}>
                 <p style={{ 
-                  color: BRAND.colors.textLight,
-                  fontSize: '14px',
+                  color: '#424242',
+                  fontSize: '15px',
                   lineHeight: '1.5',
                   marginBottom: '12px',
                   flex: 1,
@@ -1345,30 +1352,8 @@ export default function MemberDashboard() {
                 </p>
 
 
-                {/* Skills Section - Matching modal style */}
-                {opportunity.tags && opportunity.tags.length > 0 && (
-                  <div style={{ 
-                    display: 'flex', 
-                    alignItems: 'center', 
-                    gap: '8px', 
-                    marginBottom: '12px',
-                    flexWrap: 'wrap'
-                  }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      <Wrench size={16} color="#6b7280" />
-                      <span style={{ 
-                        color: '#6b7280', 
-                        fontSize: '14px', 
-                        fontWeight: '500', 
-                        fontFamily: BRAND.fonts.heading 
-                      }}>
-                        Skills needed:
-                      </span>
-                    </div>
-                  </div>
-                )}
 
-                {/* Tags - Dynamic color and checkmarks with Quicksand font */}
+                {/* Tags - Dynamic color with Show More functionality */}
                 {opportunity.tags && opportunity.tags.length > 0 && (
                   <div style={{ marginBottom: '16px' }}>
                     <div style={{ 
@@ -1400,7 +1385,7 @@ export default function MemberDashboard() {
                                     ...styles
                                   }}
                                 >
-                                  {tagName} {/* No checkmark, just clean tag name */}
+                                  {tagName}
                                 </span>
                               );
                             })}
@@ -1448,16 +1433,12 @@ export default function MemberDashboard() {
                 backgroundColor: '#fafbfc'
               }}>
                 {(() => {
-                  // Check if user has already signed up for this need
-                  const isHelping = opportunity.responses?.some(r => r.user_id === currentUserId && r.status === 'accepted') || 
-                                   userCommitments.includes(opportunity.id);
-                  
                   return isHelping ? (
                     <button 
                       className="flex items-center gap-2 px-6 py-2 rounded-lg font-medium"
                       style={{ 
-                        backgroundColor: '#d1d5db',
-                        color: '#6b7280',
+                        backgroundColor: '#E0E0E0',
+                        color: '#616161',
                         minHeight: '44px',
                         cursor: 'not-allowed',
                         width: '100%',
@@ -1466,12 +1447,11 @@ export default function MemberDashboard() {
                         fontWeight: '600',
                         fontFamily: BRAND.fonts.heading,
                         fontSize: '15px',
-                        border: '2px solid #d1d5db'
+                        border: '2px solid #E0E0E0'
                       }}
                       disabled
                     >
-                      <Check size={16} />
-                      You're Helping
+                      Committed ✓
                     </button>
                   ) : (
                     <button 
@@ -1495,13 +1475,14 @@ export default function MemberDashboard() {
                       onMouseEnter={(e) => e.currentTarget.style.backgroundColor = BRAND.colors.primaryHover}
                       onMouseLeave={(e) => e.currentTarget.style.backgroundColor = BRAND.colors.primary}
                     >
-                      I Can Help
+                      I'm Available
                     </button>
                   );
                 })()}
               </div>
             </div>
-          ))}
+            );
+          })}
         </div>
       </main>
 
