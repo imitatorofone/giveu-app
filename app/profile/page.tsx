@@ -12,6 +12,7 @@ import {
 import { supabaseBrowser as supabase } from '../../lib/supabaseBrowser';
 import { GIFT_CATEGORIES } from '../../constants/giftCategories.js';
 import { formatPhoneToE164, formatPhoneForDisplay } from '../../lib/phoneFormatter';
+import { BRAND } from '../../lib/brandConfig';
 import Footer from '../../components/Footer';
 import Header from '../../components/Header';
 import toast from "react-hot-toast";
@@ -277,26 +278,26 @@ export default function ProfilePage() {
       <div style={{ backgroundColor: 'white', boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)', borderBottom: '1px solid #e5e7eb' }}>
         <div style={{ maxWidth: '1024px', margin: '0 auto', padding: '24px 16px' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <h1 style={{ fontSize: '24px', fontWeight: 'bold', color: '#111827', fontFamily: quicksandFont }}>
-              My Profile
+            <h1 className="text-3xl font-bold mb-2" style={{ fontFamily: BRAND.fonts.heading, color: BRAND.colors.text }}>
+              {profile.full_name || 'Your Profile'}
             </h1>
             {!isEditing ? (
               <div style={{ display: 'flex', gap: '12px' }}>
                 <button
                   onClick={() => setIsEditing(true)}
+                  className="px-6 py-2 rounded-lg text-white font-medium transition-colors"
                   style={{
+                    backgroundColor: BRAND.colors.primary,
+                    minHeight: '44px',
                     display: 'flex',
                     alignItems: 'center',
                     gap: '8px',
-                    padding: '8px 16px',
-                    backgroundColor: '#20c997',
-                    color: 'white',
-                    borderRadius: '8px',
                     border: 'none',
                     cursor: 'pointer',
-                    fontFamily: quicksandFont,
-                    fontWeight: '500'
+                    fontFamily: BRAND.fonts.heading
                   }}
+                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = BRAND.colors.primaryHover}
+                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = BRAND.colors.primary}
                 >
                   <Edit3 size={18} />
                   Edit Profile
@@ -371,22 +372,22 @@ export default function ProfilePage() {
                   Cancel
                 </button>
                 <button
-                  onClick={handleSaveProfile}
+                  onClick={() => handleSaveProfile}
                   disabled={saving}
+                  className="px-6 py-2 rounded-lg text-white font-medium transition-colors"
                   style={{
+                    backgroundColor: BRAND.colors.primary,
+                    minHeight: '44px',
                     display: 'flex',
                     alignItems: 'center',
                     gap: '8px',
-                    padding: '8px 16px',
-                    backgroundColor: '#20c997',
-                    color: 'white',
-                    borderRadius: '8px',
                     border: 'none',
                     cursor: saving ? 'not-allowed' : 'pointer',
-                    fontFamily: quicksandFont,
-                    fontWeight: '500',
+                    fontFamily: BRAND.fonts.heading,
                     opacity: saving ? 0.5 : 1
                   }}
+                  onMouseEnter={(e) => !saving && (e.currentTarget.style.backgroundColor = BRAND.colors.primaryHover)}
+                  onMouseLeave={(e) => !saving && (e.currentTarget.style.backgroundColor = BRAND.colors.primary)}
                 >
                   <Save size={18} />
                   {saving ? 'Saving...' : 'Save'}
@@ -401,7 +402,7 @@ export default function ProfilePage() {
       <div style={{ maxWidth: '1024px', margin: '0 auto', padding: '24px 16px' }}>
         
         {/* Basic Information Card */}
-        <div style={{ backgroundColor: 'white', borderRadius: '12px', boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)', border: '1px solid #e5e7eb', padding: '24px', marginBottom: '24px' }}>
+        <div className="bg-white border border-gray-200 rounded-xl shadow-md p-6" style={{ marginBottom: '24px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '24px' }}>
             <div style={{ width: '64px', height: '64px', backgroundColor: '#d1fae5', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <User style={{ color: '#20c997' }} size={24} />
@@ -425,7 +426,7 @@ export default function ProfilePage() {
         </div>
 
         {/* Availability Card */}
-        <div style={{ backgroundColor: 'white', borderRadius: '12px', boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)', border: '1px solid #e5e7eb', padding: '24px', marginBottom: '24px' }}>
+        <div className="bg-white border border-gray-200 rounded-xl shadow-md p-6" style={{ marginBottom: '24px' }}>
           <h3 style={{ fontSize: '18px', fontWeight: '600', color: '#111827', fontFamily: 'Quicksand, sans-serif', marginBottom: '16px' }}>
             Availability
           </h3>
@@ -439,7 +440,7 @@ export default function ProfilePage() {
         </div>
 
         {/* Enhanced Interactive Gifts Section */}
-        <div style={{ backgroundColor: 'white', borderRadius: '12px', boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)', border: '1px solid #e5e7eb', padding: '24px' }}>
+        <div className="bg-white border border-gray-200 rounded-xl shadow-md p-6">
           <h3 style={{ fontSize: '18px', fontWeight: '600', color: '#111827', fontFamily: 'Quicksand, sans-serif', marginBottom: '16px' }}>
             My Gifts & Skills
           </h3>
@@ -455,7 +456,7 @@ export default function ProfilePage() {
 
         {/* Notification Preferences Section - Only show in edit mode */}
         {isEditing && (
-          <div style={{ backgroundColor: 'white', borderRadius: '12px', boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)', border: '1px solid #e5e7eb', padding: '24px', marginBottom: '24px' }}>
+          <div className="bg-white border border-gray-200 rounded-xl shadow-md p-6" style={{ marginBottom: '24px' }}>
             <h3 style={{ fontSize: '18px', fontWeight: '600', color: '#111827', fontFamily: 'Quicksand, sans-serif', marginBottom: '8px' }}>
               Notification Preferences
             </h3>
@@ -583,7 +584,7 @@ function BasicInfoForm({ profile, setProfile }: { profile: any; setProfile: (pro
   return (
     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '16px' }}>
       <div>
-        <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '8px' }}>
+        <label className="text-sm font-semibold mb-1" style={{ color: BRAND.colors.text, display: 'block' }}>
           Full Name
         </label>
         <input
@@ -595,14 +596,15 @@ function BasicInfoForm({ profile, setProfile }: { profile: any; setProfile: (pro
             padding: '8px 12px',
             border: '1px solid #d1d5db',
             borderRadius: '8px',
-            fontFamily: merriweatherFont,
-            fontSize: '14px'
+            fontFamily: BRAND.fonts.body,
+            fontSize: '14px',
+            minHeight: '44px'
           }}
           placeholder="Enter your full name"
         />
       </div>
       <div>
-        <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '8px' }}>
+        <label className="text-sm font-semibold mb-1" style={{ color: BRAND.colors.text, display: 'block' }}>
           City
         </label>
         <input
@@ -614,14 +616,15 @@ function BasicInfoForm({ profile, setProfile }: { profile: any; setProfile: (pro
             padding: '8px 12px',
             border: '1px solid #d1d5db',
             borderRadius: '8px',
-            fontFamily: merriweatherFont,
-            fontSize: '14px'
+            fontFamily: BRAND.fonts.body,
+            fontSize: '14px',
+            minHeight: '44px'
           }}
           placeholder="Your city"
         />
       </div>
       <div>
-        <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '8px' }}>
+        <label className="text-sm font-semibold mb-1" style={{ color: BRAND.colors.text, display: 'block' }}>
           Phone
         </label>
         <input
@@ -633,14 +636,15 @@ function BasicInfoForm({ profile, setProfile }: { profile: any; setProfile: (pro
             padding: '8px 12px',
             border: '1px solid #d1d5db',
             borderRadius: '8px',
-            fontFamily: merriweatherFont,
-            fontSize: '14px'
+            fontFamily: BRAND.fonts.body,
+            fontSize: '14px',
+            minHeight: '44px'
           }}
           placeholder="Your phone number"
         />
       </div>
       <div>
-        <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '8px' }}>
+        <label className="text-sm font-semibold mb-1" style={{ color: BRAND.colors.text, display: 'block' }}>
           Age
         </label>
         <input
@@ -652,8 +656,9 @@ function BasicInfoForm({ profile, setProfile }: { profile: any; setProfile: (pro
             padding: '8px 12px',
             border: '1px solid #d1d5db',
             borderRadius: '8px',
-            fontFamily: merriweatherFont,
-            fontSize: '14px'
+            fontFamily: BRAND.fonts.body,
+            fontSize: '14px',
+            minHeight: '44px'
           }}
           placeholder="Your age"
         />
@@ -665,19 +670,19 @@ function BasicInfoForm({ profile, setProfile }: { profile: any; setProfile: (pro
 // Basic Info Display Component
 function BasicInfoDisplay({ profile }: { profile: any }) {
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', fontSize: '14px', color: '#6b7280' }}>
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
         <MapPin size={16} />
-        <span>{profile.city || 'City not set'}</span>
+        <span className="text-base" style={{ color: BRAND.colors.textLight }}>{profile.city || 'City not set'}</span>
       </div>
       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
         <User size={16} />
-        <span>{profile.age ? `${profile.age} years old` : 'Age not set'}</span>
+        <span className="text-base" style={{ color: BRAND.colors.textLight }}>{profile.age ? `${profile.age} years old` : 'Age not set'}</span>
       </div>
       {profile.phone && (
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <Phone size={16} />
-          <span>{formatPhoneForDisplay(profile.phone)}</span>
+          <span className="text-base" style={{ color: BRAND.colors.textLight }}>{formatPhoneForDisplay(profile.phone)}</span>
         </div>
       )}
     </div>
@@ -833,17 +838,13 @@ function GiftSelectionSection({ selectedGifts, isEditing, onChange }: { selected
             {selectedGifts.map((gift: string) => (
               <span
                 key={gift}
+                className="px-3 py-1 rounded-full text-sm font-medium"
                 style={{
-                  padding: '6px 12px',
-                  borderRadius: '9999px',
-                  fontSize: '12px',
-                  fontFamily: quicksandFont,
-                  fontWeight: '500',
-                  border: '1px solid #20c997',
-                  backgroundColor: '#20c997',
+                  backgroundColor: BRAND.colors.primary,
                   color: 'white',
                   textAlign: 'center',
-                  display: 'inline-block'
+                  display: 'inline-block',
+                  fontFamily: BRAND.fonts.heading
                 }}
               >
                 {gift}

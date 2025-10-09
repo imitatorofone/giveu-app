@@ -6,7 +6,8 @@ import { Calendar, MapPin, Clock, Bell, List, Grid, Mail, X, Search, ArrowUpDown
 import { format, isToday, isTomorrow, isThisWeek, isThisMonth, isFuture, parseISO, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, parse, addHours, isValid } from 'date-fns';
 import Header from '../../components/Header';
 import Footer from '../../components/Footer';
-import toast from 'react-hot-toast';
+import { Toaster, toast } from 'react-hot-toast';
+import { BRAND } from '../../lib/brandConfig';
 
 // Helper function to format time with AM/PM
 function formatTime(timeString: string): string {
@@ -351,7 +352,7 @@ function CalendarView({ commitments, currentMonth, onMonthChange }: {
               key={day.toISOString()}
               className={`w-10 h-10 flex flex-col items-center justify-center relative rounded-lg ${
                 isCurrentMonth ? 'bg-white' : 'bg-gray-50'
-              } ${isToday ? 'bg-[#20c997] text-white' : ''} ${
+              } ${
                 isCurrentMonth && !isToday ? 'hover:bg-gray-50' : ''
               } transition-colors cursor-pointer`}
               onClick={() => {
@@ -361,10 +362,15 @@ function CalendarView({ commitments, currentMonth, onMonthChange }: {
                 }
               }}
             >
-              {/* Day Number */}
-              <div className={`text-sm font-semibold font-quicksand ${
-                isCurrentMonth ? (isToday ? 'text-white' : 'text-gray-900') : 'text-gray-400'
-              }`}>
+              {/* Day Number with green circle for today */}
+              <div 
+                className={`text-sm font-semibold font-quicksand relative z-10 flex items-center justify-center ${
+                  isToday ? 'w-7 h-7 rounded-full text-white' : ''
+                } ${
+                  isCurrentMonth ? (isToday ? '' : 'text-gray-900') : 'text-gray-400'
+                }`}
+                style={isToday ? { backgroundColor: BRAND.colors.primary } : {}}
+              >
                 {format(day, 'd')}
               </div>
               
@@ -412,19 +418,26 @@ function CommitmentCard({ commitment, onCantMakeIt }: {
 
 
   return (
-    <div className="bg-white rounded-xl border shadow-sm p-6">
+    <div className="bg-white border border-gray-200 rounded-xl shadow-md p-6">
       <div className="flex justify-between items-start mb-3">
-        <h3 className="text-lg font-bold text-gray-900 flex-1 pr-4">
+        <h3 className="text-lg font-bold flex-1 pr-4" style={{ fontFamily: BRAND.fonts.heading, color: BRAND.colors.text }}>
           {need.title || 'Untitled Need'}
         </h3>
         
         {/* Action Buttons - Compact in top right */}
-        <div className="flex gap-2">
+        <div className="flex flex-col gap-2 sm:flex-row">
           <a
             href={generateCalendarLink(commitment)}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center gap-1 px-3 py-2 bg-[#20c997] text-white rounded-lg text-sm font-medium hover:bg-[#1bb085] transition-colors"
+            className="px-6 py-2 rounded-lg text-white font-medium transition-colors flex items-center gap-1 justify-center"
+            style={{ 
+              backgroundColor: BRAND.colors.primary,
+              minHeight: '44px',
+              fontFamily: BRAND.fonts.heading
+            }}
+            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = BRAND.colors.primaryHover}
+            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = BRAND.colors.primary}
             title="Add to Google Calendar"
             onClick={() => toast.success('Opening Google Calendar...')}
           >
@@ -433,7 +446,14 @@ function CommitmentCard({ commitment, onCantMakeIt }: {
           </a>
           <button
             onClick={() => onCantMakeIt(commitment.id)}
-            className="flex items-center gap-1 px-3 py-2 bg-red-500 text-white rounded-lg text-sm font-medium hover:bg-red-600 transition-colors"
+            className="px-6 py-2 rounded-lg text-white font-medium transition-colors flex items-center gap-1 justify-center"
+            style={{ 
+              backgroundColor: BRAND.colors.danger,
+              minHeight: '44px',
+              fontFamily: BRAND.fonts.heading
+            }}
+            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = BRAND.colors.dangerHover}
+            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = BRAND.colors.danger}
             title="Cancel this commitment"
           >
             <X className="w-4 h-4" />
@@ -502,7 +522,9 @@ function CommitmentSection({ title, commitments, onCantMakeIt }: {
 }) {
   return (
     <div className="mb-8">
-      <h2 className="text-lg font-semibold text-gray-900 mb-4">{title}</h2>
+      <h2 className="text-xl font-semibold mb-3" style={{ fontFamily: BRAND.fonts.heading, color: BRAND.colors.text }}>
+        {title}
+      </h2>
       <div className="space-y-4">
         {commitments.map((commitment) => (
           <CommitmentCard
@@ -1011,8 +1033,10 @@ export default function CommitmentsPage() {
       <div className="bg-white px-6 pt-6 pb-4">
         <div className="flex justify-between items-center mb-4">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">My Commitments</h1>
-            <p className="text-gray-600">Track your volunteering commitments and schedule</p>
+            <h1 className="text-3xl font-bold mb-6" style={{ fontFamily: BRAND.fonts.heading, color: BRAND.colors.text }}>
+              My Commitments
+            </h1>
+            <p className="text-gray-600" style={{ fontFamily: BRAND.fonts.body }}>Track your volunteering commitments and schedule</p>
           </div>
           
           {/* View Mode Toggle */}
@@ -1163,6 +1187,24 @@ export default function CommitmentsPage() {
         )}
       </div>
       <Footer />
+      <Toaster 
+        position="top-center"
+        toastOptions={{
+          style: {
+            background: 'white',
+            color: BRAND.colors.text,
+            border: `1px solid ${BRAND.colors.primary}`,
+            padding: '16px',
+            borderRadius: '8px',
+          },
+          success: {
+            iconTheme: {
+              primary: BRAND.colors.success,
+              secondary: 'white',
+            },
+          },
+        }}
+      />
     </div>
   );
 }
