@@ -6,8 +6,8 @@ import {
   Sun, Sunset, Moon, Calendar, Phone, Bell,
   LogOut,
   // Category Icons
-  Wrench, Users, Brain, Heart, BookOpen, Palette, 
-  Crown, Settings, Dumbbell, Compass
+  Wrench, Users, Lightbulb, Heart, BookOpen, Palette, 
+  Crown, Settings, Activity, Compass
 } from 'lucide-react';
 import { supabaseBrowser as supabase } from '../../lib/supabaseBrowser';
 import { GIFT_CATEGORIES } from '../../constants/giftCategories.js';
@@ -372,7 +372,7 @@ export default function ProfilePage() {
                   Cancel
                 </button>
                 <button
-                  onClick={() => handleSaveProfile}
+                  onClick={handleSaveProfile}
                   disabled={saving}
                   className="px-6 py-2 rounded-lg text-white font-medium transition-colors"
                   style={{
@@ -753,7 +753,7 @@ function GiftSelectionSection({ selectedGifts, isEditing, onChange }: { selected
       name: 'Hands-On Skills',
       icon: Wrench,
       color: '#20c997',
-      tags: ['Carpentry', 'Repairs', 'Gardening', 'Sewing', 'Decorating', 'Setup/Tear Down', 'Cooking', 'Automotive', 'Painting']
+      tags: ['Carpentry', 'Repairs', 'Gardening', 'Sewing', 'Cooking', 'Decorating', 'Setup/Tear Down', 'Automotive', 'Painting']
     },
     'people-relationships': {
       name: 'People & Relationships', 
@@ -763,7 +763,7 @@ function GiftSelectionSection({ selectedGifts, isEditing, onChange }: { selected
     },
     'problem-solving': {
       name: 'Problem-Solving & Organizing',
-      icon: Brain,
+      icon: Lightbulb,
       color: '#20c997', 
       tags: ['Planning', 'Budgeting', 'Logistics', 'Strategy', 'Administration', 'Research']
     },
@@ -783,7 +783,7 @@ function GiftSelectionSection({ selectedGifts, isEditing, onChange }: { selected
       name: 'Creativity & Expression',
       icon: Palette,
       color: '#20c997',
-      tags: ['Art', 'Music', 'Writing', 'Photography', 'Design', 'Storytelling']
+      tags: ['Art', 'Music', 'Writing', 'Photography', 'Design', 'Storytelling', 'Media Production']
     },
     'leadership-motivation': {
       name: 'Leadership & Motivation',
@@ -799,7 +799,7 @@ function GiftSelectionSection({ selectedGifts, isEditing, onChange }: { selected
     },
     'physical-active': {
       name: 'Physical & Active',
-      icon: Dumbbell,
+      icon: Activity,
       color: '#20c997',
       tags: ['Sports Coaching', 'Outdoor Projects', 'Moving Help', 'Fitness Activities', 'Recreation Leading', 'Disaster Relief']
     },

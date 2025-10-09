@@ -4,10 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Bell } from 'lucide-react';
 import { supabaseBrowser as supabase } from '../../../lib/supabaseBrowser';
-
-// Brand typography
-const quicksandFont = 'Quicksand, -apple-system, BlinkMacSystemFont, sans-serif';
-const merriweatherFont = 'Merriweather, Georgia, serif';
+import { BRAND } from '../../../lib/brandConfig';
 
 export default function NotificationOnboarding() {
   const [loading, setLoading] = useState(true);
@@ -105,7 +102,7 @@ export default function NotificationOnboarding() {
         alignItems: 'center',
         justifyContent: 'center',
         backgroundColor: '#f9fafb',
-        fontFamily: quicksandFont
+        fontFamily: BRAND.fonts.heading
       }}>
         <div style={{
           fontSize: '18px',
@@ -125,7 +122,7 @@ export default function NotificationOnboarding() {
       alignItems: 'center',
       justifyContent: 'center',
       padding: '24px',
-      fontFamily: quicksandFont
+      fontFamily: BRAND.fonts.heading
     }}>
       <div style={{
         maxWidth: '500px',
@@ -141,7 +138,7 @@ export default function NotificationOnboarding() {
         <div style={{
           width: '80px',
           height: '80px',
-          backgroundColor: '#20c997',
+          backgroundColor: BRAND.colors.primary,
           borderRadius: '50%',
           display: 'flex',
           alignItems: 'center',
@@ -156,9 +153,9 @@ export default function NotificationOnboarding() {
         <h1 style={{
           fontSize: '32px',
           fontWeight: '600',
-          color: '#111827',
+          color: BRAND.colors.text,
           marginBottom: '16px',
-          fontFamily: quicksandFont,
+          fontFamily: BRAND.fonts.heading,
           lineHeight: '1.2'
         }}>
           Stay Connected
@@ -167,12 +164,12 @@ export default function NotificationOnboarding() {
         {/* Description */}
         <p style={{
           fontSize: '18px',
-          color: '#6b7280',
+          color: BRAND.colors.textLight,
           lineHeight: '1.6',
           marginBottom: '40px',
-          fontFamily: merriweatherFont
+          fontFamily: BRAND.fonts.body
         }}>
-          Get notified when new opportunities match your gifts and when volunteers sign up for your needs.
+          We'll let you know when there are opportunities to serve that match your gifts, and when others respond to needs you share with the community.
         </p>
 
         {/* Action Buttons */}
@@ -188,7 +185,7 @@ export default function NotificationOnboarding() {
             style={{
               width: '100%',
               padding: '16px 24px',
-              backgroundColor: processing ? '#9ca3af' : '#20c997',
+              backgroundColor: processing ? '#9ca3af' : BRAND.colors.primary,
               color: 'white',
               borderRadius: '12px',
               fontSize: '16px',
@@ -197,17 +194,17 @@ export default function NotificationOnboarding() {
               cursor: processing ? 'not-allowed' : 'pointer',
               transition: 'all 0.2s ease',
               boxShadow: processing ? 'none' : '0 4px 12px rgba(32, 201, 151, 0.3)',
-              fontFamily: quicksandFont
+              fontFamily: BRAND.fonts.heading
             }}
             onMouseEnter={(e) => {
               if (!processing) {
-                e.currentTarget.style.backgroundColor = '#1ba085';
+                e.currentTarget.style.backgroundColor = BRAND.colors.primaryHover;
                 e.currentTarget.style.transform = 'translateY(-1px)';
               }
             }}
             onMouseLeave={(e) => {
               if (!processing) {
-                e.currentTarget.style.backgroundColor = '#20c997';
+                e.currentTarget.style.backgroundColor = BRAND.colors.primary;
                 e.currentTarget.style.transform = 'translateY(0)';
               }
             }}
@@ -230,7 +227,7 @@ export default function NotificationOnboarding() {
               border: '1px solid #d1d5db',
               cursor: processing ? 'not-allowed' : 'pointer',
               transition: 'all 0.2s ease',
-              fontFamily: quicksandFont
+              fontFamily: BRAND.fonts.heading
             }}
             onMouseEnter={(e) => {
               if (!processing) {
@@ -255,7 +252,7 @@ export default function NotificationOnboarding() {
           color: '#9ca3af',
           marginTop: '24px',
           lineHeight: '1.5',
-          fontFamily: quicksandFont
+          fontFamily: BRAND.fonts.heading
         }}>
           You can always change notification settings later in your profile.
         </p>

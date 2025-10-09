@@ -1,6 +1,6 @@
 import { 
-  Wrench, Users, Brain, Heart, BookOpen, Palette, 
-  Crown, Settings, Dumbbell, Compass 
+  Wrench, Users, Lightbulb, Heart, BookOpen, Palette, 
+  Crown, Settings, Activity, Compass 
 } from 'lucide-react';
 
 export const GIFT_CATEGORIES = {
@@ -9,9 +9,8 @@ export const GIFT_CATEGORIES = {
     icon: Wrench,
     color: 'bg-blue-100 text-blue-800 border-blue-200',
     tags: [
-      'Carpentry', 'Repairs', 'Gardening', 'Sewing', 
-      'Decorating', 'Setup/Tear Down', 'Cooking', 
-      'Automotive', 'Painting'
+      'Carpentry', 'Repairs', 'Gardening', 'Sewing', 'Cooking',
+      'Decorating', 'Setup/Tear Down', 'Automotive', 'Painting'
     ]
   },
   'people-relationships': {
@@ -25,7 +24,7 @@ export const GIFT_CATEGORIES = {
   },
   'problem-solving': {
     name: 'Problem-Solving & Organizing',
-    icon: Brain,
+    icon: Lightbulb,
     color: 'bg-green-100 text-green-800 border-green-200',
     tags: [
       'Planning', 'Budgeting', 'Logistics', 'Strategy', 
@@ -56,7 +55,7 @@ export const GIFT_CATEGORIES = {
     color: 'bg-red-100 text-red-800 border-red-200',
     tags: [
       'Art', 'Music', 'Writing', 'Photography', 
-      'Design', 'Storytelling'
+      'Design', 'Storytelling', 'Media Production'
     ]
   },
   'leadership-motivation': {
@@ -79,7 +78,7 @@ export const GIFT_CATEGORIES = {
   },
   'physical-active': {
     name: 'Physical & Active',
-    icon: Dumbbell,
+    icon: Activity,
     color: 'bg-indigo-100 text-indigo-800 border-indigo-200',
     tags: [
       'Sports Coaching', 'Outdoor Projects', 'Moving Help', 

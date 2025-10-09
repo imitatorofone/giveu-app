@@ -4,62 +4,10 @@ import { useState, useEffect } from 'react';
 import { supabaseBrowser as supabase } from '../../lib/supabaseBrowser';
 import { useRouter } from 'next/navigation';
 import { Icon } from '../../icons/index';
-import { ArrowLeft, MapPin, Users, Calendar, Clock, AlertCircle, CheckCircle, FileText, Plus, Sun, Cloud, Moon, Home, ArrowRight, Wrench, Lightbulb, Heart, BookOpen, Palette, Target, Settings, Activity, Compass, ChevronDown } from 'lucide-react';
+import { ArrowLeft, MapPin, Users, Calendar, Clock, AlertCircle, CheckCircle, FileText, Plus, Sun, Cloud, Moon, Home, ArrowRight, ChevronDown } from 'lucide-react';
 import { createNotification } from '../../lib/notificationHelper';
 import { BRAND } from '../../lib/brandConfig';
-
-const giftCategories = [
-  {
-    name: 'Hands-On Skills',
-    icon: Wrench,
-    tags: ['Carpentry', 'Repairs', 'Gardening', 'Sewing', 'Cooking', 'Decorating', 'Setup/Tear Down', 'Automotive', 'Painting']
-  },
-  {
-    name: 'People & Relationships',
-    icon: Users,
-    tags: ['Hospitality', 'Listening', 'Mentoring', 'Counseling', 'Welcoming', 'Hosting']
-  },
-  {
-    name: 'Problem-Solving & Organizing',
-    icon: Lightbulb,
-    tags: ['Planning', 'Budgeting', 'Logistics', 'Strategy', 'Administration', 'Research']
-  },
-  {
-    name: 'Care & Comfort',
-    icon: Heart,
-    tags: ['Visiting the Sick', 'Meal Prep', 'Childcare', 'Encouragement', 'Prayer', 'Compassionate Care']
-  },
-  {
-    name: 'Learning & Teaching',
-    icon: BookOpen,
-    tags: ['Tutoring', 'Bible Study Leading', 'Coaching', 'Skill Training', 'Public Speaking', 'Mentoring']
-  },
-  {
-    name: 'Creativity & Expression',
-    icon: Palette,
-    tags: ['Art', 'Music', 'Writing', 'Photography', 'Design', 'Storytelling', 'Media Production']
-  },
-  {
-    name: 'Leadership & Motivation',
-    icon: Target,
-    tags: ['Facilitating Groups', 'Casting Vision', 'Mentoring Teams', 'Event Leadership', 'Preaching', 'Strategic Planning']
-  },
-  {
-    name: 'Behind-the-Scenes Support',
-    icon: Settings,
-    tags: ['Tech Support', 'AV/Production', 'Finance', 'Cleaning', 'Setup Crew', 'Admin Tasks']
-  },
-  {
-    name: 'Physical & Active',
-    icon: Activity,
-    tags: ['Sports Coaching', 'Outdoor Projects', 'Moving Help', 'Fitness Activities', 'Recreation Leading', 'Disaster Relief']
-  },
-  {
-    name: 'Pioneering & Connecting',
-    icon: Compass,
-    tags: ['Evangelism', 'Community Outreach', 'Starting Ministries', 'Networking', 'Fundraising', 'Advocacy']
-  }
-];
+import { GIFT_CATEGORIES } from '../../lib/giftsConfig';
 
 const primaryGiftings = [
   { id: 'hands-on', name: 'Hands-On Skills', skills: ['Carpentry', 'Repairs', 'Gardening', 'Sewing', 'Cooking', 'Decorating', 'Setup/Tear-down'] },
@@ -1229,7 +1177,7 @@ export default function ShareNeedScreen() {
 
             {/* Gift Categories */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: '24px' }}>
-              {giftCategories.map((category) => {
+              {GIFT_CATEGORIES.map((category) => {
                 const IconComponent = category.icon;
                 const isExpanded = expandedGiftings.has(category.name);
                 const selectedInCategory = category.tags.filter(tag => formData.giftingsNeeded.includes(tag)).length;
