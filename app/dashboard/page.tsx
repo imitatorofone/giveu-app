@@ -1191,7 +1191,9 @@ export default function MemberDashboard() {
                   fontFamily: BRAND.fonts.heading,
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '8px'
+                  justifyContent: 'center',
+                  gap: '8px',
+                  textAlign: 'center'
                 }}>
                   {opportunity.title}
                   {opportunity.urgency === 'asap' && (
@@ -1221,14 +1223,14 @@ export default function MemberDashboard() {
                   }}>
                     <Calendar size={16} style={{ 
                       marginBottom: '4px', 
-                      color: BRAND.colors.textLight,
+                      color: BRAND.colors.primary,
                       flexShrink: 0
                     }} />
                     <div style={{ fontSize: '12px', lineHeight: '1.2', textAlign: 'center' }}>
-                      <div>{opportunity.date}</div>
+                      <div style={{ fontWeight: '500', color: BRAND.colors.text }}>{opportunity.date}</div>
                       {opportunity.time && (
                         <div style={{ 
-                          color: '#9ca3af', 
+                          color: BRAND.colors.textLight, 
                           fontSize: '11px', 
                           marginTop: '2px',
                           fontWeight: '400'
@@ -1249,7 +1251,7 @@ export default function MemberDashboard() {
                   }}>
                     <MapPin size={16} style={{ 
                       marginBottom: '4px', 
-                      color: BRAND.colors.textLight,
+                      color: BRAND.colors.primary,
                       flexShrink: 0
                     }} />
                     <div style={{ fontSize: '12px', lineHeight: '1.2', textAlign: 'center' }}>
@@ -1272,7 +1274,7 @@ export default function MemberDashboard() {
                   }}>
                     <Users size={16} style={{ 
                       marginBottom: '4px', 
-                      color: BRAND.colors.textLight,
+                      color: BRAND.colors.primary,
                       flexShrink: 0
                     }} />
                     <div style={{ fontSize: '12px', lineHeight: '1.3', textAlign: 'center' }}>

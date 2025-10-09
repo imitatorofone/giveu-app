@@ -1361,7 +1361,8 @@ export default function ShareNeedScreen() {
               fontWeight: 'bold',
               color: BRAND.colors.text,
               fontFamily: BRAND.fonts.heading,
-              lineHeight: '1.4'
+              lineHeight: '1.4',
+              textAlign: 'center'
             }}>
               {formData.title || 'Need Title'}
             </h3>
@@ -1390,7 +1391,7 @@ export default function ShareNeedScreen() {
             }}>
               {/* Date */}
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
-                <Calendar size={20} color='#9ca3af' style={{ marginBottom: '4px' }} />
+                <Calendar size={20} color={BRAND.colors.primary} style={{ marginBottom: '4px' }} />
                 <span style={{ fontSize: '12px', fontWeight: '500', color: BRAND.colors.text, display: 'block' }}>
                   {formatDate(formData.urgency, formData.specificDate, formData.ongoingStartDate)}
                 </span>
@@ -1401,7 +1402,7 @@ export default function ShareNeedScreen() {
 
               {/* Location */}
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
-                <MapPin size={20} color='#9ca3af' style={{ marginBottom: '4px' }} />
+                <MapPin size={20} color={BRAND.colors.primary} style={{ marginBottom: '4px' }} />
                 <span style={{ fontSize: '12px', fontWeight: '500', color: BRAND.colors.text, display: 'block' }}>
                   {getLocationLine1(displayLocation)}
                 </span>
@@ -1412,7 +1413,7 @@ export default function ShareNeedScreen() {
 
               {/* People Needed */}
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
-                <Users size={20} color='#9ca3af' style={{ marginBottom: '4px' }} />
+                <Users size={20} color={BRAND.colors.primary} style={{ marginBottom: '4px' }} />
                 <span style={{ fontSize: '12px', fontWeight: '500', color: BRAND.colors.text, display: 'block' }}>
                   {displayPeopleNeeded}+ needed
                 </span>

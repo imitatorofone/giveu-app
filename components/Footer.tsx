@@ -1,12 +1,14 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { Heart, CalendarDays, Plus, UserCircle, Settings, MessageSquare } from 'lucide-react';
 import { supabaseBrowser as supabase } from '../lib/supabaseBrowser';
+import { BRAND } from '../lib/brandConfig';
 
 export default function Footer() {
   const pathname = usePathname();
+  const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [isLeader, setIsLeader] = useState(false);
 
@@ -28,17 +30,9 @@ export default function Footer() {
         const role = norm(prof?.role);
         const isLeaderResult = role === 'leader' || role === 'admin';
         
-        console.log('[Footer] User role check:', { 
-          userId: user.id, 
-          profile: prof, 
-          role, 
-          isLeader: isLeaderResult 
-        });
-        
         setIsLeader(isLeaderResult);
       } catch (error) {
         console.error('Error checking user role:', error);
-        // Default to showing Tools for leaders when role check fails
         setIsLeader(true);
       } finally {
         setLoading(false);
@@ -47,228 +41,203 @@ export default function Footer() {
     run();
   }, []);
 
-  // Render loading skeleton to keep layout stable
+  const regularTabs = [
+    {
+      name: 'Ways to Serve',
+      icon: Heart,
+      path: '/dashboard'
+    },
+    {
+      name: 'Commitments',
+      icon: CalendarDays,
+      path: '/commitments'
+    },
+    {
+      name: 'Profile',
+      icon: UserCircle,
+      path: '/profile'
+    },
+    {
+      name: isLeader ? 'Tools' : 'Feedback',
+      icon: isLeader ? Settings : MessageSquare,
+      path: isLeader ? '/leader/tools' : '/feedback'
+    }
+  ];
+
+  const RegularTab = ({ tab }: { tab: typeof regularTabs[0] }) => {
+    const Icon = tab.icon;
+    const isActive = pathname === tab.path || 
+                    (tab.path === '/dashboard' && pathname === '/') ||
+                    (tab.path === '/leader/tools' && pathname.startsWith('/leader'));
+    
+    return (
+      <button
+        onClick={() => router.push(tab.path)}
+        className="relative flex flex-col items-center justify-between"
+        style={{ 
+          minWidth: '64px',
+          height: '64px',
+          paddingTop: '8px',
+          paddingBottom: '24px'
+        }}
+      >
+        {/* Icon in upper area */}
+        <div className="flex items-center justify-center">
+          <Icon 
+            size={22}
+            strokeWidth={isActive ? 2.5 : 2}
+            style={{ color: isActive ? BRAND.colors.primary : '#9ca3af' }}
+          />
+        </div>
+        
+        {/* Text absolutely positioned at bottom */}
+        <span 
+          style={{ 
+            position: 'absolute',
+            bottom: '10px',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            fontSize: '11px',
+            lineHeight: '14px',
+            fontWeight: isActive ? 600 : 500,
+            fontFamily: BRAND.fonts.heading,
+            color: isActive ? BRAND.colors.primary : '#6b7280',
+            whiteSpace: 'nowrap'
+          }}
+        >
+          {tab.name}
+        </span>
+      </button>
+    );
+  };
+
   if (loading) {
     return (
-      <nav style={{
-        position: 'fixed',
-        bottom: 0,
-        left: 0,
-        right: 0,
-        backgroundColor: 'white',
-        borderTop: '1px solid #e5e7eb',
-        padding: '16px 0 12px 0'
-      }}>
-        <div style={{ display: 'flex', width: '100%', alignItems: 'center' }}>
-          {/* Existing buttons */}
-          <button style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '8px 4px', background: 'none', border: 'none', color: '#9ca3af', cursor: 'pointer', flex: 1 }}>
-            <Heart size={24} />
-            <span style={{ fontSize: '12px', marginTop: '4px', fontFamily: 'Quicksand, sans-serif', fontWeight: '600' }}>Ways to Serve</span>
-          </button>
-          <button style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '8px 4px', background: 'none', border: 'none', color: '#9ca3af', cursor: 'pointer', flex: 1 }}>
-            <CalendarDays size={24} />
-            <span style={{ fontSize: '12px', marginTop: '4px', fontFamily: 'Quicksand, sans-serif', fontWeight: '600' }}>Commitments</span>
-          </button>
-          <button style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '0 8px', background: 'none', border: 'none', cursor: 'pointer', position: 'relative', flex: 1 }}>
-            <div style={{ width: '64px', height: '64px', backgroundColor: '#20c997', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '4px solid white', boxShadow: '0 6px 20px rgba(32, 201, 151, 0.4)', marginBottom: '4px', marginTop: '-20px' }}>
-              <Plus size={32} color="white" strokeWidth={2.5} />
+      <>
+        <nav 
+          className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-40"
+          style={{ 
+            height: '64px',
+            boxShadow: '0 -2px 8px rgba(0, 0, 0, 0.08)',
+            paddingBottom: 'env(safe-area-inset-bottom, 8px)'
+          }}
+        >
+          <div className="relative h-full flex items-center justify-around max-w-screen-xl mx-auto px-4">
+            <div className="relative flex flex-col items-center justify-between opacity-50" style={{ minWidth: '64px', height: '64px', paddingTop: '8px', paddingBottom: '24px' }}>
+              <div className="flex items-center justify-center">
+                <div style={{ width: '22px', height: '22px', backgroundColor: '#e5e7eb', borderRadius: '4px' }} />
+              </div>
             </div>
-            <span style={{ fontSize: '12px', fontFamily: 'Quicksand, sans-serif', color: '#374151', fontWeight: '600' }}>Share a Need</span>
-          </button>
-          <button style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '8px 4px', background: 'none', border: 'none', color: '#9ca3af', cursor: 'pointer', flex: 1 }}>
-            <UserCircle size={24} />
-            <span style={{ fontSize: '12px', marginTop: '4px', fontFamily: 'Quicksand, sans-serif', fontWeight: '600' }}>Profile</span>
-          </button>
-          {/* Loading skeleton for last button */}
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '8px 4px', flex: 1, opacity: 0.5 }}>
-            <div style={{ width: '24px', height: '24px', backgroundColor: '#e5e7eb', borderRadius: '4px' }} />
-            <div style={{ width: '40px', height: '12px', backgroundColor: '#e5e7eb', borderRadius: '2px', marginTop: '4px' }} />
+            <div className="relative flex flex-col items-center justify-between opacity-50" style={{ minWidth: '64px', height: '64px', paddingTop: '8px', paddingBottom: '24px' }}>
+              <div className="flex items-center justify-center">
+                <div style={{ width: '22px', height: '22px', backgroundColor: '#e5e7eb', borderRadius: '4px' }} />
+              </div>
+            </div>
+            <div style={{ width: '70px' }} />
+            <div className="relative flex flex-col items-center justify-between opacity-50" style={{ minWidth: '64px', height: '64px', paddingTop: '8px', paddingBottom: '24px' }}>
+              <div className="flex items-center justify-center">
+                <div style={{ width: '22px', height: '22px', backgroundColor: '#e5e7eb', borderRadius: '4px' }} />
+              </div>
+            </div>
+            <div className="relative flex flex-col items-center justify-between opacity-50" style={{ minWidth: '64px', height: '64px', paddingTop: '8px', paddingBottom: '24px' }}>
+              <div className="flex items-center justify-center">
+                <div style={{ width: '22px', height: '22px', backgroundColor: '#e5e7eb', borderRadius: '4px' }} />
+              </div>
+            </div>
           </div>
+        </nav>
+        
+        <div 
+          className="fixed left-1/2 z-50 opacity-50"
+          style={{
+            bottom: 'calc(34px + env(safe-area-inset-bottom, 8px))',
+            transform: 'translateX(-50%)'
+          }}
+        >
+          <button
+            className="flex items-center justify-center rounded-full"
+            style={{
+              width: '60px',
+              height: '60px',
+              backgroundColor: BRAND.colors.primary,
+              border: 'none',
+              boxShadow: '0 6px 20px rgba(0, 0, 0, 0.18), 0 3px 12px rgba(0, 0, 0, 0.12)'
+            }}
+          >
+            <Plus size={28} className="text-white" strokeWidth={2.5} />
+          </button>
         </div>
-      </nav>
+      </>
     );
   }
 
   return (
-    <nav style={{
-      position: 'fixed',
-      bottom: 0,
-      left: 0,
-      right: 0,
-      backgroundColor: 'white',
-      borderTop: '1px solid #e5e7eb',
-      padding: '16px 0 12px 0'
-    }}>
-      <div style={{ display: 'flex', width: '100%', alignItems: 'center' }}>
-        <button 
-          onClick={() => window.location.href = '/dashboard'}
+    <>
+      {/* Nav bar */}
+      <nav 
+        className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-40"
+        style={{ 
+          height: '64px',
+          boxShadow: '0 -2px 8px rgba(0, 0, 0, 0.08)',
+          paddingBottom: 'env(safe-area-inset-bottom, 8px)'
+        }}
+      >
+        <div className="relative h-full flex items-center justify-around max-w-screen-xl mx-auto px-4">
+          <RegularTab tab={regularTabs[0]} />
+          <RegularTab tab={regularTabs[1]} />
+          
+          {/* Spacer for center button */}
+          <div style={{ width: '70px' }} />
+          
+          <RegularTab tab={regularTabs[2]} />
+          <RegularTab tab={regularTabs[3]} />
+        </div>
+      </nav>
+
+      {/* Center button - button only, NO text */}
+      <div 
+        className="fixed left-1/2 z-50"
+        style={{
+          bottom: 'calc(34px + env(safe-area-inset-bottom, 8px))',
+          transform: 'translateX(-50%)'
+        }}
+      >
+        <button
+          onClick={() => router.push('/share-need?modal=1')}
+          className="flex items-center justify-center rounded-full"
           style={{
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            padding: '8px 4px',
-            background: 'none',
+            width: '60px',
+            height: '60px',
+            backgroundColor: BRAND.colors.primary,
             border: 'none',
-            color: pathname === '/dashboard' ? '#20c997' : '#9ca3af',
-            cursor: 'pointer',
-            flex: 1
-          }}>
-          <Heart size={24} />
-          <span style={{ 
-            fontSize: '12px', 
-            marginTop: '4px', 
-            fontFamily: 'Quicksand, sans-serif',
-            fontWeight: '600'
-          }}>
-            Ways to Serve
-          </span>
+            boxShadow: '0 6px 20px rgba(0, 0, 0, 0.18), 0 3px 12px rgba(0, 0, 0, 0.12)',
+            transition: 'transform 0.15s ease'
+          }}
+          onMouseDown={(e) => e.currentTarget.style.transform = 'scale(0.95)'}
+          onMouseUp={(e) => e.currentTarget.style.transform = 'scale(1)'}
+          onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
+        >
+          <Plus size={28} className="text-white" strokeWidth={2.5} />
         </button>
-        
-        <button 
-          onClick={() => window.location.href = '/commitments'}
-          style={{
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            padding: '8px 4px',
-            background: 'none',
-            border: 'none',
-            color: pathname === '/commitments' ? '#20c997' : '#9ca3af',
-            cursor: 'pointer',
-            flex: 1
-          }}>
-            <CalendarDays size={24} />
-          <span style={{ 
-            fontSize: '12px', 
-            marginTop: '4px', 
-            fontFamily: 'Quicksand, sans-serif',
-            fontWeight: '600'
-          }}>
-            Commitments
-          </span>
-        </button>
-        
-        <button 
-          onClick={() => window.location.href = '/share-need?modal=1'}
-          style={{
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            padding: '0 8px',
-            background: 'none',
-            border: 'none',
-            cursor: 'pointer',
-            position: 'relative',
-            flex: 1
-          }}>
-          <div style={{
-            width: '64px',
-            height: '64px',
-            backgroundColor: '#20c997',
-            borderRadius: '50%',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            border: '4px solid white',
-            boxShadow: '0 6px 20px rgba(32, 201, 151, 0.4)',
-            marginBottom: '4px',
-            marginTop: '-20px'
-          }}>
-            <Plus size={32} color="white" strokeWidth={2.5} />
-          </div>
-          <span style={{ 
-            fontSize: '12px', 
-            fontFamily: 'Quicksand, sans-serif',
-            color: '#374151',
-            fontWeight: '600'
-          }}>
-            Share a Need
-          </span>
-        </button>
-        
-        <button 
-          onClick={() => window.location.href = '/profile'}
-          style={{
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            padding: '8px 4px',
-            background: 'none',
-            border: 'none',
-            color: pathname === '/profile' ? '#20c997' : '#9ca3af',
-            cursor: 'pointer',
-            flex: 1
-          }}>
-          <UserCircle size={24} />
-          <span style={{ 
-            fontSize: '12px', 
-            marginTop: '4px', 
-            fontFamily: 'Quicksand, sans-serif',
-            fontWeight: '600'
-          }}>
-            Profile
-          </span>
-        </button>
-        
-          {/* Role-gated: Leadership Tools for leaders/admins, Feedback for others */}
-          {isLeader ? (
-            // Leadership Tools for leaders/admins
-            <button 
-              onClick={() => window.location.href = '/leader/tools'}
-              style={{
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                padding: '8px 4px',
-                background: 'none',
-                border: 'none',
-                color: pathname.startsWith('/leader/tools') ? '#20c997' : '#9ca3af',
-                cursor: 'pointer',
-                flex: 1
-              }}
-              aria-label="Leadership Tools"
-              aria-current={pathname.startsWith('/leader/tools') ? 'page' : undefined}
-            >
-              <Settings size={24} />
-              <span style={{ 
-                fontSize: '12px', 
-                marginTop: '4px', 
-                fontFamily: 'Quicksand, sans-serif',
-                fontWeight: '600'
-              }}>
-                Tools
-              </span>
-            </button>
-          ) : (
-            // Feedback for non-leaders
-            <button 
-              onClick={() => window.location.href = '/feedback'}
-              style={{
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                padding: '8px 4px',
-                background: 'none',
-                border: 'none',
-                color: pathname === '/feedback' ? '#20c997' : '#9ca3af',
-                cursor: 'pointer',
-                flex: 1
-              }}
-              aria-label="Feedback"
-              aria-current={pathname === '/feedback' ? 'page' : undefined}
-            >
-              <MessageSquare size={24} />
-              <span style={{ 
-                fontSize: '12px', 
-                marginTop: '4px', 
-                fontFamily: 'Quicksand, sans-serif',
-                fontWeight: '600'
-              }}>
-                Feedback
-              </span>
-            </button>
-          )}
       </div>
-    </nav>
+
+      {/* Text - SEPARATE element, same level as nav */}
+      <span 
+        className="fixed left-1/2"
+        style={{ 
+          bottom: '10px',
+          transform: 'translateX(-50%)',
+          fontSize: '11px',
+          lineHeight: '14px',
+          fontWeight: 600,
+          fontFamily: BRAND.fonts.heading,
+          color: BRAND.colors.primary,
+          whiteSpace: 'nowrap',
+          zIndex: 51
+        }}
+      >
+        Share a Need
+      </span>
+    </>
   );
 }
