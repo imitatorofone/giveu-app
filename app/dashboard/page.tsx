@@ -157,8 +157,41 @@ export default function MemberDashboard() {
   const [selectedNeedId, setSelectedNeedId] = useState<string | null>(null);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [deepLinkRetryCount, setDeepLinkRetryCount] = useState(0);
+  const [expandedSkills, setExpandedSkills] = useState<Set<string>>(new Set());
   const router = useRouter();
   const searchParams = useSearchParams();
+
+  // Helper function to sort skills with user matches first
+  const sortSkillsByMatch = (tags: string[]): string[] => {
+    const userMatches: string[] = [];
+    const nonMatches: string[] = [];
+    
+    tags.forEach(tag => {
+      const tagName = tag.replace(' ✓', '').toLowerCase();
+      const isMatch = userGifts.some(gift => 
+        gift.toLowerCase().includes(tagName) || tagName.includes(gift.toLowerCase())
+      );
+      
+      if (isMatch) {
+        userMatches.push(tag);
+      } else {
+        nonMatches.push(tag);
+      }
+    });
+    
+    return [...userMatches, ...nonMatches];
+  };
+
+  // Helper function to toggle skills expansion
+  const toggleSkillsExpansion = (opportunityId: string) => {
+    const newExpanded = new Set(expandedSkills);
+    if (newExpanded.has(opportunityId)) {
+      newExpanded.delete(opportunityId);
+    } else {
+      newExpanded.add(opportunityId);
+    }
+    setExpandedSkills(newExpanded);
+  };
 
   // Helper function to sync volunteers_count with actual opportunity_responses
   const syncVolunteerCounts = async () => {
@@ -1336,33 +1369,76 @@ export default function MemberDashboard() {
                 )}
 
                 {/* Tags - Dynamic color and checkmarks with Quicksand font */}
-                <div style={{ 
-                  display: 'flex', 
-                  gap: '8px', 
-                  marginBottom: '16px',
-                  flexWrap: 'wrap'
-                }}>
-                  {opportunity.tags.map((tag) => {
-                    const tagName = tag.replace(' ✓', ''); // Clean tag name
-                    const { isMatch, styles } = getTagColor(tag);
-                    
-                    return (
-                      <span
-                        key={tag}
-                        style={{
-                          padding: '6px 12px',
-                          borderRadius: '16px',
-                          fontSize: '12px',
-                          fontWeight: '500',
-                          fontFamily: BRAND.fonts.heading,
-                          ...styles
-                        }}
-                      >
-                        {tagName} {/* No checkmark, just clean tag name */}
-                      </span>
-                    );
-                  })}
-                </div>
+                {opportunity.tags && opportunity.tags.length > 0 && (
+                  <div style={{ marginBottom: '16px' }}>
+                    <div style={{ 
+                      display: 'flex', 
+                      gap: '8px', 
+                      flexWrap: 'wrap'
+                    }}>
+                      {(() => {
+                        const sortedSkills = sortSkillsByMatch(opportunity.tags);
+                        const isExpanded = expandedSkills.has(opportunity.id);
+                        const visibleSkills = isExpanded ? sortedSkills : sortedSkills.slice(0, 6);
+                        const hasMoreSkills = sortedSkills.length > 6;
+                        
+                        return (
+                          <>
+                            {visibleSkills.map((tag) => {
+                              const tagName = tag.replace(' ✓', ''); // Clean tag name
+                              const { isMatch, styles } = getTagColor(tag);
+                              
+                              return (
+                                <span
+                                  key={tag}
+                                  style={{
+                                    padding: '6px 12px',
+                                    borderRadius: '16px',
+                                    fontSize: '12px',
+                                    fontWeight: '500',
+                                    fontFamily: BRAND.fonts.heading,
+                                    ...styles
+                                  }}
+                                >
+                                  {tagName} {/* No checkmark, just clean tag name */}
+                                </span>
+                              );
+                            })}
+                            
+                            {/* Show More/Less Button */}
+                            {hasMoreSkills && (
+                              <button
+                                onClick={() => toggleSkillsExpansion(opportunity.id)}
+                                style={{
+                                  padding: '6px 12px',
+                                  borderRadius: '16px',
+                                  fontSize: '12px',
+                                  fontWeight: '500',
+                                  fontFamily: BRAND.fonts.heading,
+                                  backgroundColor: '#f3f4f6',
+                                  color: BRAND.colors.text,
+                                  border: 'none',
+                                  cursor: 'pointer',
+                                  transition: 'all 0.2s ease'
+                                }}
+                                onMouseEnter={(e) => {
+                                  e.currentTarget.style.backgroundColor = BRAND.colors.primary;
+                                  e.currentTarget.style.color = 'white';
+                                }}
+                                onMouseLeave={(e) => {
+                                  e.currentTarget.style.backgroundColor = '#f3f4f6';
+                                  e.currentTarget.style.color = BRAND.colors.text;
+                                }}
+                              >
+                                {isExpanded ? 'Show Less' : `+${sortedSkills.length - 6} more`}
+                              </button>
+                            )}
+                          </>
+                        );
+                      })()}
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Card Footer */}

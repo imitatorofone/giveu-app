@@ -52,6 +52,7 @@ export default function ShareNeedScreen() {
   const [isHydrated, setIsHydrated] = useState(false);
   const [churchName, setChurchName] = useState('');
   const [churchAddress, setChurchAddress] = useState('');
+  const [showAllSkills, setShowAllSkills] = useState(false);
 
   // Fix hydration mismatch by ensuring client-side rendering
   useEffect(() => {
@@ -1432,36 +1433,60 @@ export default function ShareNeedScreen() {
                   </span>
                 </div>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                  {formData.giftingsNeeded.slice(0, 4).map((gift: string) => (
-                    <span
-                      key={gift}
-                      style={{
-                        padding: '6px 12px',
-                        borderRadius: '9999px',
-                        fontSize: '12px',
-                        fontWeight: '500',
-                        color: 'white',
-                        backgroundColor: BRAND.colors.primary,
-                        fontFamily: BRAND.fonts.heading
-                      }}
-                    >
-                      {gift}
-                    </span>
-                  ))}
-                  {formData.giftingsNeeded.length > 4 && (
-                    <span
-                      style={{
-                        padding: '6px 12px',
-                        borderRadius: '9999px',
-                        fontSize: '12px',
-                        fontWeight: '500',
-                        backgroundColor: '#e5e7eb',
-                        color: BRAND.colors.text
-                      }}
-                    >
-                      +{formData.giftingsNeeded.length - 4} more
-                    </span>
-                  )}
+                  {(() => {
+                    const visibleSkills = showAllSkills ? formData.giftingsNeeded : formData.giftingsNeeded.slice(0, 6);
+                    const hasMoreSkills = formData.giftingsNeeded.length > 6;
+                    
+                    return (
+                      <>
+                        {visibleSkills.map((gift: string) => (
+                          <span
+                            key={gift}
+                            style={{
+                              padding: '6px 12px',
+                              borderRadius: '9999px',
+                              fontSize: '12px',
+                              fontWeight: '500',
+                              color: 'white',
+                              backgroundColor: BRAND.colors.primary,
+                              fontFamily: BRAND.fonts.heading
+                            }}
+                          >
+                            {gift}
+                          </span>
+                        ))}
+                        
+                        {/* Show More/Less Button */}
+                        {hasMoreSkills && (
+                          <button
+                            onClick={() => setShowAllSkills(!showAllSkills)}
+                            style={{
+                              padding: '6px 12px',
+                              borderRadius: '16px',
+                              fontSize: '12px',
+                              fontWeight: '500',
+                              fontFamily: BRAND.fonts.heading,
+                              backgroundColor: '#f3f4f6',
+                              color: BRAND.colors.text,
+                              border: 'none',
+                              cursor: 'pointer',
+                              transition: 'all 0.2s ease'
+                            }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.backgroundColor = BRAND.colors.primary;
+                              e.currentTarget.style.color = 'white';
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.backgroundColor = '#f3f4f6';
+                              e.currentTarget.style.color = BRAND.colors.text;
+                            }}
+                          >
+                            {showAllSkills ? 'Show Less' : `+${formData.giftingsNeeded.length - 6} more`}
+                          </button>
+                        )}
+                      </>
+                    );
+                  })()}
                 </div>
               </div>
             )}
