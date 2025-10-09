@@ -235,6 +235,7 @@ export default function MemberDashboard() {
               time: dateTimeDisplay.time,
               volunteers_count: need.volunteers_count || 0,
               needed: need.people_needed || 1,
+              people_needed: need.people_needed || 1,
               categories: need.giftings_needed && need.giftings_needed.length > 0 ? need.giftings_needed : ['Care'],
               tags: need.giftings_needed && need.giftings_needed.length > 0 
                 ? need.giftings_needed.map((gift: string) => `${gift} ✓`) 
@@ -246,7 +247,8 @@ export default function MemberDashboard() {
               ongoing_start_time: need.ongoing_start_time,
               recurring_pattern: need.recurring_pattern,
               time_preference: need.time_preference,
-              ongoing_schedule: formatOngoingSchedule(need)
+              ongoing_schedule: formatOngoingSchedule(need),
+              responses: need.responses
             };
           });
           
@@ -553,8 +555,22 @@ export default function MemberDashboard() {
   ];
 
 
+  // Helper function to parse people_needed field
+  const parsePeopleNeeded = (peopleNeeded: any): number => {
+    if (!peopleNeeded) return 1;
+    // Remove "+" if present and convert to number
+    return parseInt(peopleNeeded.toString().replace('+', '')) || 1;
+  };
+
+  // Filter out fully committed needs
+  const availableOpportunities = opportunities.filter(need => {
+    const needed = parsePeopleNeeded(need.people_needed);
+    const committed = need.volunteers_count || 0;
+    return committed < needed; // Only show if not fully committed
+  });
+
   // Sort the opportunities based on selectedSort
-  const sortedOpportunities = [...opportunities].sort((a, b) => {
+  const sortedOpportunities = [...availableOpportunities].sort((a, b) => {
     switch (selectedSort) {
       case 'Best Match':
         // Sort by gift matching - opportunities with more matching tags first
@@ -1233,7 +1249,11 @@ export default function MemberDashboard() {
                     }} />
                     <div style={{ fontSize: '12px', lineHeight: '1.3', textAlign: 'center' }}>
                       <div style={{ fontWeight: '500', color: BRAND.colors.text }}>
-                        {opportunity.people_needed || 1}+ needed
+                        {(() => {
+                          const peopleNeeded = opportunity.people_needed || 1;
+                          const needsText = String(peopleNeeded);
+                          return needsText.includes('+') ? `${needsText} needed` : `${needsText}+ needed`;
+                        })()}
                       </div>
                       <div style={{ color: BRAND.colors.textLight, fontSize: '11px' }}>
                         {opportunity.volunteers_count || 0} committed
