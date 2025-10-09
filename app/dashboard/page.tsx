@@ -28,8 +28,9 @@ interface Opportunity {
   location: string;
   date: string;
   time: string;
-  committed: number;
+  volunteers_count: number;
   needed: number;
+  people_needed?: number;
   categories: string[];
   tags: string[];
   urgency?: string;
@@ -40,6 +41,10 @@ interface Opportunity {
   recurring_pattern?: string;
   time_preference?: string;
   ongoing_schedule?: string;
+  responses?: Array<{
+    user_id: string;
+    status: string;
+  }>;
 }
 
 // Helper functions for date/time formatting
@@ -133,6 +138,41 @@ export default function MemberDashboard() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
+  // Helper function to sync volunteers_count with actual opportunity_responses
+  const syncVolunteerCounts = async () => {
+    try {
+      console.log('🔄 Starting volunteer count sync...');
+      const { data: needs } = await supabase
+        .from('needs')
+        .select('id')
+        .in('status', ['active', 'approved']);
+      
+      if (!needs || needs.length === 0) {
+        console.log('⚠️ No active needs found to sync');
+        return;
+      }
+
+      for (const need of needs) {
+        const { count } = await supabase
+          .from('opportunity_responses')
+          .select('*', { count: 'exact', head: true })
+          .eq('need_id', need.id)
+          .eq('status', 'accepted');
+        
+        await supabase
+          .from('needs')
+          .update({ volunteers_count: count || 0 })
+          .eq('id', need.id);
+        
+        console.log(`✅ Synced need ${need.id}: ${count || 0} volunteers`);
+      }
+      
+      console.log('✅ Volunteer count sync complete');
+    } catch (error) {
+      console.error('❌ Error syncing volunteer counts:', error);
+    }
+  };
+
   // Helper function for dynamic tag coloring
   const getTagColor = (tag: string) => {
     const tagName = tag.replace(' ✓', ''); // Remove checkmark for comparison
@@ -163,7 +203,8 @@ export default function MemberDashboard() {
         .from('needs')
         .select(`
           *,
-          commitments(count)
+          commitments(count),
+          responses:opportunity_responses(user_id, status)
         `)
         .in('status', ['active', 'approved'])
         .order('created_at', { ascending: false });
@@ -192,7 +233,7 @@ export default function MemberDashboard() {
               location: need.location || need.geographic_location || need.city || 'Location TBD',
               date: dateTimeDisplay.date,
               time: dateTimeDisplay.time,
-              committed: need.commitments?.[0]?.count || 0,
+              volunteers_count: need.volunteers_count || 0,
               needed: need.people_needed || 1,
               categories: need.giftings_needed && need.giftings_needed.length > 0 ? need.giftings_needed : ['Care'],
               tags: need.giftings_needed && need.giftings_needed.length > 0 
@@ -270,6 +311,9 @@ export default function MemberDashboard() {
       console.log('🔐 Dashboard currentUserId state will be:', userResult.data.user?.id || s.data.session?.user?.id);
     }
     checkAuth();
+    
+    // Sync volunteer counts on initial load
+    syncVolunteerCounts();
     
     fetchNeeds();
   }, []);
@@ -453,7 +497,7 @@ export default function MemberDashboard() {
       location: 'Church Kitchen',
       time: '2-5pm',
       date: 'This Saturday',
-      committed: 1,
+      volunteers_count: 1,
       needed: 5,
       categories: ['Hands-On', 'Care'],
       tags: ['Cooking ✓', 'Setup/Tear Down ✓']
@@ -465,7 +509,7 @@ export default function MemberDashboard() {
       location: 'Church Grounds',
       time: '9am-12pm',
       date: 'This Saturday',
-      committed: 0,
+      volunteers_count: 0,
       needed: 4,
       categories: ['Hands-On', 'Physical'],
       tags: ['Gardening ✓', 'Physical ✓']
@@ -477,7 +521,7 @@ export default function MemberDashboard() {
       location: 'Church Office',
       time: '6-8pm',
       date: 'Thursday',
-      committed: 1,
+      volunteers_count: 1,
       needed: 2,
       categories: ['Leadership', 'Behind-the-Scenes'],
       tags: ['Planning ✓', 'Logistics ✓']
@@ -489,7 +533,7 @@ export default function MemberDashboard() {
       location: 'Food Bank',
       time: '10am-1pm',
       date: 'Next Saturday',
-      committed: 0,
+      volunteers_count: 0,
       needed: 6,
       categories: ['Care', 'Behind-the-Scenes'],
       tags: ['Administration ✓', 'Organization ✓']
@@ -501,7 +545,7 @@ export default function MemberDashboard() {
       location: 'Various Locations',
       time: '7-9pm',
       date: 'Next Tuesday',
-      committed: 0,
+      volunteers_count: 0,
       needed: 3,
       categories: ['Pioneering', 'People'],
       tags: ['Evangelism ✓', 'Networking ✓']
@@ -555,8 +599,8 @@ export default function MemberDashboard() {
       
       case 'Most Needed':
         // Sort by how many more people are needed
-        const aNeeded = a.needed - a.committed;
-        const bNeeded = b.needed - b.committed;
+        const aNeeded = a.needed - a.volunteers_count;
+        const bNeeded = b.needed - b.volunteers_count;
         return bNeeded - aNeeded;
       
       default:
@@ -670,8 +714,30 @@ export default function MemberDashboard() {
       // Add the new response to state immediately for UI feedback
       setUserCommitments(prev => [...prev, needId]);
       
-      // Update volunteer count via RPC
-      console.log('📊 Updating volunteer count...');
+      // Get the current need to check volunteers_count
+      const { data: currentNeed } = await supabase
+        .from('needs')
+        .select('volunteers_count')
+        .eq('id', needId)
+        .single();
+      
+      // Update volunteers_count in needs table
+      console.log('📊 Updating volunteers_count...');
+      const { error: updateError } = await supabase
+        .from('needs')
+        .update({ 
+          volunteers_count: (currentNeed?.volunteers_count || 0) + 1 
+        })
+        .eq('id', needId);
+      
+      if (updateError) {
+        console.error('❌ Error updating committed count:', updateError);
+      } else {
+        console.log('✅ Committed count updated successfully');
+      }
+      
+      // Update volunteer count via RPC (backup method)
+      console.log('📊 Updating volunteer count via RPC...');
       const { error: rpcError } = await supabase.rpc('increment_volunteer_count', { need_id: needId });
       
       if (rpcError) {
@@ -1165,10 +1231,12 @@ export default function MemberDashboard() {
                       color: BRAND.colors.textLight,
                       flexShrink: 0
                     }} />
-                    <div style={{ fontSize: '12px', lineHeight: '1.2', textAlign: 'center' }}>
-                      <div>{opportunity.committed} committed</div>
-                      <div style={{ color: '#9ca3af', fontSize: '11px', marginTop: '2px' }}>
-                        {opportunity.needed}+ needed
+                    <div style={{ fontSize: '12px', lineHeight: '1.3', textAlign: 'center' }}>
+                      <div style={{ fontWeight: '500', color: BRAND.colors.text }}>
+                        {opportunity.people_needed || 1}+ needed
+                      </div>
+                      <div style={{ color: BRAND.colors.textLight, fontSize: '11px' }}>
+                        {opportunity.volunteers_count || 0} committed
                       </div>
                     </div>
                   </div>
@@ -1254,43 +1322,54 @@ export default function MemberDashboard() {
                 backgroundColor: '#fafbfc'
               }}>
                 {(() => {
-                  const isCommitted = userCommitments.includes(opportunity.id);
-                  return (
+                  // Check if user has already signed up for this need
+                  const isHelping = opportunity.responses?.some(r => r.user_id === currentUserId && r.status === 'accepted') || 
+                                   userCommitments.includes(opportunity.id);
+                  
+                  return isHelping ? (
+                    <button 
+                      className="flex items-center gap-2 px-6 py-2 rounded-lg font-medium"
+                      style={{ 
+                        backgroundColor: '#d1d5db',
+                        color: '#6b7280',
+                        minHeight: '44px',
+                        cursor: 'not-allowed',
+                        width: '100%',
+                        justifyContent: 'center',
+                        borderRadius: '8px',
+                        fontWeight: '600',
+                        fontFamily: BRAND.fonts.heading,
+                        fontSize: '15px',
+                        border: '2px solid #d1d5db'
+                      }}
+                      disabled
+                    >
+                      <Check size={16} />
+                      You're Helping
+                    </button>
+                  ) : (
                     <button 
                       onClick={(e) => {
                         e.stopPropagation();
-                        if (!isCommitted) {
-                          handleICanHelp(opportunity.id);
-                        }
+                        handleICanHelp(opportunity.id);
                       }}
-                      disabled={isCommitted}
+                      className="flex items-center gap-2 px-6 py-2 rounded-lg text-white font-medium transition-colors"
                       style={{ 
+                        backgroundColor: BRAND.colors.primary,
+                        minHeight: '44px',
                         width: '100%',
-                        backgroundColor: isCommitted ? 'white' : BRAND.colors.primary,
-                        color: isCommitted ? BRAND.colors.primary : 'white',
-                        padding: '12px 0',
+                        justifyContent: 'center',
                         borderRadius: '8px',
-                        border: `2px solid ${BRAND.colors.primary}`,
                         fontWeight: '600',
                         fontFamily: BRAND.fonts.heading,
-                        cursor: isCommitted ? 'default' : 'pointer',
                         fontSize: '15px',
-                        transition: 'all 0.2s',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: '8px',
-                        minHeight: '44px' // Mobile-friendly touch target
+                        border: `2px solid ${BRAND.colors.primary}`,
+                        cursor: 'pointer'
                       }}
+                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = BRAND.colors.primaryHover}
+                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = BRAND.colors.primary}
                     >
-                      {isCommitted ? (
-                        <>
-                          You're Helping
-                          <Check size={16} />
-                        </>
-                      ) : (
-                        'I Can Help'
-                      )}
+                      I Can Help
                     </button>
                   );
                 })()}
