@@ -17,20 +17,15 @@ export function useNotifications() {
   // supabase is imported at the top of the file
 
   const fetchNotifications = useCallback(async () => {
-    console.log('🔔 Fetching notifications...');
-    
     // Cleanup old notifications (runs once when hook mounts)
     try {
       await supabase.rpc('cleanup_old_notifications');
-      console.log('🗑️ Old notifications cleaned up');
     } catch (cleanupError) {
       // Silently fail if cleanup doesn't work - not critical
-      console.warn('Cleanup skipped:', cleanupError);
     }
     
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      console.log('🔔 User:', user?.id);
       if (!user) return;
 
       // Fetch DIY notifications from Supabase
@@ -40,9 +35,6 @@ export function useNotifications() {
         .eq('user_id', user.id)
         .order('created_at', { ascending: false })
         .limit(20);
-
-      console.log('🔔 DIY Notifications data:', diyNotifications);
-      console.log('🔔 DIY Notifications error:', error);
 
       if (error) throw error;
 
@@ -92,11 +84,8 @@ export function useNotifications() {
         .map(n => n.id);
 
       if (unreadIds.length === 0) {
-        console.log('🔔 No unread notifications to mark');
         return;
       }
-
-      console.log('🔔 Marking all notifications as read:', unreadIds.length);
 
       // Update all unread notifications in Supabase
       const { error } = await supabase
@@ -111,8 +100,6 @@ export function useNotifications() {
         prev.map(n => ({ ...n, read_at: n.read_at || new Date().toISOString() }))
       );
       setUnreadCount(0);
-
-      console.log('✅ All notifications marked as read');
     } catch (error) {
       console.error('Error marking all notifications as read:', error);
     }
@@ -131,7 +118,7 @@ export function useNotifications() {
       clearInterval(interval);
       window.removeEventListener('focus', handleFocus);
     };
-  }, []);
+  }, [fetchNotifications]);
 
   return {
     notifications,

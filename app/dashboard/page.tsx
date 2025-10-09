@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { 
   Calendar, Clock, MapPin, Users, User, Bell, 
-  Heart, CalendarDays, Plus, UserCircle, MessageCircle, AlertCircle, Check, Wrench 
+  CalendarDays, Plus, UserCircle, MessageCircle, AlertCircle, Check, Wrench 
 } from 'lucide-react';
 import { supabaseBrowser as supabase } from '../../lib/supabaseBrowser'; // Use browser client for session persistence
 import { GIFT_CATEGORIES } from '../../constants/giftCategories.js';
@@ -12,6 +12,7 @@ import Footer from '../../components/Footer';
 import Header from '../../components/Header';
 import dynamic from 'next/dynamic';
 import { createNotification } from '@/lib/notificationHelper';
+import { BRAND } from '../../lib/brandConfig';
 
 const NeedDetailModal = dynamic(
   () => import('../../components/NeedDetailModal'),
@@ -19,9 +20,6 @@ const NeedDetailModal = dynamic(
 );
 import toast from 'react-hot-toast';
 
-// Brand typography
-const quicksandFont = 'Quicksand, -apple-system, BlinkMacSystemFont, sans-serif';
-const merriweatherFont = 'Merriweather, Georgia, serif';
 
 interface Opportunity {
   id: string;
@@ -123,7 +121,6 @@ const formatOngoingSchedule = (need: any): string => {
 };
 
 export default function MemberDashboard() {
-  const [activeFilter, setActiveFilter] = useState('All');
   const [opportunities, setOpportunities] = useState<Opportunity[]>([]);
   const [loading, setLoading] = useState(true);
   const [sortOpen, setSortOpen] = useState(false);
@@ -447,10 +444,6 @@ export default function MemberDashboard() {
     fetchUserCommitments();
   }, []);
 
-  const categories = [
-    'All', 'Hands-On', 'People', 'Problem-Solving', 'Care', 
-    'Learning', 'Creativity', 'Leadership', 'Behind-the-Scenes', 'Physical', 'Pioneering'
-  ];
 
   const staticOpportunities = [
     {
@@ -515,12 +508,9 @@ export default function MemberDashboard() {
     }
   ];
 
-  const filteredOpportunities = opportunities.filter(opp => 
-    activeFilter === 'All' || opp.categories.some(cat => cat === activeFilter)
-  );
 
-  // Sort the filtered opportunities based on selectedSort
-  const sortedOpportunities = [...filteredOpportunities].sort((a, b) => {
+  // Sort the opportunities based on selectedSort
+  const sortedOpportunities = [...opportunities].sort((a, b) => {
     switch (selectedSort) {
       case 'Best Match':
         // Sort by gift matching - opportunities with more matching tags first
@@ -904,13 +894,13 @@ export default function MemberDashboard() {
         display: 'flex', 
         alignItems: 'center', 
         justifyContent: 'center',
-        backgroundColor: '#f9fafb'
+        backgroundColor: BRAND.colors.background
       }}>
         <div style={{ textAlign: 'center' }}>
           <div style={{ 
             width: 32, 
             height: 32, 
-            border: '2px solid #10b981',
+            border: `2px solid ${BRAND.colors.primary}`,
             borderTopColor: 'transparent',
             borderRadius: '50%',
             animation: 'spin 1s linear infinite',
@@ -929,75 +919,37 @@ export default function MemberDashboard() {
 
   return (
     <div style={{ 
-      backgroundColor: '#f9fafb', 
+      backgroundColor: BRAND.colors.background, 
       minHeight: '100vh', 
       paddingBottom: '80px',
-      fontFamily: merriweatherFont // Default to body font
+      fontFamily: BRAND.fonts.body // Use brand body font
     }}>
       <Header />
 
       {/* Main Content */}
-      <main style={{ maxWidth: '1200px', margin: '0 auto', padding: '32px 24px' }}>
+      <main style={{ maxWidth: '1200px', margin: '0 auto', padding: '20px 16px' }}>
         <div style={{ marginBottom: '30px' }}>
           <h1 style={{ 
             fontSize: '28px', 
             fontWeight: '700',
             marginBottom: '8px',
-            color: '#1e293b',
-            fontFamily: quicksandFont // Quicksand for headings
+            color: BRAND.colors.text,
+            fontFamily: BRAND.fonts.heading // Use brand heading font
           }}>
             Ways to Serve
           </h1>
           <p style={{ 
-            color: '#64748b',
+            color: BRAND.colors.textLight,
             fontSize: '16px',
-            fontFamily: merriweatherFont // Merriweather for body text
+            fontFamily: BRAND.fonts.body // Use brand body font
           }}>Discover opportunities to use your gifts</p>
         </div>
 
-        {/* Filter Buttons */}
-        <div style={{ 
-          display: 'flex', 
-          flexWrap: 'wrap', 
-          gap: '8px', 
-          marginBottom: '24px'
-        }}>
-          {categories.map((category) => (
-            <button
-              key={category}
-              onClick={() => setActiveFilter(category)}
-              style={{
-                padding: '8px 16px',
-                borderRadius: '20px',
-                fontSize: '14px',
-                fontWeight: '500',
-                fontFamily: 'Quicksand, sans-serif', // Add Quicksand font
-                border: activeFilter === category ? 'none' : '1px solid #d1d5db',
-                backgroundColor: activeFilter === category ? '#20c997' : 'white',
-                color: activeFilter === category ? 'white' : '#374151',
-                cursor: 'pointer',
-                transition: 'all 0.2s'
-              }}
-              onMouseOver={(e) => {
-                if (activeFilter !== category) {
-                  (e.target as HTMLButtonElement).style.backgroundColor = '#f3f4f6';
-                }
-              }}
-              onMouseOut={(e) => {
-                if (activeFilter !== category) {
-                  (e.target as HTMLButtonElement).style.backgroundColor = 'white';
-                }
-              }}
-            >
-              {category}
-            </button>
-          ))}
-        </div>
 
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
           <div style={{ 
-            color: '#64748b',
-            fontFamily: 'Merriweather, serif',
+            color: BRAND.colors.textLight,
+            fontFamily: BRAND.fonts.body,
             fontSize: '14px'
           }}>
             {sortedOpportunities.length} opportunities • {sortedOpportunities.filter(opp => 
@@ -1096,7 +1048,7 @@ export default function MemberDashboard() {
 
         <div style={{ 
           display: 'grid', 
-          gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
           gap: '20px'
         }}>
           {sortedOpportunities.map((opportunity) => (
@@ -1124,21 +1076,21 @@ export default function MemberDashboard() {
               }}
             >
               {/* Card Header */}
-              <div style={{ padding: '20px 20px 0 20px' }}>
+              <div style={{ padding: '16px 16px 0 16px' }}>
                 <h3 style={{ 
                   fontSize: '18px', 
-                  fontWeight: '700', // Changed from '600' to '700' for bold
-                  marginBottom: '16px',
-                  color: '#1e293b',
+                  fontWeight: '700',
+                  marginBottom: '12px',
+                  color: BRAND.colors.text,
                   lineHeight: '1.3',
-                  fontFamily: quicksandFont,
+                  fontFamily: BRAND.fonts.heading,
                   display: 'flex',
                   alignItems: 'center',
                   gap: '8px'
                 }}>
                   {opportunity.title}
                   {opportunity.urgency === 'asap' && (
-                    <AlertCircle size={20} color="#dc2626" />
+                    <AlertCircle size={20} color={BRAND.colors.danger} />
                   )}
                 </h3>
                 
@@ -1149,7 +1101,7 @@ export default function MemberDashboard() {
                   alignItems: 'flex-start',
                   marginBottom: '16px',
                   fontSize: '14px',
-                  color: '#64748b',
+                  color: BRAND.colors.textLight,
                   borderBottom: '1px solid #f1f5f9',
                   paddingBottom: '12px',
                   minHeight: '44px'
@@ -1164,7 +1116,7 @@ export default function MemberDashboard() {
                   }}>
                     <Calendar size={16} style={{ 
                       marginBottom: '4px', 
-                      color: '#64748b',
+                      color: BRAND.colors.textLight,
                       flexShrink: 0
                     }} />
                     <div style={{ fontSize: '12px', lineHeight: '1.2', textAlign: 'center' }}>
@@ -1192,7 +1144,7 @@ export default function MemberDashboard() {
                   }}>
                     <MapPin size={16} style={{ 
                       marginBottom: '4px', 
-                      color: '#64748b',
+                      color: BRAND.colors.textLight,
                       flexShrink: 0
                     }} />
                     <div style={{ fontSize: '12px', lineHeight: '1.2', textAlign: 'center' }}>
@@ -1210,7 +1162,7 @@ export default function MemberDashboard() {
                   }}>
                     <Users size={16} style={{ 
                       marginBottom: '4px', 
-                      color: '#64748b',
+                      color: BRAND.colors.textLight,
                       flexShrink: 0
                     }} />
                     <div style={{ fontSize: '12px', lineHeight: '1.2', textAlign: 'center' }}>
@@ -1225,18 +1177,18 @@ export default function MemberDashboard() {
 
               {/* Card Body */}
               <div style={{ 
-                padding: '0 20px',
+                padding: '0 16px',
                 flex: 1,
                 display: 'flex',
                 flexDirection: 'column'
               }}>
                 <p style={{ 
-                  color: '#475569',
+                  color: BRAND.colors.textLight,
                   fontSize: '14px',
                   lineHeight: '1.5',
-                  marginBottom: '16px',
+                  marginBottom: '12px',
                   flex: 1,
-                  fontFamily: merriweatherFont
+                  fontFamily: BRAND.fonts.body
                 }}>
                   {opportunity.description}
                 </p>
@@ -1257,7 +1209,7 @@ export default function MemberDashboard() {
                         color: '#6b7280', 
                         fontSize: '14px', 
                         fontWeight: '500', 
-                        fontFamily: quicksandFont 
+                        fontFamily: BRAND.fonts.heading 
                       }}>
                         Skills needed:
                       </span>
@@ -1284,7 +1236,7 @@ export default function MemberDashboard() {
                           borderRadius: '16px',
                           fontSize: '12px',
                           fontWeight: '500',
-                          fontFamily: quicksandFont,
+                          fontFamily: BRAND.fonts.heading,
                           ...styles
                         }}
                       >
@@ -1297,7 +1249,7 @@ export default function MemberDashboard() {
 
               {/* Card Footer */}
               <div style={{ 
-                padding: '16px 20px',
+                padding: '16px 16px',
                 borderTop: '1px solid #f1f5f9',
                 backgroundColor: '#fafbfc'
               }}>
@@ -1314,20 +1266,21 @@ export default function MemberDashboard() {
                       disabled={isCommitted}
                       style={{ 
                         width: '100%',
-                        backgroundColor: isCommitted ? 'white' : '#20c997',
-                        color: isCommitted ? '#20c997' : 'white',
+                        backgroundColor: isCommitted ? 'white' : BRAND.colors.primary,
+                        color: isCommitted ? BRAND.colors.primary : 'white',
                         padding: '12px 0',
                         borderRadius: '8px',
-                        border: '2px solid #20c997',
+                        border: `2px solid ${BRAND.colors.primary}`,
                         fontWeight: '600',
-                        fontFamily: quicksandFont,
+                        fontFamily: BRAND.fonts.heading,
                         cursor: isCommitted ? 'default' : 'pointer',
                         fontSize: '15px',
                         transition: 'all 0.2s',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        gap: '8px'
+                        gap: '8px',
+                        minHeight: '44px' // Mobile-friendly touch target
                       }}
                     >
                       {isCommitted ? (
