@@ -1077,19 +1077,10 @@ export default function MemberDashboard() {
           }}>
             Ways to Serve
           </h1>
-          <p style={{ 
-            color: BRAND.colors.textLight,
-            fontSize: '16px',
-            fontFamily: BRAND.fonts.body // Use brand body font
-          }}>Discover opportunities to use your gifts</p>
-        </div>
-
-
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
           <div style={{ 
             color: BRAND.colors.textLight,
             fontFamily: BRAND.fonts.body,
-            fontSize: '14px'
+            fontSize: '16px'
           }}>
             {sortedOpportunities.length} opportunities • {sortedOpportunities.filter(opp => 
               opp.tags.some(tag => {
@@ -1101,6 +1092,11 @@ export default function MemberDashboard() {
               })
             ).length} match your gifts
           </div>
+        </div>
+
+
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+          <div style={{ flex: 1 }}></div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <span style={{ 
               fontSize: '14px', 
