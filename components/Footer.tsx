@@ -223,7 +223,7 @@ export default function Footer() {
         style={{ 
           bottom: '10px',
           transform: 'translateX(-50%)',
-          fontSize: '11px',
+          fontSize: '12px',
           lineHeight: '14px',
           fontWeight: 600,
           fontFamily: BRAND.fonts.heading,
