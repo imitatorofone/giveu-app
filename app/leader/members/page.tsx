@@ -240,13 +240,19 @@ export default function MembersPage() {
               <div className="flex items-center gap-4 mb-4">
                 <button
                   onClick={() => router.push('/leader/tools')}
-                  className="flex items-center gap-2 px-4 py-2 text-white rounded-lg font-medium transition-colors"
+                  className="flex items-center gap-2 px-4 py-2 text-white rounded-lg font-medium transition-all active:scale-95"
                   style={{ 
-                    minHeight: '44px',
-                    backgroundColor: '#20c997'
+                    minHeight: '48px',
+                    fontSize: '15px',
+                    backgroundColor: '#20c997',
+                    fontFamily: BRAND.fonts.heading
                   }}
-                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#1ba87f'}
-                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#20c997'}
+                  onTouchStart={(e) => e.currentTarget.style.backgroundColor = '#1ba87f'}
+                  onTouchEnd={(e) => {
+                    setTimeout(() => {
+                      e.currentTarget.style.backgroundColor = '#20c997';
+                    }, 150);
+                  }}
                 >
                   <ArrowLeft size={16} />
                   Back to Tools
@@ -263,7 +269,9 @@ export default function MembersPage() {
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 style={{
-                  fontFamily: BRAND.fonts.body
+                  fontFamily: BRAND.fonts.body,
+                  fontSize: '16px',
+                  minHeight: '48px'
                 }}
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:border-transparent"
                 onFocus={(e) => e.currentTarget.style.boxShadow = `0 0 0 2px ${BRAND.colors.primary}`}
@@ -279,14 +287,16 @@ export default function MembersPage() {
                   <button
                     key={role}
                     onClick={() => setRoleFilter(role)}
-                    className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
+                    className={`px-4 py-2 rounded-full font-medium transition-all active:scale-95 ${
                       roleFilter === role
                         ? 'text-white'
-                        : 'bg-white text-gray-600 border border-gray-300 hover:bg-gray-50'
+                        : 'bg-white text-gray-600 border border-gray-300 active:bg-gray-50'
                     }`}
                     style={{
                       backgroundColor: roleFilter === role ? BRAND.colors.primary : undefined,
-                      fontFamily: BRAND.fonts.heading
+                      fontFamily: BRAND.fonts.heading,
+                      fontSize: '14px',
+                      minHeight: '40px'
                     }}
                   >
                     {role}
@@ -303,14 +313,16 @@ export default function MembersPage() {
                   <button
                     key={status}
                     onClick={() => setStatusFilter(status)}
-                    className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
+                    className={`px-4 py-2 rounded-full font-medium transition-all active:scale-95 ${
                       statusFilter === status
                         ? 'text-white'
-                        : 'bg-white text-gray-600 border border-gray-300 hover:bg-gray-50'
+                        : 'bg-white text-gray-600 border border-gray-300 active:bg-gray-50'
                     }`}
                     style={{
                       backgroundColor: statusFilter === status ? BRAND.colors.primary : undefined,
-                      fontFamily: BRAND.fonts.heading
+                      fontFamily: BRAND.fonts.heading,
+                      fontSize: '14px',
+                      minHeight: '40px'
                     }}
                   >
                     {status}
@@ -355,13 +367,14 @@ export default function MembersPage() {
                               <h3 className="font-semibold text-gray-900" style={{ fontFamily: BRAND.fonts.heading }}>
                                 {member.full_name}
                               </h3>
-                              <p className="text-sm text-gray-600" style={{ fontFamily: BRAND.fonts.body }}>Member</p>
+                              <p className="text-gray-600" style={{ fontFamily: BRAND.fonts.body, fontSize: '14px' }}>Member</p>
                             </div>
                           </div>
-                          <div className="flex items-center gap-3">
+                          <div className="flex flex-col gap-2 w-full sm:w-auto sm:flex-row sm:items-center">
                             <span 
-                              className="px-3 py-1 rounded-full text-xs font-medium"
+                              className="px-3 py-1 rounded-full font-medium text-center"
                               style={{ 
+                                fontSize: '13px',
                                 backgroundColor: `${BRAND.colors.primary}20`,
                                 color: BRAND.colors.primary,
                                 fontFamily: BRAND.fonts.heading
@@ -369,25 +382,37 @@ export default function MembersPage() {
                             >
                               PENDING
                             </span>
-                            <button
-                              onClick={() => approveMember(member.id)}
-                              className="px-4 py-2 text-white rounded-lg text-sm font-medium transition-colors"
-                              style={{ 
-                                backgroundColor: BRAND.colors.primary,
-                                fontFamily: BRAND.fonts.heading
-                              }}
-                              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = BRAND.colors.primaryHover}
-                              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = BRAND.colors.primary}
-                            >
-                              Approve
-                            </button>
-                            <button
-                              onClick={() => denyMember(member.id)}
-                              className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-300 transition-colors"
-                              style={{ fontFamily: BRAND.fonts.heading }}
-                            >
-                              Deny
-                            </button>
+                            <div className="flex gap-2">
+                              <button
+                                onClick={() => approveMember(member.id)}
+                                className="flex-1 sm:flex-none px-4 py-2 text-white rounded-lg font-medium transition-all active:scale-95"
+                                style={{ 
+                                  backgroundColor: BRAND.colors.primary,
+                                  fontFamily: BRAND.fonts.heading,
+                                  fontSize: '15px',
+                                  minHeight: '44px'
+                                }}
+                                onTouchStart={(e) => e.currentTarget.style.backgroundColor = BRAND.colors.primaryHover}
+                                onTouchEnd={(e) => {
+                                  setTimeout(() => {
+                                    e.currentTarget.style.backgroundColor = BRAND.colors.primary;
+                                  }, 150);
+                                }}
+                              >
+                                Approve
+                              </button>
+                              <button
+                                onClick={() => denyMember(member.id)}
+                                className="flex-1 sm:flex-none px-4 py-2 bg-gray-200 text-gray-700 rounded-lg font-medium active:bg-gray-300 transition-all active:scale-95"
+                                style={{ 
+                                  fontFamily: BRAND.fonts.heading,
+                                  fontSize: '15px',
+                                  minHeight: '44px'
+                                }}
+                              >
+                                Deny
+                              </button>
+                            </div>
                           </div>
                         </div>
                       </div>

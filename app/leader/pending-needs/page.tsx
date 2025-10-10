@@ -276,13 +276,19 @@ export default function PendingNeedsPage() {
               <div className="flex items-center gap-4 mb-4">
                 <button
                   onClick={() => router.push('/leader/tools')}
-                  className="flex items-center gap-2 px-4 py-2 text-white rounded-lg font-medium transition-colors"
+                  className="flex items-center gap-2 px-4 py-2 text-white rounded-lg font-medium transition-all active:scale-95"
                   style={{ 
-                    minHeight: '44px',
-                    backgroundColor: '#20c997'
+                    minHeight: '48px',
+                    fontSize: '15px',
+                    backgroundColor: '#20c997',
+                    fontFamily: BRAND.fonts.heading
                   }}
-                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#1ba87f'}
-                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#20c997'}
+                  onTouchStart={(e) => e.currentTarget.style.backgroundColor = '#1ba87f'}
+                  onTouchEnd={(e) => {
+                    setTimeout(() => {
+                      e.currentTarget.style.backgroundColor = '#20c997';
+                    }, 150);
+                  }}
                 >
                   <ArrowLeft size={16} />
                   Back to Tools
@@ -321,10 +327,10 @@ export default function PendingNeedsPage() {
           ) : (
             <div className="grid md:grid-cols-2 gap-6">
               {pendingNeeds.map((need) => (
-                <div key={need.id} className="bg-white rounded-xl shadow-md hover:shadow-lg transition-shadow border border-gray-200">
+                <div key={need.id} className="bg-white rounded-xl shadow-md transition-shadow border border-gray-200">
                   
                   {/* Card Content - Exact Ways to Serve structure */}
-                  <div className="p-6">
+                  <div className="p-4 sm:p-6">
                     {/* Title */}
                     <h3 className="text-lg font-semibold text-gray-900 mb-6">
                       {need.title}
@@ -339,7 +345,7 @@ export default function PendingNeedsPage() {
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3a4 4 0 118 0v4m-4 8a2 2 0 11-4 0 2 2 0 014 0zM6 7h12a2 2 0 012 2v9a2 2 0 01-2 2H6a2 2 0 01-2-2V9a2 2 0 012-2z"></path>
                           </svg>
                         </div>
-                        <div className="text-xs text-gray-600">
+                        <div className="text-gray-600" style={{ fontSize: '13px', lineHeight: '1.3' }}>
                           <div>{need.urgency === 'ongoing' ? 'Ongoing starting' : 'This Saturday'}</div>
                           <div>{need.urgency === 'ongoing' ? new Date(need.ongoing_start_date || need.created_at).toLocaleDateString() : '2-5pm'}</div>
                         </div>
@@ -353,7 +359,7 @@ export default function PendingNeedsPage() {
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
                           </svg>
                         </div>
-                        <div className="text-xs text-gray-600">
+                        <div className="text-gray-600" style={{ fontSize: '13px', lineHeight: '1.3' }}>
                           <div>{need.city || need.location || 'Church'}</div>
                           <div>{need.city ? 'Location' : 'Kitchen'}</div>
                         </div>
@@ -366,7 +372,7 @@ export default function PendingNeedsPage() {
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
                           </svg>
                         </div>
-                        <div className="text-xs text-gray-600">
+                        <div className="text-gray-600" style={{ fontSize: '13px', lineHeight: '1.3' }}>
                           <div>0 committed</div>
                           <div>{need.people_needed}+ needed</div>
                         </div>
@@ -375,11 +381,11 @@ export default function PendingNeedsPage() {
 
                     {/* Description */}
                     <div className="mb-6">
-                      <p className="text-gray-700 text-sm leading-relaxed">
+                      <p className="text-gray-700 leading-relaxed" style={{ fontSize: '15px', lineHeight: '1.5', fontFamily: BRAND.fonts.body }}>
                         {need.description.split('Ongoing Schedule:')[0].trim()}
                       </p>
                       {need.urgency === 'ongoing' && need.description.includes('Ongoing Schedule:') && (
-                        <p className="text-xs text-blue-600 mt-2 italic">
+                        <p className="text-blue-600 mt-2 italic" style={{ fontSize: '13px' }}>
                           Schedule: {need.description.split('Ongoing Schedule:')[1]?.replace('Starting ', '').trim()}
                         </p>
                       )}
@@ -393,8 +399,9 @@ export default function PendingNeedsPage() {
                           return (
                             <span 
                               key={index}
-                              className="text-xs px-3 py-1 rounded-full border font-medium"
+                              className="px-3 py-1 rounded-full border font-medium"
                               style={{
+                                fontSize: '13px',
                                 backgroundColor: category?.bgColor || '#f3f4f6',
                                 color: category?.textColor || '#6b7280',
                                 borderColor: category?.borderColor || '#d1d5db'
@@ -405,7 +412,7 @@ export default function PendingNeedsPage() {
                           );
                         })}
                         {formatGiftings(need.giftings_needed).length > 3 && (
-                          <span className="bg-gray-100 text-gray-600 text-xs px-3 py-1 rounded-full border border-gray-200">
+                          <span className="bg-gray-100 text-gray-600 px-3 py-1 rounded-full border border-gray-200" style={{ fontSize: '13px' }}>
                             +{formatGiftings(need.giftings_needed).length - 3}
                           </span>
                         )}
@@ -413,24 +420,28 @@ export default function PendingNeedsPage() {
                     </div>
 
                     {/* Action Buttons - Replaces "I Can Help" button */}
-                    <div className="space-y-3">
+                    <div className="space-y-4">
                       <button
                         onClick={() => approveNeed(need.id)}
                         disabled={actingId === need.id}
                         aria-busy={actingId === need.id}
-                        className="w-full py-3 px-4 rounded-lg font-semibold text-center disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-white"
+                        className={`w-full py-3 px-4 rounded-lg font-semibold text-center disabled:opacity-50 disabled:cursor-not-allowed transition-all text-white ${actingId !== need.id ? 'active:scale-95' : ''}`}
                         style={{ 
                           backgroundColor: BRAND.colors.primary,
-                          minHeight: '44px'
+                          minHeight: '48px',
+                          fontSize: '16px',
+                          fontFamily: BRAND.fonts.heading
                         }}
-                        onMouseEnter={(e) => {
+                        onTouchStart={(e) => {
                           if (actingId !== need.id) {
                             e.currentTarget.style.backgroundColor = BRAND.colors.primaryHover;
                           }
                         }}
-                        onMouseLeave={(e) => {
+                        onTouchEnd={(e) => {
                           if (actingId !== need.id) {
-                            e.currentTarget.style.backgroundColor = BRAND.colors.primary;
+                            setTimeout(() => {
+                              e.currentTarget.style.backgroundColor = BRAND.colors.primary;
+                            }, 150);
                           }
                         }}
                       >
@@ -440,19 +451,23 @@ export default function PendingNeedsPage() {
                         onClick={() => rejectNeed(need.id)}
                         disabled={actingId === need.id}
                         aria-busy={actingId === need.id}
-                        className="w-full py-2 px-4 rounded-lg font-medium text-center disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-white"
+                        className={`w-full py-3 px-4 rounded-lg font-medium text-center disabled:opacity-50 disabled:cursor-not-allowed transition-all text-white ${actingId !== need.id ? 'active:scale-95' : ''}`}
                         style={{ 
                           backgroundColor: BRAND.colors.danger,
-                          minHeight: '44px'
+                          minHeight: '48px',
+                          fontSize: '15px',
+                          fontFamily: BRAND.fonts.heading
                         }}
-                        onMouseEnter={(e) => {
+                        onTouchStart={(e) => {
                           if (actingId !== need.id) {
                             e.currentTarget.style.backgroundColor = BRAND.colors.dangerHover;
                           }
                         }}
-                        onMouseLeave={(e) => {
+                        onTouchEnd={(e) => {
                           if (actingId !== need.id) {
-                            e.currentTarget.style.backgroundColor = BRAND.colors.danger;
+                            setTimeout(() => {
+                              e.currentTarget.style.backgroundColor = BRAND.colors.danger;
+                            }, 150);
                           }
                         }}
                       >
