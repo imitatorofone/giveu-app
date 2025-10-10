@@ -343,8 +343,13 @@ export default function ProfilePage() {
               <>
                 <button
                   onClick={() => setIsEditing(false)}
-                  className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
-                  style={{ minHeight: '44px', color: BRAND.colors.text, fontFamily: BRAND.fonts.heading }}
+                  className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg active:bg-gray-50 transition-colors"
+                  style={{ 
+                    minHeight: '48px', 
+                    color: BRAND.colors.text, 
+                    fontFamily: BRAND.fonts.heading,
+                    fontSize: '15px'
+                  }}
                 >
                   <X size={16} />
                   Cancel
@@ -352,16 +357,27 @@ export default function ProfilePage() {
                 <button
                   onClick={handleSaveProfile}
                   disabled={saving}
-                  className="flex items-center gap-2 px-4 py-2 rounded-lg text-white font-medium transition-colors"
+                  className={`flex items-center gap-2 px-4 py-2 rounded-lg text-white font-medium transition-all ${!saving ? 'active:scale-95' : ''}`}
                   style={{ 
                     backgroundColor: BRAND.colors.primary,
-                    minHeight: '44px',
+                    minHeight: '48px',
                     fontFamily: BRAND.fonts.heading,
+                    fontSize: '15px',
                     opacity: saving ? 0.5 : 1,
                     cursor: saving ? 'not-allowed' : 'pointer'
                   }}
-                  onMouseEnter={(e) => !saving && (e.currentTarget.style.backgroundColor = BRAND.colors.primaryHover)}
-                  onMouseLeave={(e) => !saving && (e.currentTarget.style.backgroundColor = BRAND.colors.primary)}
+                  onTouchStart={(e) => {
+                    if (!saving) {
+                      e.currentTarget.style.backgroundColor = BRAND.colors.primaryHover;
+                    }
+                  }}
+                  onTouchEnd={(e) => {
+                    if (!saving) {
+                      setTimeout(() => {
+                        e.currentTarget.style.backgroundColor = BRAND.colors.primary;
+                      }, 150);
+                    }
+                  }}
                 >
                   <Check size={16} />
                   {saving ? 'Saving...' : 'Save'}
@@ -371,14 +387,21 @@ export default function ProfilePage() {
               <>
                 <button
                   onClick={() => setIsEditing(true)}
-                  className="flex items-center gap-2 px-4 py-2 rounded-lg text-white font-medium transition-colors"
+                  className="flex items-center gap-2 px-4 py-2 rounded-lg text-white font-medium transition-all active:scale-95"
                   style={{ 
                     backgroundColor: BRAND.colors.primary,
-                    minHeight: '44px',
-                    fontFamily: BRAND.fonts.heading
+                    minHeight: '48px',
+                    fontFamily: BRAND.fonts.heading,
+                    fontSize: '15px'
                   }}
-                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = BRAND.colors.primaryHover}
-                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = BRAND.colors.primary}
+                  onTouchStart={(e) => {
+                    e.currentTarget.style.backgroundColor = BRAND.colors.primaryHover;
+                  }}
+                  onTouchEnd={(e) => {
+                    setTimeout(() => {
+                      e.currentTarget.style.backgroundColor = BRAND.colors.primary;
+                    }, 150);
+                  }}
                 >
                   <Edit2 size={16} />
                   Edit Profile
@@ -403,8 +426,13 @@ export default function ProfilePage() {
                       console.log('[Profile] User cancelled sign out');
                     }
                   }}
-                  className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
-                  style={{ minHeight: '44px', color: '#6b7280', fontFamily: BRAND.fonts.heading }}
+                  className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg active:bg-gray-50 transition-colors"
+                  style={{ 
+                    minHeight: '48px', 
+                    color: '#6b7280', 
+                    fontFamily: BRAND.fonts.heading,
+                    fontSize: '15px'
+                  }}
                 >
                   <LogOut size={16} />
                   Sign out
@@ -422,7 +450,9 @@ export default function ProfilePage() {
       }}>
 
       {/* Profile Content */}
-      <div style={{ maxWidth: '1024px', margin: '0 auto', padding: '24px 16px' }}>
+      <div style={{ maxWidth: '1024px', margin: '0 auto', padding: '16px' }}
+      className="sm:p-6"
+      >
         
         {/* Top Section - Avatar and Name */}
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '32px' }}>
@@ -560,8 +590,8 @@ export default function ProfilePage() {
         </div>
         
         {/* Profile Info Card - No avatar, no name, just details */}
-        <div className="bg-white rounded-xl shadow-md border border-gray-200 p-6" style={{ marginBottom: '24px' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
+        <div className="bg-white rounded-xl shadow-md border border-gray-200 p-4 sm:p-6" style={{ marginBottom: '24px' }}>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             {/* City */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
               <div style={{ 
@@ -585,13 +615,14 @@ export default function ProfilePage() {
                     onChange={(e) => setProfile(prev => ({ ...prev, city: e.target.value }))}
                     placeholder="Enter city"
                     style={{
-                      fontSize: '14px',
+                      fontSize: '16px',
                       width: '100%',
                       border: '1px solid #e5e7eb',
                       borderRadius: '6px',
-                      padding: '6px 8px',
+                      padding: '12px 12px',
                       color: BRAND.colors.text,
-                      fontFamily: BRAND.fonts.body
+                      fontFamily: BRAND.fonts.body,
+                      minHeight: '48px'
                     }}
                   />
                 ) : (
@@ -633,13 +664,14 @@ export default function ProfilePage() {
                     onChange={(e) => setProfile(prev => ({ ...prev, age: e.target.value }))}
                     placeholder="Age"
                     style={{
-                      fontSize: '14px',
+                      fontSize: '16px',
                       width: '100%',
                       border: '1px solid #e5e7eb',
                       borderRadius: '6px',
-                      padding: '6px 8px',
+                      padding: '12px 12px',
                       color: BRAND.colors.text,
-                      fontFamily: BRAND.fonts.body
+                      fontFamily: BRAND.fonts.body,
+                      minHeight: '48px'
                     }}
                   />
                 ) : (
@@ -678,13 +710,14 @@ export default function ProfilePage() {
                     onChange={(e) => setProfile(prev => ({ ...prev, phone: e.target.value }))}
                     placeholder="Phone number"
                     style={{
-                      fontSize: '14px',
+                      fontSize: '16px',
                       width: '100%',
                       border: '1px solid #e5e7eb',
                       borderRadius: '6px',
-                      padding: '6px 8px',
+                      padding: '12px 12px',
                       color: BRAND.colors.text,
-                      fontFamily: BRAND.fonts.body
+                      fontFamily: BRAND.fonts.body,
+                      minHeight: '48px'
                     }}
                   />
                 ) : (
@@ -703,7 +736,7 @@ export default function ProfilePage() {
         </div>
 
         {/* Availability Card */}
-        <div className="bg-white border border-gray-200 rounded-xl shadow-md p-6" style={{ marginBottom: '24px' }}>
+        <div className="bg-white border border-gray-200 rounded-xl shadow-md p-4 sm:p-6" style={{ marginBottom: '24px' }}>
           <h3 style={{ fontSize: '18px', fontWeight: '600', color: '#111827', fontFamily: 'Quicksand, sans-serif', marginBottom: '16px' }}>
             Availability
           </h3>
@@ -717,7 +750,7 @@ export default function ProfilePage() {
         </div>
 
         {/* Enhanced Interactive Gifts Section */}
-        <div className="bg-white border border-gray-200 rounded-xl shadow-md p-6" style={{ marginBottom: '24px' }}>
+        <div className="bg-white border border-gray-200 rounded-xl shadow-md p-4 sm:p-6" style={{ marginBottom: '24px' }}>
           <h3 style={{ fontSize: '18px', fontWeight: '600', color: '#111827', fontFamily: 'Quicksand, sans-serif', marginBottom: '16px' }}>
             My Gifts & Skills
           </h3>
@@ -733,7 +766,7 @@ export default function ProfilePage() {
 
         {/* Notification Preferences Section - Only show in edit mode */}
         {isEditing && (
-          <div className="bg-white border border-gray-200 rounded-xl shadow-md p-6" style={{ marginBottom: '24px' }}>
+          <div className="bg-white border border-gray-200 rounded-xl shadow-md p-4 sm:p-6" style={{ marginBottom: '24px' }}>
             <h3 style={{ fontSize: '18px', fontWeight: '600', color: '#111827', fontFamily: 'Quicksand, sans-serif', marginBottom: '8px' }}>
               Notification Preferences
             </h3>
@@ -774,12 +807,12 @@ function BasicInfoForm({ profile, setProfile }: { profile: any; setProfile: (pro
           onChange={(e) => setProfile((prev: any) => ({ ...prev, full_name: e.target.value }))}
           style={{
             width: '100%',
-            padding: '8px 12px',
+            padding: '12px 16px',
             border: '1px solid #d1d5db',
             borderRadius: '8px',
             fontFamily: BRAND.fonts.body,
-            fontSize: '14px',
-            minHeight: '44px'
+            fontSize: '16px',
+            minHeight: '48px'
           }}
           placeholder="Enter your full name"
         />
@@ -794,12 +827,12 @@ function BasicInfoForm({ profile, setProfile }: { profile: any; setProfile: (pro
           onChange={(e) => setProfile((prev: any) => ({ ...prev, city: e.target.value }))}
           style={{
             width: '100%',
-            padding: '8px 12px',
+            padding: '12px 16px',
             border: '1px solid #d1d5db',
             borderRadius: '8px',
             fontFamily: BRAND.fonts.body,
-            fontSize: '14px',
-            minHeight: '44px'
+            fontSize: '16px',
+            minHeight: '48px'
           }}
           placeholder="Your city"
         />
@@ -814,12 +847,12 @@ function BasicInfoForm({ profile, setProfile }: { profile: any; setProfile: (pro
           onChange={(e) => setProfile((prev: any) => ({ ...prev, phone: e.target.value }))}
           style={{
             width: '100%',
-            padding: '8px 12px',
+            padding: '12px 16px',
             border: '1px solid #d1d5db',
             borderRadius: '8px',
             fontFamily: BRAND.fonts.body,
-            fontSize: '14px',
-            minHeight: '44px'
+            fontSize: '16px',
+            minHeight: '48px'
           }}
           placeholder="Your phone number"
         />
@@ -834,12 +867,12 @@ function BasicInfoForm({ profile, setProfile }: { profile: any; setProfile: (pro
           onChange={(e) => setProfile((prev: any) => ({ ...prev, age: e.target.value }))}
           style={{
             width: '100%',
-            padding: '8px 12px',
+            padding: '12px 16px',
             border: '1px solid #d1d5db',
             borderRadius: '8px',
             fontFamily: BRAND.fonts.body,
-            fontSize: '14px',
-            minHeight: '44px'
+            fontSize: '16px',
+            minHeight: '48px'
           }}
           placeholder="Your age"
         />
@@ -901,23 +934,23 @@ function AvailabilitySection({ availability, isEditing, onChange }: { availabili
             onClick={() => toggleAvailability(slot.id)}
             disabled={!isEditing}
             className={isSelected 
-              ? 'text-white shadow-md' 
-              : 'bg-white text-gray-700 border-2 border-gray-300 hover:border-gray-400 hover:shadow-sm'
+              ? 'text-white shadow-md active:scale-95' 
+              : 'bg-white text-gray-700 border-2 border-gray-300 active:border-gray-400 active:shadow-sm'
             }
             style={{
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               gap: '8px',
-              padding: '10px 16px',
+              padding: '12px 16px',
               borderRadius: '8px',
               backgroundColor: isSelected ? BRAND.colors.primary : undefined,
               cursor: isEditing ? 'pointer' : 'default',
               fontFamily: BRAND.fonts.heading,
               fontWeight: '500',
-              fontSize: '14px',
-              minHeight: '44px',
-              transition: 'all 0.2s'
+              fontSize: '15px',
+              minHeight: '48px',
+              transition: 'all 0.15s ease'
             }}
           >
             <Icon size={18} />
