@@ -73,18 +73,18 @@ export default function Footer() {
     return (
       <button
         onClick={() => router.push(tab.path)}
-        className="relative flex flex-col items-center justify-between"
+        className="relative flex flex-col items-center justify-between active:opacity-70 transition-opacity"
         style={{ 
-          minWidth: '64px',
+          minWidth: '72px',
           height: '64px',
-          paddingTop: '8px',
+          paddingTop: '6px',
           paddingBottom: '24px'
         }}
       >
         {/* Icon in upper area */}
-        <div className="flex items-center justify-center">
+        <div className="flex items-center justify-center" style={{ minWidth: '44px', minHeight: '44px' }}>
           <Icon 
-            size={22}
+            size={24}
             strokeWidth={isActive ? 2.5 : 2}
             style={{ color: isActive ? BRAND.colors.primary : '#9ca3af' }}
           />
@@ -97,7 +97,7 @@ export default function Footer() {
             bottom: '10px',
             left: '50%',
             transform: 'translateX(-50%)',
-            fontSize: '11px',
+            fontSize: '12px',
             lineHeight: '14px',
             fontWeight: isActive ? 600 : 500,
             fontFamily: BRAND.fonts.heading,
@@ -204,18 +204,14 @@ export default function Footer() {
       >
         <button
           onClick={() => router.push('/share-need?modal=1')}
-          className="flex items-center justify-center rounded-full"
+          className="flex items-center justify-center rounded-full active:scale-95 transition-transform"
           style={{
             width: '60px',
             height: '60px',
             backgroundColor: BRAND.colors.primary,
             border: 'none',
-            boxShadow: '0 6px 20px rgba(0, 0, 0, 0.18), 0 3px 12px rgba(0, 0, 0, 0.12)',
-            transition: 'transform 0.15s ease'
+            boxShadow: '0 6px 20px rgba(0, 0, 0, 0.18), 0 3px 12px rgba(0, 0, 0, 0.12)'
           }}
-          onMouseDown={(e) => e.currentTarget.style.transform = 'scale(0.95)'}
-          onMouseUp={(e) => e.currentTarget.style.transform = 'scale(1)'}
-          onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
         >
           <Plus size={28} className="text-white" strokeWidth={2.5} />
         </button>

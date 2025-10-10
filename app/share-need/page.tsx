@@ -480,7 +480,7 @@ export default function ShareNeedScreen() {
   const renderStep = () => {
     const cardStyle = {
       backgroundColor: 'white',
-      padding: '32px',
+      padding: '20px',
       borderRadius: '16px',
       boxShadow: '0 4px 16px rgba(0, 0, 0, 0.08)',
       maxWidth: '680px',
@@ -513,7 +513,7 @@ export default function ShareNeedScreen() {
     switch (currentStep) {
       case 0:
         return (
-          <div style={cardStyle}>
+          <div style={cardStyle} className="sm:p-8">
             {/* Progress Bar */}
             <div style={{ marginBottom: '24px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
@@ -1002,7 +1002,7 @@ export default function ShareNeedScreen() {
 
       case 1:
         return (
-          <div style={cardStyle}>
+          <div style={cardStyle} className="sm:p-8">
             {/* Progress Bar */}
             <div style={{ marginBottom: '24px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
@@ -1169,7 +1169,7 @@ export default function ShareNeedScreen() {
 
       case 2:
         return (
-          <div style={cardStyle}>
+          <div style={cardStyle} className="sm:p-8">
             {/* Progress Bar */}
             <div style={{ marginBottom: '24px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
@@ -1368,7 +1368,7 @@ export default function ShareNeedScreen() {
 
           {/* Need Card Preview - EXACT DASHBOARD MATCH */}
           <div style={{ 
-            backgroundColor: 'white',
+            backgroundColor: 'white', 
             border: '1px solid #e5e7eb',
             borderRadius: '12px',
             boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
@@ -1417,7 +1417,7 @@ export default function ShareNeedScreen() {
                 <Calendar size={20} color={BRAND.colors.primary} style={{ marginBottom: '4px' }} />
                 <span style={{ fontSize: '12px', fontWeight: '500', color: BRAND.colors.text, display: 'block' }}>
                   {formatDate(formData.urgency, formData.specificDate, formData.ongoingStartDate)}
-                </span>
+                  </span>
                 <span style={{ fontSize: '12px', color: BRAND.colors.textLight, display: 'block' }}>
                   {formatTime(formData.specificTime || formData.ongoingStartTime) || 'Time TBD'}
                 </span>
@@ -1432,7 +1432,7 @@ export default function ShareNeedScreen() {
                 <span style={{ fontSize: '12px', color: BRAND.colors.textLight, display: 'block' }}>
                   {getLocationLine2(displayLocation)}
                 </span>
-              </div>
+            </div>
 
               {/* People Needed */}
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
@@ -1444,7 +1444,7 @@ export default function ShareNeedScreen() {
                   0 committed
                 </span>
               </div>
-            </div>
+              </div>
 
             {/* Skills Needed */}
             {formData.giftingsNeeded && formData.giftingsNeeded.length > 0 && (
@@ -1504,15 +1504,15 @@ export default function ShareNeedScreen() {
                       </>
                     );
                   })()}
-                </div>
-              </div>
+            </div>
+          </div>
             )}
 
             {/* I Can Help Button (Preview - Disabled) */}
-            <button
+          <button 
               disabled
-              style={{
-                width: '100%',
+            style={{
+              width: '100%',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -1521,9 +1521,9 @@ export default function ShareNeedScreen() {
                 borderRadius: '8px',
                 fontSize: '16px',
                 fontWeight: '500',
-                color: 'white',
+              color: 'white',
                 backgroundColor: BRAND.colors.primary,
-                border: 'none',
+              border: 'none',
                 minHeight: '44px',
                 opacity: 0.75,
                 cursor: 'not-allowed',
@@ -1531,11 +1531,11 @@ export default function ShareNeedScreen() {
               }}
             >
               I Can Help
-            </button>
-          </div>
+          </button>
+        </div>
 
           {/* Action Buttons - Side by side */}
-          <div style={{ 
+    <div style={{ 
             display: 'flex', 
             alignItems: 'center',
             justifyContent: 'space-between',
@@ -1543,9 +1543,9 @@ export default function ShareNeedScreen() {
             maxWidth: '28rem',
             margin: '0 auto'
           }}>
-            <button
+          <button 
               onClick={handlePrevious}
-              style={{
+            style={{ 
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -1555,7 +1555,7 @@ export default function ShareNeedScreen() {
                 borderRadius: '8px',
                 backgroundColor: 'white',
                 color: BRAND.colors.text,
-                cursor: 'pointer',
+              cursor: 'pointer',
                 minHeight: '44px',
                 fontWeight: '500',
                 fontFamily: BRAND.fonts.heading,
@@ -1575,8 +1575,8 @@ export default function ShareNeedScreen() {
                 handleSubmit();
               }}
               style={{
-                display: 'flex',
-                alignItems: 'center',
+              display: 'flex',
+              alignItems: 'center',
                 justifyContent: 'center',
                 gap: '8px',
                 padding: '12px 24px',
@@ -1597,8 +1597,8 @@ export default function ShareNeedScreen() {
             >
               <CheckCircle size={16} />
               Post Need
-            </button>
-          </div>
+          </button>
+        </div>
         </div>
       </div>
     );
@@ -1608,23 +1608,41 @@ export default function ShareNeedScreen() {
     <div style={{ 
       minHeight: '100vh', 
       backgroundColor: '#FDFBF7',
-      padding: 20 
-    }}>
-      <div style={{ maxWidth: 600, margin: '0 auto', paddingTop: 32 }}>
+      padding: '16px' 
+    }}
+    className="sm:p-6"
+    >
+      <div style={{ maxWidth: 600, margin: '0 auto', paddingTop: 16 }}
+      className="sm:pt-8"
+      >
         {/* Removed duplicate progress bar and back button - now only in modal */}
 
         {renderStep()}
 
         {/* Navigation */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px' }}>
           <button 
             onClick={currentStep === 0 ? () => router.push('/dashboard') : handlePrevious}
+            className="active:scale-95"
             style={{ 
               backgroundColor: '#f3f4f6', 
               border: '1px solid #d1d5db', 
-              padding: '12px 20px', 
+              padding: '14px 24px', 
               borderRadius: 8, 
-              cursor: 'pointer' 
+              cursor: 'pointer',
+              minHeight: '48px',
+              fontSize: '15px',
+              fontFamily: BRAND.fonts.heading,
+              fontWeight: '500',
+              transition: 'all 0.15s ease'
+            }}
+            onTouchStart={(e) => {
+              e.currentTarget.style.backgroundColor = '#e5e7eb';
+            }}
+            onTouchEnd={(e) => {
+              setTimeout(() => {
+                e.currentTarget.style.backgroundColor = '#f3f4f6';
+              }, 150);
             }}
           >
             ← {currentStep === 0 ? 'Back' : 'Previous'}
@@ -1633,26 +1651,32 @@ export default function ShareNeedScreen() {
           <button 
             onClick={handleNext}
             disabled={!canContinue()}
+            className={canContinue() ? 'active:scale-95' : ''}
             style={{
-              backgroundColor: canContinue() ? '#20c997' : '#e5e7eb',
+              backgroundColor: canContinue() ? BRAND.colors.primary : '#e5e7eb',
               color: canContinue() ? 'white' : '#9ca3af',
               border: 'none',
-              padding: '12px 20px',
+              padding: '14px 24px',
               borderRadius: 8,
               cursor: canContinue() ? 'pointer' : 'not-allowed',
               fontWeight: 600,
-              minHeight: '44px',
+              minHeight: '48px',
+              fontSize: '16px',
               fontFamily: BRAND.fonts.heading,
-              transition: 'background-color 0.2s ease'
+              transition: 'all 0.15s ease'
             }}
-            onMouseEnter={(e) => {
+            onTouchStart={(e) => {
               if (canContinue()) {
-                e.currentTarget.style.backgroundColor = '#1ba87f';
+                e.currentTarget.style.backgroundColor = BRAND.colors.primaryHover;
+                e.currentTarget.style.transform = 'scale(0.98)';
               }
             }}
-            onMouseLeave={(e) => {
+            onTouchEnd={(e) => {
               if (canContinue()) {
-                e.currentTarget.style.backgroundColor = '#20c997';
+                setTimeout(() => {
+                  e.currentTarget.style.backgroundColor = BRAND.colors.primary;
+                  e.currentTarget.style.transform = 'scale(1)';
+                }, 150);
               }
             }}
           >
