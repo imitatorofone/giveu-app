@@ -91,12 +91,13 @@ export default function NotificationDropdown() {
       {/* Bell Icon with Badge */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="relative p-2 text-gray-600 hover:text-gray-900 transition-colors"
+        className="relative p-3 text-gray-600 active:text-gray-900 transition-colors active:scale-95"
+        style={{ minWidth: '48px', minHeight: '48px' }}
         aria-label="Notifications"
       >
         <Bell className="h-6 w-6" />
         {unreadCount > 0 && (
-          <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
+          <span className="absolute top-0 right-0 bg-red-500 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
             {unreadCount > 9 ? '9+' : unreadCount}
           </span>
         )}
@@ -104,16 +105,23 @@ export default function NotificationDropdown() {
 
       {/* Dropdown */}
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-lg border border-gray-200 z-50 max-h-96 overflow-y-auto">
+        <div className="absolute right-0 mt-2 bg-white rounded-lg shadow-lg border border-gray-200 z-50 max-h-96 overflow-y-auto"
+        style={{ width: '90vw', maxWidth: '380px' }}
+        >
           <div className="p-4 border-b border-gray-200 flex items-center justify-between">
-            <h3 className="font-semibold text-gray-900">Notifications</h3>
+            <h3 className="font-semibold text-gray-900" style={{ fontSize: '16px' }}>Notifications</h3>
             {unreadCount > 0 && (
               <button
                 onClick={(e) => {
                   e.stopPropagation();
                   markAllAsRead();
                 }}
-                className="text-sm text-teal-600 hover:text-teal-700 font-medium transition-colors"
+                className="px-3 py-2 text-sm text-white font-medium transition-all active:scale-95"
+                style={{ 
+                  backgroundColor: '#20c997',
+                  borderRadius: '6px',
+                  minHeight: '36px'
+                }}
               >
                 Mark all read
               </button>
@@ -132,16 +140,17 @@ export default function NotificationDropdown() {
                 <button
                   key={notification.id}
                   onClick={() => handleNotificationClick(notification)}
-                  className={`w-full text-left p-4 hover:bg-gray-50 transition-colors ${
+                  className={`w-full text-left p-4 active:bg-gray-100 transition-colors ${
                     !notification.read_at ? 'bg-blue-50' : ''
                   }`}
+                  style={{ minHeight: '60px' }}
                 >
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
-                      <p className="text-sm text-gray-900 font-medium">
+                      <p className="text-gray-900 font-medium" style={{ fontSize: '15px', lineHeight: '1.4' }}>
                         {getNotificationMessage(notification)}
                       </p>
-                      <p className="text-xs text-gray-500 mt-1">
+                      <p className="text-gray-500 mt-1" style={{ fontSize: '13px' }}>
                         {getTimeAgo(notification.created_at)}
                       </p>
                     </div>
