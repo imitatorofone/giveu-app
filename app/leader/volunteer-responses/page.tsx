@@ -1,19 +1,14 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabaseBrowser as supabase } from '../../../lib/supabaseBrowser';
-import Header from '../../../components/Header';
 import Footer from '../../../components/Footer';
 import { 
-  UserCheck, Clock, CheckCircle, XCircle, Filter, 
-  Calendar, MapPin, Users, Mail, Phone, Wrench, ArrowLeft 
+  UserCheck, CheckCircle, ArrowLeft, Mail, Phone, Sparkles
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { BRAND } from '../../../lib/brandConfig';
-
-// Brand typography
-const quicksandFont = 'Quicksand, -apple-system, BlinkMacSystemFont, sans-serif';
 
 interface VolunteerResponse {
   id: string;
@@ -26,12 +21,6 @@ interface VolunteerResponse {
     id: string;
     title: string;
     description: string;
-    start_at: string;
-    end_at: string;
-    address: string;
-    city: string;
-    state: string;
-    giftings_needed: string[];
   };
   volunteer: {
     id: string;
@@ -47,8 +36,8 @@ export default function VolunteerResponsesPage() {
   const [loading, setLoading] = useState(true);
   const [responses, setResponses] = useState<VolunteerResponse[]>([]);
   const [filter, setFilter] = useState<'all' | 'pending' | 'accepted' | 'declined' | 'cancelled'>('all');
-  const [actingId, setActingId] = useState<string | null>(null);
   const [tableError, setTableError] = useState<boolean>(false);
+  const [userChurchCode, setUserChurchCode] = useState<string | null>(null);
 
   useEffect(() => {
     checkAuthAndLoadData();
@@ -82,6 +71,16 @@ export default function VolunteerResponsesPage() {
         return;
       }
 
+      // Verify church_code exists
+      if (!profileData?.church_code) {
+        console.error('Leader has no church_code assigned');
+        toast.error('Unable to load church information');
+        return;
+      }
+
+      // Store church code for filtering
+      setUserChurchCode(profileData.church_code);
+
       // Load volunteer responses
       await loadVolunteerResponses();
 
@@ -95,310 +94,73 @@ export default function VolunteerResponsesPage() {
 
   const loadVolunteerResponses = async () => {
     try {
-      console.log('[VolunteerResponses] Loading volunteer responses...');
-      
-      // First, let's test if the table exists with a simple query
-      console.log('[VolunteerResponses] Testing table existence...');
-      const { data: testData, error: testError } = await supabase
-        .from('opportunity_responses')
-        .select('id')
-        .limit(1);
-      
-      console.log('[VolunteerResponses] Test query result:', { testData, testError });
-      
-      if (testError) {
-        console.error('[VolunteerResponses] Table test failed:', testError);
-        if (testError.code === '42P01') {
-          toast.error('Database table not found. Please run the SQL setup script first.');
-          setTableError(true);
-          return;
-        }
+      // Don't fetch if we don't have church_code yet
+      if (!userChurchCode) {
+        console.log('Skipping fetch - no church_code yet');
+        return;
       }
-      
-      console.log('[VolunteerResponses] Table exists, proceeding with simplified query...');
-      
-      // First, get the opportunity responses
-      console.log('🔍 [Leader Debug] Fetching all volunteer responses...');
-      
-      const { data: responsesData, error: responsesError } = await supabase
+
+      // Try to load from opportunity_responses table
+      // Filter by needs that belong to this church
+      const { data, error } = await supabase
         .from('opportunity_responses')
-        .select('id, need_id, user_id, status, created_at, cancelled_at')
+        .select(`
+          *,
+          need:needs!inner(id, title, description, church_code),
+          volunteer:profiles(id, full_name, email, phone, gift_selections)
+        `)
+        .eq('need.church_code', userChurchCode) // 🔥 CRITICAL: Filter by church through needs relationship
         .order('created_at', { ascending: false });
 
-      console.log('🔍 [Leader Debug] Raw responses query result:', {
-        responsesData,
-        responsesError,
-        count: responsesData?.length || 0,
-        statuses: responsesData?.map(r => ({ id: r.id, status: r.status, cancelled_at: r.cancelled_at })) || []
-      });
-
-      if (responsesError) {
-        console.error('[VolunteerResponses] Error loading responses:', responsesError);
-        toast.error(`Failed to load volunteer responses: ${responsesError.message}`);
-        return;
-      }
-
-      console.log('[VolunteerResponses] Loaded responses:', responsesData?.length || 0);
-
-      if (!responsesData || responsesData.length === 0) {
-        setResponses([]);
-        return;
-      }
-
-      // Get unique need IDs and user IDs, filtering out invalid UUIDs
-      const validNeedIds = responsesData
-        .map(r => r.need_id)
-        .filter(id => {
-          // Check if it's a valid UUID format
-          const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-          return uuidRegex.test(id);
-        });
-      
-      const needIds = [...new Set(validNeedIds)];
-      const userIds = [...new Set(responsesData.map(r => r.user_id))];
-
-      console.log('[VolunteerResponses] Valid need IDs:', needIds);
-      console.log('[VolunteerResponses] Invalid need IDs filtered out:', responsesData.map(r => r.need_id).filter(id => !needIds.includes(id)));
-      console.log('[VolunteerResponses] Fetching profiles for IDs:', userIds);
-
-      let needsData = [];
-      let allNeedsData = [];
-
-      // Only fetch needs if we have valid UUIDs
-      if (needIds.length > 0) {
-        // Fetch needs data - let's first check what columns exist
-        console.log('[VolunteerResponses] Checking needs table structure...');
-        const { data: needsDataResult, error: needsError } = await supabase
-          .from('needs')
-          .select('*')
-          .in('id', needIds)
-          .limit(1);
-
-        if (needsError) {
-          console.error('[VolunteerResponses] Error loading needs:', needsError);
-          toast.error(`Failed to load needs data: ${needsError.message}`);
-          return;
-        }
-
-        console.log('[VolunteerResponses] Needs table structure:', needsDataResult?.[0] ? Object.keys(needsDataResult[0]) : 'No data');
-        
-        // Now fetch all needs with the correct columns
-        const { data: allNeedsDataResult, error: allNeedsError } = await supabase
-          .from('needs')
-          .select('*')
-          .in('id', needIds);
-
-        if (allNeedsError) {
-          console.error('[VolunteerResponses] Error loading all needs:', allNeedsError);
-          toast.error(`Failed to load needs data: ${allNeedsError.message}`);
-          return;
-        }
-
-        needsData = needsDataResult || [];
-        allNeedsData = allNeedsDataResult || [];
-      } else {
-        console.log('[VolunteerResponses] No valid need IDs found, skipping needs fetch');
-      }
-
-      // Fetch profiles data
-      const { data: profilesData, error: profilesError } = await supabase
-        .from('profiles')
-        .select('id, full_name, email, phone, gift_selections')
-        .in('id', userIds);
-
-      if (profilesError) {
-        console.error('[VolunteerResponses] Error loading profiles:', profilesError);
-        toast.error(`Failed to load volunteer profiles: ${profilesError.message}`);
-        return;
-      }
-
-      // Combine the data
-      const combinedData = responsesData.map(response => {
-        const need = allNeedsData?.find(n => n.id === response.need_id);
-        const volunteer = profilesData?.find(p => p.id === response.user_id);
-        
-        return {
-          ...response,
-          need: need || { id: response.need_id, title: 'Unknown Need', description: '', start_at: '', end_at: '', address: '', city: '', state: '', giftings_needed: [] },
-          volunteer: volunteer || { id: response.user_id, full_name: 'Unknown Volunteer', email: '', phone: '', gift_selections: [] }
-        };
-      });
-
-      console.log('[VolunteerResponses] Combined data:', combinedData.length);
-      setResponses(combinedData);
-
-    } catch (error) {
-      console.error('[VolunteerResponses] Error:', error);
-      toast.error('Failed to load volunteer responses');
-    }
-  };
-
-  const handleAccept = async (responseId: string) => {
-    console.log('[VolunteerResponses] Accepting response:', responseId);
-    setActingId(responseId);
-    
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      console.log('[VolunteerResponses] Session user ID:', session?.user?.id);
-      console.log('[VolunteerResponses] Update data:', {
-        status: 'accepted'
-      });
-      
-      const { data, error } = await supabase
-        .from('opportunity_responses')
-        .update({ 
-          status: 'accepted'
-        })
-        .eq('id', responseId)
-        .select();
-
       if (error) {
-        console.error('[VolunteerResponses] Error accepting response:', error);
-        console.error('[VolunteerResponses] Error type:', typeof error);
-        console.error('[VolunteerResponses] Error keys:', Object.keys(error));
-        console.error('[VolunteerResponses] Error stringified:', JSON.stringify(error, null, 2));
-        
-        const errorMessage = error?.message || 'Unknown error occurred';
-        const errorCode = error?.code || 'UNKNOWN';
-        
-        console.error('[VolunteerResponses] Parsed accept error:', {
-          message: errorMessage,
-          code: errorCode,
-          details: error?.details,
-          hint: error?.hint
-        });
-        
-        toast.error(`Failed to accept volunteer response: ${errorMessage}`);
+        console.warn('Table might not exist or query failed:', error);
+        setTableError(true);
         return;
       }
 
-      console.log('[VolunteerResponses] Accept successful, updated data:', data);
-      toast.success('Volunteer response accepted');
-      await loadVolunteerResponses(); // Refresh data
-
+      setResponses((data || []) as any);
     } catch (error) {
-      console.error('[VolunteerResponses] Error:', error);
-      toast.error('Failed to accept volunteer response');
-    } finally {
-      setActingId(null);
+      console.error('Error loading responses:', error);
+      setTableError(true);
     }
   };
 
-  const handleDecline = async (responseId: string) => {
-    console.log('[VolunteerResponses] Declining response:', responseId);
-    setActingId(responseId);
-    
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      const { data, error } = await supabase
-        .from('opportunity_responses')
-        .update({ 
-          status: 'declined'
-        })
-        .eq('id', responseId)
-        .select();
+  function getInitials(name: string) {
+    if (!name) return 'V';
+    return name
+      .split(' ')
+      .map(n => n[0])
+      .join('')
+      .toUpperCase()
+      .slice(0, 2);
+  }
 
-      if (error) {
-        console.error('[VolunteerResponses] Error declining response:', error);
-        console.error('[VolunteerResponses] Error type:', typeof error);
-        console.error('[VolunteerResponses] Error keys:', Object.keys(error));
-        console.error('[VolunteerResponses] Error stringified:', JSON.stringify(error, null, 2));
-        
-        const errorMessage = error?.message || 'Unknown error occurred';
-        const errorCode = error?.code || 'UNKNOWN';
-        
-        console.error('[VolunteerResponses] Parsed decline error:', {
-          message: errorMessage,
-          code: errorCode,
-          details: error?.details,
-          hint: error?.hint
-        });
-        
-        toast.error(`Failed to decline volunteer response: ${errorMessage}`);
-        return;
-      }
-
-      console.log('[VolunteerResponses] Decline successful, updated data:', data);
-      toast.success('Volunteer response declined');
-      await loadVolunteerResponses(); // Refresh data
-
-    } catch (error) {
-      console.error('[VolunteerResponses] Error:', error);
-      toast.error('Failed to decline volunteer response');
-    } finally {
-      setActingId(null);
-    }
-  };
-
-  const getMatchingGifts = (volunteerGifts: string[], needGifts: string[]) => {
-    return volunteerGifts.filter(gift => needGifts.includes(gift));
-  };
-
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric'
+  function formatDate(dateString: string) {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', { 
+      month: 'short', 
+      day: 'numeric', 
+      year: 'numeric' 
     });
-  };
+  }
 
-  const formatTime = (dateString: string) => {
-    return new Date(dateString).toLocaleTimeString('en-US', {
-      hour: 'numeric',
-      minute: '2-digit',
-      hour12: true
-    });
-  };
-
-  const filteredResponses = responses.filter(response => {
-    if (filter === 'all') return true;
-    return response.status === filter;
-  });
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'pending': return 'bg-yellow-100 text-yellow-800';
-      case 'accepted': return 'bg-green-100 text-green-800';
-      case 'declined': return 'bg-red-100 text-red-800';
-      case 'cancelled': return 'bg-red-100 text-red-800';
-      default: return 'bg-gray-100 text-gray-800';
-    }
-  };
-
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'pending': return <Clock className="w-4 h-4" />;
-      case 'accepted': return <CheckCircle className="w-4 h-4" />;
-      case 'declined': return <XCircle className="w-4 h-4" />;
-      case 'cancelled': return <XCircle className="w-4 h-4" />;
-      default: return <Clock className="w-4 h-4" />;
-    }
-  };
+  const filteredResponses = filter === 'all' 
+    ? responses 
+    : responses.filter(r => r.status === filter);
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50">
-        <Header />
-        <main className="py-8">
-          <div className="max-w-4xl mx-auto px-4">
-            <div className="text-center py-12">
-              <div className="text-lg">Loading volunteer responses...</div>
-            </div>
-          </div>
-        </main>
-        <Footer />
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-lg">Loading volunteer responses...</div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen" style={{ backgroundColor: BRAND.colors.background }}>
+    <div className="min-h-screen pb-20" style={{ backgroundColor: BRAND.colors.background }}>
       {/* Consistent Header */}
       <header className="sticky top-0 z-50 bg-white border-b border-gray-200 shadow-sm">
         <div className="flex items-center justify-between px-4 py-3">
-          {/* Back button on left */}
           <button 
             onClick={() => router.push('/leader/tools')}
             className="p-2 active:bg-gray-100 rounded-full transition-colors"
@@ -408,12 +170,10 @@ export default function VolunteerResponsesPage() {
             <ArrowLeft size={22} style={{ color: '#374151' }} />
           </button>
           
-          {/* Centered logo */}
           <span className="text-xl font-bold text-gray-900" style={{ fontFamily: BRAND.fonts.heading }}>
             giveU
           </span>
           
-          {/* Empty right side for balance */}
           <div style={{ width: '44px' }}></div>
         </div>
       </header>
@@ -457,252 +217,162 @@ export default function VolunteerResponsesPage() {
       </div>
 
       {/* Responses List */}
-      <main className="px-4 pt-4 pb-32">
-            {/* Setup Message */}
-            {tableError && (
-              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6 mb-6">
-                <div className="flex items-start gap-3">
-                  <div className="w-6 h-6 bg-yellow-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
-                    <span className="text-yellow-600 text-sm">⚠️</span>
-                  </div>
-                  <div>
-                    <h3 className="text-lg font-semibold text-yellow-800 mb-2">
-                      Database Setup Required
-                    </h3>
-                    <p className="text-yellow-700 mb-4">
-                      The volunteer responses feature requires a database table to be created first.
-                    </p>
-                    <div className="bg-yellow-100 rounded-lg p-4 mb-4">
-                      <h4 className="font-semibold text-yellow-800 mb-2">To set up the database:</h4>
-                      <ol className="list-decimal list-inside text-yellow-700 space-y-1 text-sm">
-                        <li>Go to your Supabase dashboard</li>
-                        <li>Open the SQL Editor</li>
-                        <li>Run the script: <code className="bg-yellow-200 px-1 rounded">supabase/policies/opportunity_responses_table.sql</code></li>
-                        <li>Refresh this page</li>
-                      </ol>
-                    </div>
-                    <button
-                      onClick={() => window.location.reload()}
-                      className="px-4 py-2 bg-yellow-600 text-white rounded-lg text-sm font-medium hover:bg-yellow-700 transition-colors"
-                    >
-                      Refresh Page
-                    </button>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Responses List */}
-            <div className="space-y-4">
-              {filteredResponses.length === 0 && !tableError ? (
-                <div className="text-center py-12">
-                  <UserCheck className="mx-auto w-12 h-12 text-gray-400 mb-4" />
-                  <h3 className="text-lg font-medium text-gray-900 mb-2">
-                    {filter === 'all' ? 'No volunteer responses yet' : `No ${filter} responses`}
-                  </h3>
-                  <p className="text-gray-600">
-                    {filter === 'all' 
-                      ? 'Volunteer responses will appear here when members sign up to help with needs.'
-                      : `No responses with ${filter} status found.`
-                    }
-                  </p>
-                </div>
-              ) : (
-                filteredResponses.map((response) => {
-                  const matchingGifts = getMatchingGifts(
-                    response.volunteer.gift_selections || [],
-                    response.need.giftings_needed || []
-                  );
-
-                  return (
-                    <div key={response.id} className={`border border-gray-200 rounded-xl shadow-md p-6 ${
-                      response.status === 'cancelled' ? 'bg-gray-50' : 'bg-white'
-                    }`}>
-                      <div className="flex items-start justify-between mb-4">
-                        <div className="flex items-center gap-3">
-                          <div className="w-12 h-12 rounded-full flex items-center justify-center" style={{ backgroundColor: BRAND.colors.primary }}>
-                            <span className="text-white font-semibold text-lg">
-                              {response.volunteer.full_name?.charAt(0) || 'V'}
-                            </span>
-                          </div>
-                          <div>
-                            <h3 className="text-lg font-semibold text-gray-900">
-                              {response.volunteer.full_name || 'Volunteer'}
-                            </h3>
-                            <p className="text-sm text-gray-600">
-                              {response.status === 'cancelled' && response.cancelled_at
-                                ? `Cancelled on ${formatDate(response.cancelled_at)}`
-                                : `Responded ${formatDate(response.created_at)}`
-                              }
-                            </p>
-                          </div>
-                        </div>
-                        
-                        <div className="flex items-center gap-2">
-                          <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(response.status)}`}>
-                            {getStatusIcon(response.status)}
-                            {response.status.charAt(0).toUpperCase() + response.status.slice(1)}
-                          </span>
-                          {response.status === 'accepted' && (
-                            <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                              Auto-accepted
-                            </span>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Need Details */}
-                      <div className="mb-4 p-4 bg-gray-50 rounded-lg">
-                        <h4 className="font-semibold text-gray-900 mb-2">{response.need.title}</h4>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm text-gray-600">
-                          {response.need.start_at && (
-                            <div className="flex items-center gap-2">
-                              <Calendar className="w-4 h-4" />
-                              <span>{formatDate(response.need.start_at)} at {formatTime(response.need.start_at)}</span>
-                            </div>
-                          )}
-                          {(response.need.address || response.need.city) && (
-                            <div className="flex items-center gap-2">
-                              <MapPin className="w-4 h-4" />
-                              <span>{response.need.address || response.need.city}</span>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Volunteer Contact Info */}
-                      <div className="mb-4">
-                        <h5 className="text-sm font-semibold text-gray-900 mb-2">Contact Information</h5>
-                        <div className="flex flex-wrap gap-4 text-sm text-gray-600">
-                          {response.volunteer.email && (
-                            <div className="flex items-center gap-2">
-                              <Mail className="w-4 h-4" />
-                              <a 
-                                href={`mailto:${response.volunteer.email}`} 
-                                className="hover:underline"
-                                style={{ color: BRAND.colors.textLight }}
-                                onMouseEnter={(e) => e.currentTarget.style.color = BRAND.colors.primary}
-                                onMouseLeave={(e) => e.currentTarget.style.color = BRAND.colors.textLight}
-                              >
-                                {response.volunteer.email}
-                              </a>
-                            </div>
-                          )}
-                          {response.volunteer.phone && (
-                            <div className="flex items-center gap-2">
-                              <Phone className="w-4 h-4" />
-                              <a 
-                                href={`tel:${response.volunteer.phone}`} 
-                                className="hover:underline"
-                                style={{ color: BRAND.colors.textLight }}
-                                onMouseEnter={(e) => e.currentTarget.style.color = BRAND.colors.primary}
-                                onMouseLeave={(e) => e.currentTarget.style.color = BRAND.colors.textLight}
-                              >
-                                {response.volunteer.phone}
-                              </a>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Gift Matching */}
-                      {matchingGifts.length > 0 && (
-                        <div className="mb-4">
-                          <h5 className="text-sm font-semibold text-gray-900 mb-2 flex items-center gap-2">
-                            <Wrench className="w-4 h-4" />
-                            Matching Gifts
-                          </h5>
-                          <div className="flex flex-wrap gap-2">
-                            {matchingGifts.map((gift) => (
-                              <span 
-                                key={gift} 
-                                className="px-3 py-1 text-white rounded-full text-xs font-medium"
-                                style={{ backgroundColor: BRAND.colors.primary }}
-                              >
-                                {gift}
-                              </span>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-
-                      {/* All Volunteer Gifts */}
-                      {response.volunteer.gift_selections && response.volunteer.gift_selections.length > 0 && (
-                        <div className="mb-4">
-                          <h5 className="text-sm font-semibold text-gray-900 mb-2">All Gifts</h5>
-                          <div className="flex flex-wrap gap-2">
-                            {response.volunteer.gift_selections.map((gift) => (
-                              <span 
-                                key={gift} 
-                                className="px-3 py-1 rounded-full text-xs font-medium"
-                                style={matchingGifts.includes(gift) 
-                                  ? { backgroundColor: BRAND.colors.primary, color: 'white' }
-                                  : { backgroundColor: '#f3f4f6', color: '#374151' }
-                                }
-                              >
-                                {gift}
-                              </span>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Action Buttons */}
-                      {response.status === 'pending' && (
-                        <div className="flex gap-3 pt-4 border-t border-gray-200">
-                          <button
-                            onClick={() => handleAccept(response.id)}
-                            disabled={actingId === response.id}
-                            className="flex-1 px-4 py-2 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-white"
-                            style={{
-                              backgroundColor: BRAND.colors.primary,
-                              minHeight: '44px'
-                            }}
-                            onMouseEnter={(e) => {
-                              if (actingId !== response.id) {
-                                e.currentTarget.style.backgroundColor = BRAND.colors.primaryHover;
-                              }
-                            }}
-                            onMouseLeave={(e) => {
-                              if (actingId !== response.id) {
-                                e.currentTarget.style.backgroundColor = BRAND.colors.primary;
-                              }
-                            }}
-                          >
-                            {actingId === response.id ? 'Accepting...' : 'Accept'}
-                          </button>
-                          <button
-                            onClick={() => handleDecline(response.id)}
-                            disabled={actingId === response.id}
-                            className="flex-1 px-4 py-2 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-white"
-                            style={{
-                              backgroundColor: BRAND.colors.danger,
-                              minHeight: '44px'
-                            }}
-                            onMouseEnter={(e) => {
-                              if (actingId !== response.id) {
-                                e.currentTarget.style.backgroundColor = BRAND.colors.dangerHover;
-                              }
-                            }}
-                            onMouseLeave={(e) => {
-                              if (actingId !== response.id) {
-                                e.currentTarget.style.backgroundColor = BRAND.colors.danger;
-                              }
-                            }}
-                          >
-                            {actingId === response.id ? 'Declining...' : 'Decline'}
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  );
-                })
-              )}
-            </div>
+      <div className="px-4 pt-4">
+        {tableError ? (
+          <div className="bg-white rounded-xl border border-gray-200 p-6 text-center">
+            <p style={{ 
+              color: BRAND.colors.textLight, 
+              fontFamily: BRAND.fonts.body 
+            }}>
+              Volunteer responses feature is not yet available. Table needs to be set up.
+            </p>
           </div>
-        </div>
-      </main>
-      
+        ) : filteredResponses.length === 0 ? (
+          <div className="bg-white rounded-xl border border-gray-200 p-12 text-center">
+            <UserCheck size={48} style={{ 
+              color: BRAND.colors.primary,
+              margin: '0 auto 16px'
+            }} />
+            <h3 className="text-xl font-semibold mb-2" style={{ 
+              fontFamily: BRAND.fonts.heading,
+              color: BRAND.colors.text
+            }}>
+              No Responses Yet
+            </h3>
+            <p style={{ 
+              color: BRAND.colors.textLight,
+              fontFamily: BRAND.fonts.body
+            }}>
+              When members respond to needs, you'll see them here.
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {filteredResponses.map((response) => {
+              if (!response.volunteer || !response.need) {
+                return null;
+              }
+              
+              return (
+                <div key={response.id} className="bg-white border border-gray-200 rounded-xl shadow-sm p-5">
+                  {/* Person Header */}
+                  <div className="flex items-center gap-3 mb-4">
+                    <div 
+                      className="w-12 h-12 rounded-full flex items-center justify-center text-white font-bold flex-shrink-0"
+                      style={{ backgroundColor: BRAND.colors.primary }}
+                    >
+                      {getInitials(response.volunteer.full_name)}
+                    </div>
+                    
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-semibold text-gray-900" style={{ fontFamily: BRAND.fonts.heading }}>
+                        {response.volunteer.full_name}
+                      </h3>
+                      <p className="text-sm text-gray-600" style={{ fontFamily: BRAND.fonts.body }}>
+                        {response.status === 'cancelled' && response.cancelled_at
+                          ? `Cancelled on ${formatDate(response.cancelled_at)}`
+                          : `Responded ${formatDate(response.created_at)}`
+                        }
+                      </p>
+                    </div>
+                    
+                    <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full
+                      ${response.status === 'accepted' ? 'bg-green-100' : 
+                        response.status === 'pending' ? 'bg-yellow-100' : 
+                        response.status === 'cancelled' ? 'bg-gray-100' :
+                        'bg-red-100'
+                      }`}
+                    >
+                      <CheckCircle size={16} style={{
+                        color: response.status === 'accepted' ? '#16a34a' :
+                               response.status === 'pending' ? '#ca8a04' :
+                               response.status === 'cancelled' ? '#6b7280' :
+                               '#dc2626'
+                      }} />
+                      <span className={`text-xs font-medium capitalize
+                        ${response.status === 'accepted' ? 'text-green-800' :
+                          response.status === 'pending' ? 'text-yellow-800' :
+                          response.status === 'cancelled' ? 'text-gray-800' :
+                          'text-red-800'
+                        }`}
+                        style={{ fontFamily: BRAND.fonts.heading }}
+                      >
+                        {response.status}
+                      </span>
+                    </div>
+                  </div>
+                  
+                  {/* Need Title */}
+                  <h4 className="font-semibold text-gray-900 mb-3" style={{ fontFamily: BRAND.fonts.heading }}>
+                    {response.need.title}
+                  </h4>
+                  
+                  {/* Contact Info */}
+                  <div className="mb-4">
+                    <p className="text-sm font-medium text-gray-700 mb-2" style={{ fontFamily: BRAND.fonts.heading }}>
+                      Contact Information
+                    </p>
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2 text-sm text-gray-600">
+                        <Mail size={16} className="flex-shrink-0" />
+                        <span className="truncate" style={{ fontFamily: BRAND.fonts.body }}>
+                          {response.volunteer.email}
+                        </span>
+                      </div>
+                      {response.volunteer.phone && (
+                        <div className="flex items-center gap-2 text-sm text-gray-600">
+                          <Phone size={16} className="flex-shrink-0" />
+                          <span style={{ fontFamily: BRAND.fonts.body }}>
+                            {response.volunteer.phone}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  
+                  {/* Matching Gifts */}
+                  {response.volunteer.gift_selections && response.volunteer.gift_selections.length > 0 && (
+                    <div>
+                      <div className="flex items-center gap-2 mb-2">
+                        <Sparkles size={16} className="text-gray-700" />
+                        <span className="text-sm font-medium text-gray-700" style={{ fontFamily: BRAND.fonts.heading }}>
+                          Matching Gifts
+                        </span>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        {response.volunteer.gift_selections.slice(0, 3).map(gift => (
+                          <span 
+                            key={gift}
+                            className="px-3 py-1 text-white rounded-full text-sm font-medium"
+                            style={{ 
+                              backgroundColor: BRAND.colors.primary,
+                              fontFamily: BRAND.fonts.heading
+                            }}
+                          >
+                            {gift}
+                          </span>
+                        ))}
+                        {response.volunteer.gift_selections.length > 3 && (
+                          <button 
+                            className="text-sm font-medium"
+                            style={{ 
+                              color: BRAND.colors.primary,
+                              fontFamily: BRAND.fonts.heading
+                            }}
+                          >
+                            +{response.volunteer.gift_selections.length - 3} more
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
       <Footer />
     </div>
   );

@@ -3,45 +3,32 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabaseBrowser as supabase } from '@/lib/supabaseBrowser';
-import { getCategoryByTag } from '@/lib/giftingStructure';
-import { createNotification } from '@/lib/notificationHelper';
-import toast from 'react-hot-toast';
-import Header from '../../../components/Header';
 import Footer from '../../../components/Footer';
 import { CheckCircle, ArrowLeft } from 'lucide-react';
+import toast from 'react-hot-toast';
 import { BRAND } from '../../../lib/brandConfig';
+import { createNotification } from '@/lib/notificationHelper';
 
-// Helper function to format giftings (array or string)
-const formatGiftings = (giftings: string[] | string): string[] => {
-  if (Array.isArray(giftings)) {
-    return giftings;
-  }
-  if (typeof giftings === 'string') {
-    return giftings.split(',').map(g => g.trim()).filter(Boolean);
-  }
-  return [];
-};
-
-type PendingNeed = {
+interface PendingNeed {
   id: string;
   title: string;
   description: string;
   urgency: string;
   ongoing_start_date?: string;
   created_at: string;
-  city?: string;
   location?: string;
   people_needed: number;
   giftings_needed: string[];
-};
+  created_by: string;
+  created_by_email: string;
+}
 
 export default function PendingNeedsPage() {
+  const router = useRouter();
   const [pendingNeeds, setPendingNeeds] = useState<PendingNeed[]>([]);
   const [loading, setLoading] = useState(true);
-  const [user, setUser] = useState<any>(null);
-  const [profile, setProfile] = useState<any>(null);
   const [actingId, setActingId] = useState<string | null>(null);
-  const router = useRouter();
+  const [userChurchCode, setUserChurchCode] = useState<string | null>(null);
 
   useEffect(() => {
     checkAuthAndLoadData();
@@ -56,12 +43,10 @@ export default function PendingNeedsPage() {
         return;
       }
 
-      setUser(session.user);
-
-      // Load user profile
+      // Check if user is a leader
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
-        .select('*')
+        .select('*, church_code')
         .eq('id', session.user.id)
         .single();
 
@@ -71,17 +56,24 @@ export default function PendingNeedsPage() {
         return;
       }
 
-      setProfile(profileData);
-
-      // Check if user is a leader
       if (!profileData?.is_leader) {
         toast.error('Access denied. Leadership privileges required.');
         router.push('/dashboard');
         return;
       }
 
+      // Verify church_code exists
+      if (!profileData?.church_code) {
+        console.error('Leader has no church_code assigned');
+        toast.error('Unable to load church information');
+        return;
+      }
+
+      // Store church code for filtering
+      setUserChurchCode(profileData.church_code);
+
       // Load pending needs
-      fetchPendingNeeds();
+      await fetchPendingNeeds();
 
     } catch (error) {
       console.error('Auth error:', error);
@@ -93,150 +85,95 @@ export default function PendingNeedsPage() {
 
   const fetchPendingNeeds = async () => {
     try {
-      console.log('[PendingNeeds] Fetching needs with status=pending');
-      
-      // First, let's check all needs to see what's actually in the database
-      const { data: allNeeds, error: allError } = await supabase
-        .from('needs')
-        .select('*')
-        .order('created_at', { ascending: false });
-      
-      console.log('[PendingNeeds] All needs in database:', { allNeeds, allError });
-      
-      // Let's see what statuses we actually have
-      if (allNeeds && allNeeds.length > 0) {
-        console.log('[PendingNeeds] All need details:');
-        allNeeds.forEach((need, index) => {
-          console.log(`[PendingNeeds] Need ${index + 1}:`, {
-            id: need.id,
-            title: need.title,
-            status: need.status,
-            created_at: need.created_at
-          });
-        });
+      // Don't fetch if we don't have church_code yet
+      if (!userChurchCode) {
+        console.log('Skipping fetch - no church_code yet');
+        return;
       }
-      
-      // Now get pending needs specifically
+
       const { data, error } = await supabase
         .from('needs')
         .select('*')
+        .eq('church_code', userChurchCode) // 🔥 CRITICAL: Filter by church
         .eq('status', 'pending')
         .order('created_at', { ascending: false });
 
-      console.log('[PendingNeeds] Pending needs query result:', { data, error });
       if (error) throw error;
-      console.log('[PendingNeeds] Setting needs:', data || []);
       setPendingNeeds(data || []);
     } catch (error) {
-      console.error('[PendingNeeds] Error fetching pending needs:', error);
-    } finally {
-      setLoading(false);
+      console.error('Error fetching pending needs:', error);
     }
   };
 
-  // Approve & Publish
   const approveNeed = async (needId: string) => {
     setActingId(needId);
     try {
-      // Get the leader's church_code from their profile
-      if (!profile?.church_code) {
-        toast.error('Your profile is missing a church code. Please contact support.');
+      // Verify need belongs to leader's church before approving
+      const need = pendingNeeds.find(n => n.id === needId);
+      if (!need) {
+        toast.error('Need not found');
+        setActingId(null);
         return;
       }
 
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from('needs')
-        .update({ 
-          status: 'active', 
-          church_code: profile.church_code,  // ADD THIS LINE
-          updated_at: new Date().toISOString() 
-        })
+        .update({ status: 'approved' })
         .eq('id', needId)
-        .select('id,status');
+        .eq('church_code', userChurchCode); // 🔥 SECURITY: Only update if church matches
 
-      if (error) {
-        console.error('[PendingNeeds] approve error', error);
-        toast.error('Something went wrong approving this need.');
-        return;
-      }
-      if (!data || data.length === 0) {
-        toast.error('Not authorized or this need was already updated.');
-        return;
-      }
+      if (error) throw error;
 
-      setPendingNeeds(prev => prev.filter(n => n.id !== needId));
-      toast.success('Approved & published.');
-      
-      // Notify the need creator that their need was approved
-      const { data: needData } = await supabase
-        .from('needs')
-        .select('created_by, title')
-        .eq('id', needId)
-        .single();
-      
-      if (needData?.created_by) {
-        console.log('[PendingNeeds] Notifying need creator:', needData.created_by);
-        
-        // Create DIY notification for the need creator
+      // Send notification to the member who created the need
+      if (need) {
+        // Create notification for the member
         await createNotification({
-          userId: needData.created_by,
+          userId: need.created_by,
           eventType: 'need.approved',
-          title: 'Your Need Was Approved!',
-          description: `"${needData.title}" is now live and visible to volunteers.`,
+          title: 'Need Approved',
+          description: `Your need "${need.title}" has been approved and is now visible to the community.`,
           path: '/dashboard',
-          needId: needId,
-          need_title: needData.title
+          needId: need.id,
+          need_title: need.title
         });
-        
-        // Trigger Knock workflow for push notification
-        try {
-          await fetch('/api/knock/trigger', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              workflow: 'need_approved',
-              userId: needData.created_by,
-              data: {
-                need_title: needData.title,
-                need_id: needId
-              }
-            })
-          });
-          console.log('✅ Knock workflow triggered for need_approved to creator:', needData.created_by);
-        } catch (error) {
-          console.warn('Knock trigger failed for need_approved:', error);
-        }
       }
-      
-      fetchPendingNeeds();
+
+      // Remove from list
+      setPendingNeeds(prev => prev.filter(n => n.id !== needId));
+      toast.success('Need approved and published!');
+    } catch (error) {
+      console.error('Error approving need:', error);
+      toast.error('Failed to approve need');
     } finally {
       setActingId(null);
     }
   };
 
-  // Reject
   const rejectNeed = async (needId: string) => {
     setActingId(needId);
     try {
-      const { data, error } = await supabase
+      // Verify need belongs to leader's church before rejecting
+      const need = pendingNeeds.find(n => n.id === needId);
+      if (!need) {
+        toast.error('Need not found');
+        setActingId(null);
+        return;
+      }
+
+      const { error } = await supabase
         .from('needs')
-        .update({ status: 'rejected', updated_at: new Date().toISOString() })
+        .update({ status: 'rejected' })
         .eq('id', needId)
-        .select('id,status');
+        .eq('church_code', userChurchCode); // 🔥 SECURITY: Only update if church matches
 
-      if (error) {
-        console.error('[PendingNeeds] reject error', error);
-        toast.error('Something went wrong rejecting this need.');
-        return;
-      }
-      if (!data || data.length === 0) {
-        toast.error('Not authorized or this need was already updated.');
-        return;
-      }
+      if (error) throw error;
 
+      // Remove from list
       setPendingNeeds(prev => prev.filter(n => n.id !== needId));
-      toast.success('Rejected.');
-      fetchPendingNeeds();
+      toast.success('Need declined');
+    } catch (error) {
+      console.error('Error declining need:', error);
+      toast.error('Failed to decline need');
     } finally {
       setActingId(null);
     }
@@ -263,11 +200,10 @@ export default function PendingNeedsPage() {
   }
 
   return (
-    <div className="min-h-screen" style={{ backgroundColor: BRAND.colors.background }}>
+    <div className="min-h-screen pb-20" style={{ backgroundColor: BRAND.colors.background }}>
       {/* Consistent Header */}
       <header className="sticky top-0 z-50 bg-white border-b border-gray-200 shadow-sm">
         <div className="flex items-center justify-between px-4 py-3">
-          {/* Back button on left */}
           <button 
             onClick={() => router.push('/leader/tools')}
             className="p-2 active:bg-gray-100 rounded-full transition-colors"
@@ -277,12 +213,10 @@ export default function PendingNeedsPage() {
             <ArrowLeft size={22} style={{ color: '#374151' }} />
           </button>
           
-          {/* Centered logo */}
           <span className="text-xl font-bold text-gray-900" style={{ fontFamily: BRAND.fonts.heading }}>
             giveU
           </span>
           
-          {/* Empty right side for balance */}
           <div style={{ width: '44px' }}></div>
         </div>
       </header>
@@ -297,193 +231,96 @@ export default function PendingNeedsPage() {
         </p>
       </div>
 
-      {/* Main Content */}
-      <main className="px-4 pt-4 pb-32">
-          {/* Cards Grid - Exact copy of Ways to Serve layout */}
-          {pendingNeeds.length === 0 ? (
-            <div className="bg-gray-50 border border-gray-200 rounded-xl p-12 text-center">
-              <CheckCircle size={48} style={{ 
-                color: BRAND.colors.success,
-                margin: '0 auto 16px'
-              }} />
-              <h3 className="text-xl font-semibold mb-2" style={{ 
-                fontFamily: BRAND.fonts.heading, 
-                color: BRAND.colors.text 
-              }}>
-                All Caught Up!
-              </h3>
-              <p style={{ 
-                color: BRAND.colors.textLight, 
-                fontFamily: BRAND.fonts.body 
-              }}>
-                No pending needs to review right now. Great job keeping up with requests!
-              </p>
-            </div>
-          ) : (
-            <div className="grid md:grid-cols-2 gap-6">
-              {pendingNeeds.map((need) => (
-                <div key={need.id} className="bg-white rounded-xl shadow-md transition-shadow border border-gray-200">
-                  
-                  {/* Card Content - Exact Ways to Serve structure */}
-                  <div className="p-4 sm:p-6">
-                    {/* Title */}
-                    <h3 className="text-lg font-semibold text-gray-900 mb-6">
-                      {need.title}
-                    </h3>
-
-                    {/* Three Column Info Grid - Matches Ways to Serve exactly */}
-                    <div className="grid grid-cols-3 gap-4 mb-6">
-                      {/* Date/Time Column */}
-                      <div className="text-center">
-                        <div className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-2">
-                          <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3a4 4 0 118 0v4m-4 8a2 2 0 11-4 0 2 2 0 014 0zM6 7h12a2 2 0 012 2v9a2 2 0 01-2 2H6a2 2 0 01-2-2V9a2 2 0 012-2z"></path>
-                          </svg>
-                        </div>
-                        <div className="text-gray-600" style={{ fontSize: '13px', lineHeight: '1.3' }}>
-                          <div>{need.urgency === 'ongoing' ? 'Ongoing starting' : 'This Saturday'}</div>
-                          <div>{need.urgency === 'ongoing' ? new Date(need.ongoing_start_date || need.created_at).toLocaleDateString() : '2-5pm'}</div>
-                        </div>
-                      </div>
-
-                      {/* Location Column */}
-                      <div className="text-center">
-                        <div className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-2">
-                          <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
-                          </svg>
-                        </div>
-                        <div className="text-gray-600" style={{ fontSize: '13px', lineHeight: '1.3' }}>
-                          <div>{need.city || need.location || 'Church'}</div>
-                          <div>{need.city ? 'Location' : 'Kitchen'}</div>
-                        </div>
-                      </div>
-
-                      {/* People Column */}
-                      <div className="text-center">
-                        <div className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-2">
-                          <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
-                          </svg>
-                        </div>
-                        <div className="text-gray-600" style={{ fontSize: '13px', lineHeight: '1.3' }}>
-                          <div>0 committed</div>
-                          <div>{need.people_needed}+ needed</div>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Description */}
-                    <div className="mb-6">
-                      <p className="text-gray-700 leading-relaxed" style={{ fontSize: '15px', lineHeight: '1.5', fontFamily: BRAND.fonts.body }}>
-                        {need.description.split('Ongoing Schedule:')[0].trim()}
-                      </p>
-                      {need.urgency === 'ongoing' && need.description.includes('Ongoing Schedule:') && (
-                        <p className="text-blue-600 mt-2 italic" style={{ fontSize: '13px' }}>
-                          Schedule: {need.description.split('Ongoing Schedule:')[1]?.replace('Starting ', '').trim()}
-                        </p>
-                      )}
-                    </div>
-
-                    {/* Skills Tags - Matches Ways to Serve styling */}
-                    <div className="mb-6">
-                      <div className="flex flex-wrap gap-2">
-                        {formatGiftings(need.giftings_needed).slice(0, 3).map((skill: string, index: number) => {
-                          const category = getCategoryByTag(skill);
-                          return (
-                            <span 
-                              key={index}
-                              className="px-3 py-1 rounded-full border font-medium"
-                              style={{
-                                fontSize: '13px',
-                                backgroundColor: category?.bgColor || '#f3f4f6',
-                                color: category?.textColor || '#6b7280',
-                                borderColor: category?.borderColor || '#d1d5db'
-                              }}
-                            >
-                              {skill}
-                            </span>
-                          );
-                        })}
-                        {formatGiftings(need.giftings_needed).length > 3 && (
-                          <span className="bg-gray-100 text-gray-600 px-3 py-1 rounded-full border border-gray-200" style={{ fontSize: '13px' }}>
-                            +{formatGiftings(need.giftings_needed).length - 3}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Action Buttons - Replaces "I Can Help" button */}
-                    <div className="space-y-4">
-                      <button
-                        onClick={() => approveNeed(need.id)}
-                        disabled={actingId === need.id}
-                        aria-busy={actingId === need.id}
-                        className={`w-full py-3 px-4 rounded-lg font-semibold text-center disabled:opacity-50 disabled:cursor-not-allowed transition-all text-white ${actingId !== need.id ? 'active:scale-95' : ''}`}
-                        style={{ 
-                          backgroundColor: BRAND.colors.primary,
-                          minHeight: '48px',
-                          fontSize: '16px',
-                          fontFamily: BRAND.fonts.heading
-                        }}
-                        onTouchStart={(e) => {
-                          if (actingId !== need.id) {
-                            e.currentTarget.style.backgroundColor = BRAND.colors.primaryHover;
-                          }
-                        }}
-                        onTouchEnd={(e) => {
-                          if (actingId !== need.id) {
-                            const target = e.currentTarget;
-                            setTimeout(() => {
-                              if (target && target.style) {
-                                target.style.backgroundColor = BRAND.colors.primary;
-                              }
-                            }, 150);
-                          }
-                        }}
-                      >
-                        {actingId === need.id ? 'Publishing…' : 'Approve & Publish'}
-                      </button>
-                      <button
-                        onClick={() => rejectNeed(need.id)}
-                        disabled={actingId === need.id}
-                        aria-busy={actingId === need.id}
-                        className={`w-full py-3 px-4 rounded-lg font-medium text-center disabled:opacity-50 disabled:cursor-not-allowed transition-all text-white ${actingId !== need.id ? 'active:scale-95' : ''}`}
-                        style={{ 
-                          backgroundColor: BRAND.colors.danger,
-                          minHeight: '48px',
-                          fontSize: '15px',
-                          fontFamily: BRAND.fonts.heading
-                        }}
-                        onTouchStart={(e) => {
-                          if (actingId !== need.id) {
-                            e.currentTarget.style.backgroundColor = BRAND.colors.dangerHover;
-                          }
-                        }}
-                        onTouchEnd={(e) => {
-                          if (actingId !== need.id) {
-                            const target = e.currentTarget;
-                            setTimeout(() => {
-                              if (target && target.style) {
-                                target.style.backgroundColor = BRAND.colors.danger;
-                              }
-                            }, 150);
-                          }
-                        }}
-                      >
-                        {actingId === need.id ? 'Rejecting…' : 'Reject'}
-                      </button>
-                    </div>
-                  </div>
+      {/* Content */}
+      {pendingNeeds.length === 0 ? (
+        <div className="flex flex-col items-center justify-center px-4 pt-20">
+          <div className="w-24 h-24 rounded-full flex items-center justify-center mb-6"
+            style={{ backgroundColor: `${BRAND.colors.primary}1A` }}
+          >
+            <CheckCircle size={64} style={{ color: BRAND.colors.primary }} />
+          </div>
+          
+          <h2 className="text-xl font-bold text-gray-900 mb-2" style={{ fontFamily: BRAND.fonts.heading }}>
+            All Caught Up!
+          </h2>
+          
+          <p className="text-center text-gray-600 max-w-sm" style={{ fontFamily: BRAND.fonts.body }}>
+            No pending needs to review right now. Great job keeping up with requests!
+          </p>
+        </div>
+      ) : (
+        <div className="px-4 pt-4">
+          <div className="space-y-4">
+            {pendingNeeds.map((need) => (
+              <div key={need.id} className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
+                <h3 className="text-lg font-semibold text-gray-900 mb-2" style={{ fontFamily: BRAND.fonts.heading }}>
+                  {need.title}
+                </h3>
+                
+                <p className="text-gray-700 mb-3" style={{ fontFamily: BRAND.fonts.body, fontSize: '15px' }}>
+                  {need.description}
+                </p>
+                
+                <div className="flex items-center gap-2 text-sm text-gray-600 mb-4" style={{ fontFamily: BRAND.fonts.body }}>
+                  <span>By {need.created_by_email}</span>
+                  <span>•</span>
+                  <span>{new Date(need.created_at).toLocaleDateString()}</span>
                 </div>
-              ))}
-            </div>
-          )}
+                
+                {need.giftings_needed && need.giftings_needed.length > 0 && (
+                  <div className="flex flex-wrap gap-2 mb-4">
+                    {need.giftings_needed.slice(0, 5).map((skill, idx) => (
+                      <span 
+                        key={idx}
+                        className="px-3 py-1 text-sm font-medium rounded-full"
+                        style={{
+                          backgroundColor: `${BRAND.colors.primary}20`,
+                          color: BRAND.colors.primary,
+                          fontFamily: BRAND.fonts.heading
+                        }}
+                      >
+                        {skill}
+                      </span>
+                    ))}
+                    {need.giftings_needed.length > 5 && (
+                      <span className="px-3 py-1 bg-gray-100 text-gray-600 text-sm rounded-full">
+                        +{need.giftings_needed.length - 5}
+                      </span>
+                    )}
+                  </div>
+                )}
+                
+                <div className="flex flex-col gap-3 sm:flex-row">
+                  <button
+                    onClick={() => approveNeed(need.id)}
+                    disabled={actingId === need.id}
+                    className="flex-1 h-12 text-white rounded-lg font-medium transition-opacity disabled:opacity-50"
+                    style={{
+                      backgroundColor: BRAND.colors.primary,
+                      fontFamily: BRAND.fonts.heading,
+                      fontSize: '16px'
+                    }}
+                  >
+                    {actingId === need.id ? 'Approving...' : 'Approve & Publish'}
+                  </button>
+                  <button
+                    onClick={() => rejectNeed(need.id)}
+                    disabled={actingId === need.id}
+                    className="flex-1 h-12 border-2 border-red-500 text-red-500 rounded-lg font-medium transition-colors hover:bg-red-50 disabled:opacity-50"
+                    style={{
+                      fontFamily: BRAND.fonts.heading,
+                      fontSize: '15px'
+                    }}
+                  >
+                    Decline
+                  </button>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
-      </main>
-      
+      )}
+
       <Footer />
     </div>
   );
