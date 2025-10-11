@@ -228,112 +228,151 @@ export default function MembersPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Header />
-      
-      <main className="py-8 pb-32">
-        <div className="max-w-4xl mx-auto px-4">
-          <div className="p-6 space-y-4">
-            
-            {/* Page Header */}
-            <div className="mb-6">
-              <div className="flex items-center gap-4 mb-4">
-                <button
-                  onClick={() => router.push('/leader/tools')}
-                  className="flex items-center gap-2 px-4 py-2 text-white rounded-lg font-medium transition-all active:scale-95"
-                  style={{ 
-                    minHeight: '48px',
-                    fontSize: '15px',
-                    backgroundColor: '#20c997',
-                    fontFamily: BRAND.fonts.heading
-                  }}
-                  onTouchStart={(e) => e.currentTarget.style.backgroundColor = '#1ba87f'}
-                  onTouchEnd={(e) => {
-                    const target = e.currentTarget;
-                    setTimeout(() => {
-                      if (target && target.style) {
-                        target.style.backgroundColor = '#20c997';
-                      }
-                    }, 150);
-                  }}
-                >
-                  <ArrowLeft size={16} />
-                  Back to Tools
-                </button>
-              </div>
-              <h1 className="text-2xl font-bold text-gray-900">Members (Your Church)</h1>
-            </div>
+    <div className="min-h-screen" style={{ backgroundColor: BRAND.colors.background }}>
+      {/* Consistent Header */}
+      <header className="sticky top-0 z-50 bg-white border-b border-gray-200 shadow-sm">
+        <div className="flex items-center justify-between px-4 py-3">
+          {/* Back button on left */}
+          <button 
+            onClick={() => router.push('/leader/tools')}
+            className="p-2 active:bg-gray-100 rounded-full transition-colors"
+            style={{ minWidth: '44px', minHeight: '44px' }}
+            aria-label="Back to Tools"
+          >
+            <ArrowLeft size={22} style={{ color: '#374151' }} />
+          </button>
+          
+          {/* Centered logo */}
+          <span className="text-xl font-bold text-gray-900" style={{ fontFamily: BRAND.fonts.heading }}>
+            giveU
+          </span>
+          
+          {/* Empty right side for balance */}
+          <div style={{ width: '44px' }}></div>
+        </div>
+      </header>
 
-            {/* Search Bar */}
-            <div className="mb-6">
-              <input
-                type="text"
-                placeholder="Search by name or email..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                style={{
-                  fontFamily: BRAND.fonts.body,
-                  fontSize: '16px',
-                  minHeight: '48px'
-                }}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:border-transparent"
-                onFocus={(e) => e.currentTarget.style.boxShadow = `0 0 0 2px ${BRAND.colors.primary}`}
-                onBlur={(e) => e.currentTarget.style.boxShadow = 'none'}
-              />
-            </div>
+      {/* Page Title */}
+      <div className="px-4 pt-6 pb-4 bg-white">
+        <h1 className="text-2xl font-bold text-gray-900 mb-2" style={{ fontFamily: BRAND.fonts.heading }}>
+          Members
+        </h1>
+        <p className="text-gray-600 text-base" style={{ fontFamily: BRAND.fonts.body }}>
+          View and manage your church family
+        </p>
+      </div>
 
-            {/* Filters */}
-            <div className="flex items-center gap-4 mb-6">
-              {/* Role Filters */}
-              <div className="flex gap-2">
-                {['All Roles', 'Members', 'Leaders'].map((role) => (
-                  <button
-                    key={role}
-                    onClick={() => setRoleFilter(role)}
-                    className={`px-4 py-2 rounded-full font-medium transition-all active:scale-95 ${
-                      roleFilter === role
-                        ? 'text-white'
-                        : 'bg-white text-gray-600 border border-gray-300 active:bg-gray-50'
-                    }`}
-                    style={{
-                      backgroundColor: roleFilter === role ? BRAND.colors.primary : undefined,
-                      fontFamily: BRAND.fonts.heading,
-                      fontSize: '14px',
-                      minHeight: '40px'
-                    }}
-                  >
-                    {role}
-                  </button>
-                ))}
-              </div>
+      {/* Search Bar */}
+      <div className="px-4 pt-4 pb-3 bg-white border-b border-gray-200">
+        <div className="relative">
+          <input
+            type="text"
+            placeholder="Search by name or email..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full h-12 px-4 rounded-lg border border-gray-200 focus:outline-none"
+            style={{
+              fontFamily: BRAND.fonts.body,
+              fontSize: '16px'
+            }}
+            onFocus={(e) => e.currentTarget.style.borderColor = BRAND.colors.primary}
+            onBlur={(e) => e.currentTarget.style.borderColor = '#e5e7eb'}
+          />
+        </div>
+      </div>
 
-              {/* Separator */}
-              <div className="w-px h-6 bg-gray-300"></div>
+      {/* Role Filter Pills */}
+      <div className="px-4 py-3 bg-white border-b border-gray-200">
+        <div className="flex gap-2 overflow-x-auto pb-1" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+          <button
+            onClick={() => setRoleFilter('All Roles')}
+            className="px-5 py-2 rounded-full whitespace-nowrap font-medium transition-colors active:scale-95"
+            style={{
+              backgroundColor: roleFilter === 'All Roles' ? BRAND.colors.primary : '#f3f4f6',
+              color: roleFilter === 'All Roles' ? 'white' : '#374151',
+              fontFamily: BRAND.fonts.heading,
+              minHeight: '40px',
+              fontSize: '14px'
+            }}
+          >
+            All Roles
+          </button>
+          <button
+            onClick={() => setRoleFilter('Members')}
+            className="px-5 py-2 rounded-full whitespace-nowrap font-medium transition-colors active:scale-95"
+            style={{
+              backgroundColor: roleFilter === 'Members' ? BRAND.colors.primary : '#f3f4f6',
+              color: roleFilter === 'Members' ? 'white' : '#374151',
+              fontFamily: BRAND.fonts.heading,
+              minHeight: '40px',
+              fontSize: '14px'
+            }}
+          >
+            Members
+          </button>
+          <button
+            onClick={() => setRoleFilter('Leaders')}
+            className="px-5 py-2 rounded-full whitespace-nowrap font-medium transition-colors active:scale-95"
+            style={{
+              backgroundColor: roleFilter === 'Leaders' ? BRAND.colors.primary : '#f3f4f6',
+              color: roleFilter === 'Leaders' ? 'white' : '#374151',
+              fontFamily: BRAND.fonts.heading,
+              minHeight: '40px',
+              fontSize: '14px'
+            }}
+          >
+            Leaders
+          </button>
+        </div>
+      </div>
 
-              {/* Status Filters */}
-              <div className="flex gap-2">
-                {['All Status', 'Pending', 'Active'].map((status) => (
-                  <button
-                    key={status}
-                    onClick={() => setStatusFilter(status)}
-                    className={`px-4 py-2 rounded-full font-medium transition-all active:scale-95 ${
-                      statusFilter === status
-                        ? 'text-white'
-                        : 'bg-white text-gray-600 border border-gray-300 active:bg-gray-50'
-                    }`}
-                    style={{
-                      backgroundColor: statusFilter === status ? BRAND.colors.primary : undefined,
-                      fontFamily: BRAND.fonts.heading,
-                      fontSize: '14px',
-                      minHeight: '40px'
-                    }}
-                  >
-                    {status}
-                  </button>
-                ))}
-              </div>
-            </div>
+      {/* Status Filter Pills */}
+      <div className="px-4 py-3 bg-white border-b border-gray-200">
+        <div className="flex gap-2 overflow-x-auto pb-1" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+          <button
+            onClick={() => setStatusFilter('All Status')}
+            className="px-5 py-2 rounded-full whitespace-nowrap font-medium transition-colors active:scale-95"
+            style={{
+              backgroundColor: statusFilter === 'All Status' ? BRAND.colors.primary : '#f3f4f6',
+              color: statusFilter === 'All Status' ? 'white' : '#374151',
+              fontFamily: BRAND.fonts.heading,
+              minHeight: '40px',
+              fontSize: '14px'
+            }}
+          >
+            All Status
+          </button>
+          <button
+            onClick={() => setStatusFilter('Active')}
+            className="px-5 py-2 rounded-full whitespace-nowrap font-medium transition-colors active:scale-95"
+            style={{
+              backgroundColor: statusFilter === 'Active' ? BRAND.colors.primary : '#f3f4f6',
+              color: statusFilter === 'Active' ? 'white' : '#374151',
+              fontFamily: BRAND.fonts.heading,
+              minHeight: '40px',
+              fontSize: '14px'
+            }}
+          >
+            Active
+          </button>
+          <button
+            onClick={() => setStatusFilter('Pending')}
+            className="px-5 py-2 rounded-full whitespace-nowrap font-medium transition-colors active:scale-95"
+            style={{
+              backgroundColor: statusFilter === 'Pending' ? BRAND.colors.primary : '#f3f4f6',
+              color: statusFilter === 'Pending' ? 'white' : '#374151',
+              fontFamily: BRAND.fonts.heading,
+              minHeight: '40px',
+              fontSize: '14px'
+            }}
+          >
+            Pending
+          </button>
+        </div>
+      </div>
 
+      {/* Members List */}
+      <main className="px-4 pt-4 pb-32">
             {/* Members List */}
             <div className="space-y-8">
               {/* Pending Members */}

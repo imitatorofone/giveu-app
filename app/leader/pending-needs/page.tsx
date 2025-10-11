@@ -263,50 +263,42 @@ export default function PendingNeedsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Header />
-      
-      {/* Main Content */}
-      <main className="py-8">
-        <div className="max-w-4xl mx-auto px-4">
-          <div className="p-6 space-y-4">
-            
-            {/* Page Header */}
-            <div className="mb-6">
-              <div className="flex items-center gap-4 mb-4">
-                <button
-                  onClick={() => router.push('/leader/tools')}
-                  className="flex items-center gap-2 px-4 py-2 text-white rounded-lg font-medium transition-all active:scale-95"
-                  style={{ 
-                    minHeight: '48px',
-                    fontSize: '15px',
-                    backgroundColor: '#20c997',
-                    fontFamily: BRAND.fonts.heading
-                  }}
-                  onTouchStart={(e) => e.currentTarget.style.backgroundColor = '#1ba87f'}
-                  onTouchEnd={(e) => {
-                    const target = e.currentTarget;
-                    setTimeout(() => {
-                      if (target && target.style) {
-                        target.style.backgroundColor = '#20c997';
-                      }
-                    }, 150);
-                  }}
-                >
-                  <ArrowLeft size={16} />
-                  Back to Tools
-                </button>
-              </div>
-              <h1 style={{ 
-                fontFamily: BRAND.fonts.heading,
-                fontSize: '28px',
-                fontWeight: '700',
-                color: BRAND.colors.text
-              }}>
-                Pending Needs
-              </h1>
-            </div>
+    <div className="min-h-screen" style={{ backgroundColor: BRAND.colors.background }}>
+      {/* Consistent Header */}
+      <header className="sticky top-0 z-50 bg-white border-b border-gray-200 shadow-sm">
+        <div className="flex items-center justify-between px-4 py-3">
+          {/* Back button on left */}
+          <button 
+            onClick={() => router.push('/leader/tools')}
+            className="p-2 active:bg-gray-100 rounded-full transition-colors"
+            style={{ minWidth: '44px', minHeight: '44px' }}
+            aria-label="Back to Tools"
+          >
+            <ArrowLeft size={22} style={{ color: '#374151' }} />
+          </button>
+          
+          {/* Centered logo */}
+          <span className="text-xl font-bold text-gray-900" style={{ fontFamily: BRAND.fonts.heading }}>
+            giveU
+          </span>
+          
+          {/* Empty right side for balance */}
+          <div style={{ width: '44px' }}></div>
+        </div>
+      </header>
 
+      {/* Page Title */}
+      <div className="px-4 pt-6 pb-4 bg-white border-b border-gray-200">
+        <h1 className="text-2xl font-bold text-gray-900 mb-2" style={{ fontFamily: BRAND.fonts.heading }}>
+          Pending Needs
+        </h1>
+        <p className="text-gray-600 text-base" style={{ fontFamily: BRAND.fonts.body }}>
+          Review and approve community needs
+        </p>
+      </div>
+
+      {/* Main Content */}
+      <main className="px-4 pt-4 pb-32">
           {/* Cards Grid - Exact copy of Ways to Serve layout */}
           {pendingNeeds.length === 0 ? (
             <div className="bg-gray-50 border border-gray-200 rounded-xl p-12 text-center">

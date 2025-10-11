@@ -394,82 +394,70 @@ export default function VolunteerResponsesPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Header />
-      
-      <main className="py-8">
-        <div className="max-w-4xl mx-auto px-4">
-          <div className="p-6 space-y-6">
-            {/* Page Header */}
-            <div className="mb-6">
-              <div className="flex items-center gap-4 mb-4">
-                <button
-                  onClick={() => router.push('/leader/tools')}
-                  className="flex items-center gap-2 px-4 py-2 text-white rounded-lg font-medium transition-colors"
-                  style={{ 
-                    minHeight: '44px',
-                    backgroundColor: '#20c997'
-                  }}
-                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#1ba87f'}
-                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#20c997'}
-                >
-                  <ArrowLeft size={16} />
-                  Back to Tools
-                </button>
-              </div>
-              <h1 style={{ 
+    <div className="min-h-screen" style={{ backgroundColor: BRAND.colors.background }}>
+      {/* Consistent Header */}
+      <header className="sticky top-0 z-50 bg-white border-b border-gray-200 shadow-sm">
+        <div className="flex items-center justify-between px-4 py-3">
+          {/* Back button on left */}
+          <button 
+            onClick={() => router.push('/leader/tools')}
+            className="p-2 active:bg-gray-100 rounded-full transition-colors"
+            style={{ minWidth: '44px', minHeight: '44px' }}
+            aria-label="Back to Tools"
+          >
+            <ArrowLeft size={22} style={{ color: '#374151' }} />
+          </button>
+          
+          {/* Centered logo */}
+          <span className="text-xl font-bold text-gray-900" style={{ fontFamily: BRAND.fonts.heading }}>
+            giveU
+          </span>
+          
+          {/* Empty right side for balance */}
+          <div style={{ width: '44px' }}></div>
+        </div>
+      </header>
+
+      {/* Page Title */}
+      <div className="px-4 pt-6 pb-4 bg-white">
+        <h1 className="text-2xl font-bold text-gray-900 mb-2" style={{ fontFamily: BRAND.fonts.heading }}>
+          Volunteer Responses
+        </h1>
+        <p className="text-gray-600 text-base" style={{ fontFamily: BRAND.fonts.body }}>
+          Monitor volunteer commitments to community needs. New volunteers are auto-accepted but can be managed here.
+        </p>
+      </div>
+
+      {/* Filter Pills */}
+      <div className="px-4 py-3 bg-white border-b border-gray-200">
+        <div className="flex gap-2 overflow-x-auto pb-1" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+          {[
+            { key: 'all', label: 'All Responses' },
+            { key: 'pending', label: 'Pending' },
+            { key: 'accepted', label: 'Accepted' },
+            { key: 'declined', label: 'Declined' },
+            { key: 'cancelled', label: 'Cancelled' }
+          ].map((filterOption) => (
+            <button
+              key={filterOption.key}
+              onClick={() => setFilter(filterOption.key as any)}
+              className="px-5 py-2 rounded-full whitespace-nowrap font-medium transition-colors active:scale-95"
+              style={{
+                backgroundColor: filter === filterOption.key ? BRAND.colors.primary : '#f3f4f6',
+                color: filter === filterOption.key ? 'white' : '#374151',
                 fontFamily: BRAND.fonts.heading,
-                fontSize: '28px',
-                fontWeight: '700',
-                color: BRAND.colors.text,
-                marginBottom: '8px'
-              }}>
-                Volunteer Responses
-              </h1>
-              <p style={{ 
-                color: BRAND.colors.textLight,
-                fontFamily: BRAND.fonts.body 
-              }}>
-                Monitor volunteer commitments to community needs. New volunteers are auto-accepted but can be managed here.
-              </p>
-            </div>
+                minHeight: '40px',
+                fontSize: '14px'
+              }}
+            >
+              {filterOption.label}
+            </button>
+          ))}
+        </div>
+      </div>
 
-            {/* Filters */}
-            <div className="flex items-center gap-4 mb-6">
-              <Filter className="w-5 h-5 text-gray-500" />
-              <div className="flex gap-2">
-                {[
-                  { key: 'all', label: 'All Responses' },
-                  { key: 'pending', label: 'Pending' },
-                  { key: 'accepted', label: 'Accepted' },
-                  { key: 'declined', label: 'Declined' },
-                  { key: 'cancelled', label: 'Cancelled' }
-                ].map((filterOption) => (
-                  <button
-                    key={filterOption.key}
-                    onClick={() => setFilter(filterOption.key as any)}
-                    className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
-                      filter === filterOption.key
-                        ? ''
-                        : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
-                    }`}
-                    style={{
-                      backgroundColor: filter === filterOption.key ? BRAND.colors.primary : undefined,
-                      color: filter === filterOption.key ? 'white' : undefined,
-                      minHeight: '36px'
-                    }}
-                  >
-                    {filterOption.label}
-                    {filterOption.key === 'cancelled' && responses.filter(r => r.status === 'cancelled').length > 0 && (
-                      <span className="ml-2 px-2 py-0.5 bg-red-100 text-red-800 text-xs rounded-full">
-                        {responses.filter(r => r.status === 'cancelled').length}
-                      </span>
-                    )}
-                  </button>
-                ))}
-              </div>
-            </div>
-
+      {/* Responses List */}
+      <main className="px-4 pt-4 pb-32">
             {/* Setup Message */}
             {tableError && (
               <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6 mb-6">
