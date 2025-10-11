@@ -147,8 +147,8 @@ export default function Footer() {
       className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-40"
       style={{ 
         boxShadow: '0 -2px 8px rgba(0, 0, 0, 0.08)',
-        paddingTop: '12px',
-        paddingBottom: 'calc(12px + env(safe-area-inset-bottom, 8px))'
+        paddingTop: '4px',
+        paddingBottom: 'calc(4px + env(safe-area-inset-bottom, 8px))'
       }}
     >
       <div className="relative flex items-end justify-around max-w-md mx-auto px-4">
