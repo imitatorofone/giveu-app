@@ -1453,6 +1453,29 @@ export default function ShareNeedScreen() {
     
     const displayLocation = formData.location === 'custom' ? formData.customLocation : churchAddress;
 
+    // Validation Logic
+    const validationErrors: string[] = [];
+    if (!formData.title || formData.title.trim().length < 3) {
+      validationErrors.push('Title is required (minimum 3 characters)');
+    }
+    if (!formData.notes || formData.notes.trim().length < 10) {
+      validationErrors.push('Description is required (minimum 10 characters)');
+    }
+    if (formData.urgency === 'specific' && !formData.specificDate) {
+      validationErrors.push('Please select a specific date');
+    }
+    if (formData.urgency === 'ongoing' && !formData.ongoingStartDate) {
+      validationErrors.push('Please select a start date for ongoing need');
+    }
+    if (!formData.location || (formData.location === 'custom' && !formData.customLocation)) {
+      validationErrors.push('Location is required');
+    }
+    if (formData.peopleNeeded === '5+' && (!formData.customPeopleCount || parseInt(formData.customPeopleCount) < 6)) {
+      validationErrors.push('Please specify number of people needed (minimum 6 for "5+")');
+    }
+
+    const hasErrors = validationErrors.length > 0;
+
     return (
       <div style={{ 
         minHeight: '100vh', 
@@ -1460,6 +1483,50 @@ export default function ShareNeedScreen() {
         padding: '24px' 
       }}>
         <div style={{ maxWidth: '32rem', margin: '0 auto', paddingTop: '32px' }}>
+          {/* Validation Errors - Prominent */}
+          {hasErrors && (
+            <div style={{ 
+              marginBottom: '24px', 
+              padding: '16px', 
+              backgroundColor: '#fef2f2', 
+              border: '1px solid #fecaca',
+              borderRadius: '12px'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'start', gap: '12px' }}>
+                <AlertCircle size={20} style={{ color: '#ef4444', flexShrink: 0, marginTop: '2px' }} />
+                <div>
+                  <h3 style={{ 
+                    fontWeight: '600', 
+                    color: '#991b1b', 
+                    marginBottom: '8px',
+                    fontFamily: BRAND.fonts.heading,
+                    fontSize: '16px'
+                  }}>
+                    {validationErrors.length} {validationErrors.length === 1 ? 'issue' : 'issues'} to fix
+                  </h3>
+                  <ul style={{ 
+                    listStyle: 'none', 
+                    padding: 0, 
+                    margin: 0,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '4px'
+                  }}>
+                    {validationErrors.map((error, idx) => (
+                      <li key={idx} style={{ 
+                        fontSize: '14px', 
+                        color: '#991b1b',
+                        fontFamily: BRAND.fonts.body
+                      }}>
+                        • {error}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Title */}
           <h2 style={{ fontSize: '28px', marginBottom: '8px', fontWeight: 'bold', color: BRAND.colors.text, fontFamily: BRAND.fonts.heading }}>
             Preview Your Need
@@ -1673,9 +1740,14 @@ export default function ShareNeedScreen() {
             
             <button
               onClick={() => {
+                if (hasErrors) {
+                  toast.error('Please fix the errors before posting');
+                  return;
+                }
                 console.log('[ShareNeed] Post button clicked');
                 handleSubmit();
               }}
+              disabled={hasErrors}
               style={{
               display: 'flex',
               alignItems: 'center',
@@ -1686,16 +1758,25 @@ export default function ShareNeedScreen() {
                 fontSize: '16px',
                 fontWeight: '500',
                 color: 'white',
-                backgroundColor: BRAND.colors.primary,
+                backgroundColor: hasErrors ? '#9ca3af' : BRAND.colors.primary,
                 border: 'none',
-                cursor: 'pointer',
+                cursor: hasErrors ? 'not-allowed' : 'pointer',
                 minHeight: '44px',
                 fontFamily: BRAND.fonts.heading,
                 transition: 'background-color 0.2s',
-                flex: 1
+                flex: 1,
+                opacity: hasErrors ? 0.6 : 1
               }}
-              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = BRAND.colors.primaryHover}
-              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = BRAND.colors.primary}
+              onMouseEnter={(e) => {
+                if (!hasErrors) {
+                  e.currentTarget.style.backgroundColor = BRAND.colors.primaryHover;
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (!hasErrors) {
+                  e.currentTarget.style.backgroundColor = BRAND.colors.primary;
+                }
+              }}
             >
               <CheckCircle size={16} />
               Post Need
