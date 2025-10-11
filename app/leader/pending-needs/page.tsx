@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabaseBrowser as supabase } from '@/lib/supabaseBrowser';
+import Header from '../../../components/Header';
 import Footer from '../../../components/Footer';
 import { CheckCircle, ArrowLeft } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -201,28 +202,24 @@ export default function PendingNeedsPage() {
 
   return (
     <div className="min-h-screen pb-20" style={{ backgroundColor: BRAND.colors.background }}>
-      {/* Consistent Header */}
-      <header className="sticky top-0 z-50 bg-white border-b border-gray-200 shadow-sm">
-        <div className="flex items-center justify-between px-4 py-3">
-          <button 
-            onClick={() => router.push('/leader/tools')}
-            className="p-2 active:bg-gray-100 rounded-full transition-colors"
-            style={{ minWidth: '44px', minHeight: '44px' }}
-            aria-label="Back to Tools"
-          >
-            <ArrowLeft size={22} style={{ color: '#374151' }} />
-          </button>
-          
-          <span className="text-xl font-bold text-gray-900" style={{ fontFamily: BRAND.fonts.heading }}>
-            giveU
-          </span>
-          
-          <div style={{ width: '44px' }}></div>
-        </div>
-      </header>
+      {/* Header with logo and notifications */}
+      <Header />
 
-      {/* Page Title */}
+      {/* Back to Tools Button + Page Title */}
       <div className="px-4 pt-6 pb-4 bg-white border-b border-gray-200">
+        <button
+          onClick={() => router.push('/leader/tools')}
+          className="flex items-center gap-2 mb-4 px-4 py-2 text-white rounded-lg font-medium transition-all active:scale-95"
+          style={{ 
+            minHeight: '44px',
+            fontSize: '15px',
+            backgroundColor: BRAND.colors.primary,
+            fontFamily: BRAND.fonts.heading
+          }}
+        >
+          <ArrowLeft size={16} />
+          Back to Tools
+        </button>
         <h1 className="text-2xl font-bold text-gray-900 mb-2" style={{ fontFamily: BRAND.fonts.heading }}>
           Pending Needs
         </h1>
