@@ -1604,19 +1604,75 @@ export default function ShareNeedScreen() {
     );
   }
 
+  const handleClose = () => {
+    if (confirm('Are you sure? Your progress will be lost.')) {
+      router.push('/dashboard');
+    }
+  };
+
+  const getProgress = () => {
+    if (showPreview) return 100;
+    return ((currentStep + 1) / totalSteps) * 100;
+  };
+
+  const getStepText = () => {
+    if (showPreview) return 'Preview';
+    return `Step ${currentStep + 1} of ${totalSteps}`;
+  };
+
   return (
     <div style={{ 
       minHeight: '100vh', 
       backgroundColor: '#FDFBF7',
-      padding: '16px' 
-    }}
-    className="sm:p-6"
-    >
-      <div style={{ maxWidth: 600, margin: '0 auto', paddingTop: 16 }}
-      className="sm:pt-8"
-      >
-        {/* Removed duplicate progress bar and back button - now only in modal */}
+      paddingBottom: '80px'
+    }}>
+      {/* Consistent Header with Close & Progress */}
+      <header className="sticky top-0 z-50 bg-white border-b border-gray-200 shadow-sm">
+        <div className="flex items-center justify-between px-4 py-3">
+          {/* Close button on left */}
+          <button 
+            onClick={handleClose}
+            className="p-2 active:bg-gray-100 rounded-full transition-colors"
+            style={{ minWidth: '44px', minHeight: '44px' }}
+            aria-label="Close"
+          >
+            <ArrowLeft size={22} style={{ color: '#374151' }} />
+          </button>
+          
+          {/* Title centered */}
+          <h1 className="text-lg font-semibold text-gray-900" style={{ fontFamily: BRAND.fonts.heading }}>
+            Share a Need
+          </h1>
+          
+          {/* Empty right side for balance */}
+          <div style={{ width: '44px' }}></div>
+        </div>
+        
+        {/* Progress bar below header */}
+        <div className="px-4 pb-3">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-sm text-gray-600" style={{ fontFamily: BRAND.fonts.body }}>
+              {getStepText()}
+            </span>
+            <span className="text-sm font-medium" style={{ color: BRAND.colors.primary, fontFamily: BRAND.fonts.heading }}>
+              {Math.round(getProgress())}% complete
+            </span>
+          </div>
+          <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
+            <div 
+              className="h-full transition-all duration-300"
+              style={{ 
+                width: `${getProgress()}%`,
+                backgroundColor: BRAND.colors.primary
+              }}
+            />
+          </div>
+        </div>
+      </header>
 
+      <div style={{ maxWidth: 600, margin: '0 auto', padding: '16px' }}
+      className="sm:p-6"
+      >
         {renderStep()}
 
         {/* Navigation */}
