@@ -1104,12 +1104,12 @@ export default function CommitmentsPage() {
         </div>
       </div>
 
-      {/* Filter Pills */}
+      {/* Filter Pills - Centered */}
       <div className="bg-white px-4 py-4 border-b border-gray-200">
-        <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
+        <div className="flex gap-2 justify-center">
           <button 
             onClick={() => setActiveFilter('All')}
-            className={`px-5 py-2 rounded-full whitespace-nowrap font-medium transition-all active:scale-95 ${
+            className={`px-6 py-2 rounded-full whitespace-nowrap font-medium transition-all active:scale-95 ${
               activeFilter === 'All' 
                 ? 'bg-[#20c997] text-white' 
                 : 'bg-gray-100 text-gray-700'
@@ -1118,50 +1118,28 @@ export default function CommitmentsPage() {
           >
             All
           </button>
-            <button 
-              onClick={() => setActiveFilter('This Week')}
-              className={`px-5 py-2 rounded-full whitespace-nowrap font-medium transition-all active:scale-95 ${
-                activeFilter === 'This Week' 
-                  ? 'bg-[#20c997] text-white' 
-                  : 'bg-gray-100 text-gray-700'
-              }`}
-              style={{ minHeight: '40px', fontFamily: BRAND.fonts.heading }}
-            >
-              This Week
-            </button>
-            <button 
-              onClick={() => setActiveFilter('This Month')}
-              className={`px-5 py-2 rounded-full whitespace-nowrap font-medium transition-all active:scale-95 ${
-                activeFilter === 'This Month' 
-                  ? 'bg-[#20c997] text-white' 
-                  : 'bg-gray-100 text-gray-700'
-              }`}
-              style={{ minHeight: '40px', fontFamily: BRAND.fonts.heading }}
-            >
-              This Month
-            </button>
-            <button 
-              onClick={() => setActiveFilter('Upcoming')}
-              className={`px-5 py-2 rounded-full whitespace-nowrap font-medium transition-all active:scale-95 ${
-                activeFilter === 'Upcoming' 
-                  ? 'bg-[#20c997] text-white' 
-                  : 'bg-gray-100 text-gray-700'
-              }`}
-              style={{ minHeight: '40px', fontFamily: BRAND.fonts.heading }}
-            >
-              Upcoming
-            </button>
-            <button 
-              onClick={() => setActiveFilter('Ongoing')}
-              className={`px-5 py-2 rounded-full whitespace-nowrap font-medium transition-all active:scale-95 ${
-                activeFilter === 'Ongoing' 
-                  ? 'bg-[#20c997] text-white' 
-                  : 'bg-gray-100 text-gray-700'
-              }`}
-              style={{ minHeight: '40px', fontFamily: BRAND.fonts.heading }}
-            >
-              Ongoing
-            </button>
+          <button 
+            onClick={() => setActiveFilter('Upcoming')}
+            className={`px-6 py-2 rounded-full whitespace-nowrap font-medium transition-all active:scale-95 ${
+              activeFilter === 'Upcoming' 
+                ? 'bg-[#20c997] text-white' 
+                : 'bg-gray-100 text-gray-700'
+            }`}
+            style={{ minHeight: '40px', fontFamily: BRAND.fonts.heading }}
+          >
+            Upcoming
+          </button>
+          <button 
+            onClick={() => setActiveFilter('Ongoing')}
+            className={`px-6 py-2 rounded-full whitespace-nowrap font-medium transition-all active:scale-95 ${
+              activeFilter === 'Ongoing' 
+                ? 'bg-[#20c997] text-white' 
+                : 'bg-gray-100 text-gray-700'
+            }`}
+            style={{ minHeight: '40px', fontFamily: BRAND.fonts.heading }}
+          >
+            Ongoing
+          </button>
         </div>
       </div>
 
