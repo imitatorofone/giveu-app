@@ -54,6 +54,7 @@ export default function ShareNeedScreen() {
   const [churchName, setChurchName] = useState('');
   const [churchAddress, setChurchAddress] = useState('');
   const [showAllSkills, setShowAllSkills] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
 
   // Fix hydration mismatch by ensuring client-side rendering
   useEffect(() => {
@@ -1194,13 +1195,110 @@ export default function ShareNeedScreen() {
             <h2 style={{ fontSize: '28px', marginBottom: '8px', fontWeight: 'bold', color: BRAND.colors.text, fontFamily: BRAND.fonts.heading }}>
               What skills are needed?
             </h2>
-            <p style={{ color: BRAND.colors.textLight, marginBottom: '32px', fontSize: '16px', fontFamily: BRAND.fonts.body }}>
+            <p style={{ color: BRAND.colors.textLight, marginBottom: '24px', fontSize: '16px', fontFamily: BRAND.fonts.body }}>
               Select the gift areas and specific skills that would be most helpful
             </p>
 
+            {/* Search Skills */}
+            <div style={{ position: 'relative', marginBottom: '16px' }}>
+              <input
+                type="text"
+                placeholder="Search for a skill..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                style={{
+                  width: '100%',
+                  height: '48px',
+                  paddingLeft: '40px',
+                  paddingRight: '16px',
+                  borderRadius: '8px',
+                  border: '1px solid #e5e7eb',
+                  fontSize: '16px',
+                  fontFamily: BRAND.fonts.body,
+                  outline: 'none',
+                }}
+                onFocus={(e) => e.currentTarget.style.borderColor = BRAND.colors.primary}
+                onBlur={(e) => e.currentTarget.style.borderColor = '#e5e7eb'}
+              />
+              <Plus 
+                size={20} 
+                style={{ 
+                  position: 'absolute', 
+                  left: '12px', 
+                  top: '50%', 
+                  transform: 'translateY(-50%)',
+                  color: '#9ca3af',
+                  pointerEvents: 'none'
+                }} 
+              />
+            </div>
+
+            {/* Selected Skills Section */}
+            {formData.giftingsNeeded.length > 0 && (
+              <div style={{ 
+                marginBottom: '16px', 
+                padding: '16px', 
+                backgroundColor: `${BRAND.colors.primary}0D`, 
+                borderRadius: '12px', 
+                border: `1px solid ${BRAND.colors.primary}33`
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+                  <span style={{ fontSize: '14px', fontWeight: '600', color: BRAND.colors.text, fontFamily: BRAND.fonts.heading }}>
+                    Selected: {formData.giftingsNeeded.length} skills
+                  </span>
+                  <button
+                    onClick={() => setFormData(prev => ({ ...prev, giftingsNeeded: [] }))}
+                    style={{
+                      fontSize: '13px',
+                      color: '#ef4444',
+                      fontWeight: '500',
+                      border: 'none',
+                      background: 'none',
+                      cursor: 'pointer',
+                      padding: '4px 8px',
+                      fontFamily: BRAND.fonts.heading
+                    }}
+                  >
+                    Clear all
+                  </button>
+                </div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                  {formData.giftingsNeeded.map(skill => (
+                    <button
+                      key={skill}
+                      onClick={() => toggleGifting(skill)}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        padding: '6px 12px',
+                        backgroundColor: BRAND.colors.primary,
+                        color: 'white',
+                        borderRadius: '9999px',
+                        fontSize: '13px',
+                        fontWeight: '500',
+                        border: 'none',
+                        cursor: 'pointer',
+                        fontFamily: BRAND.fonts.heading
+                      }}
+                    >
+                      <span>{skill}</span>
+                      <ArrowLeft size={14} style={{ transform: 'rotate(180deg)' }} />
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {/* Gift Categories */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: '24px' }}>
-              {GIFT_CATEGORIES.map((category) => {
+              {GIFT_CATEGORIES.filter(category => {
+                // Filter categories based on search
+                if (!searchQuery) return true;
+                const query = searchQuery.toLowerCase();
+                return category.name.toLowerCase().includes(query) || 
+                       category.tags.some(tag => tag.toLowerCase().includes(query));
+              }).map((category) => {
                 const IconComponent = category.icon;
                 const isExpanded = expandedGiftings.has(category.name);
                 const selectedInCategory = category.tags.filter(tag => formData.giftingsNeeded.includes(tag)).length;
@@ -1268,7 +1366,11 @@ export default function ShareNeedScreen() {
                           flexWrap: 'wrap',
                           gap: '8px'
                         }}>
-                          {category.tags.map((tag) => {
+                          {category.tags.filter(tag => {
+                            // Filter tags based on search
+                            if (!searchQuery) return true;
+                            return tag.toLowerCase().includes(searchQuery.toLowerCase());
+                          }).map((tag) => {
                             const isSelected = formData.giftingsNeeded.includes(tag);
                             return (
                               <button
