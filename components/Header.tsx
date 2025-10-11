@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { supabaseBrowser as supabase } from '../lib/supabaseBrowser';
 import NotificationDropdown from './NotificationDropdown';
 
@@ -17,6 +17,7 @@ export default function Header({ profileActions }: HeaderProps = {}) {
   const [userId, setUserId] = useState<string | null>(null);
   const [isLeader, setIsLeader] = useState(false);
   const pathname = usePathname();
+  const router = useRouter();
   const isProfilePage = pathname === '/profile';
 
   useEffect(() => {
@@ -54,16 +55,24 @@ export default function Header({ profileActions }: HeaderProps = {}) {
         margin: '0 auto'
       }}>
         <div style={{ display: 'flex', alignItems: 'center' }}>
-          <span style={{ 
-            fontWeight: '700', 
-            fontSize: '18px', 
-            color: 'white',
-            fontFamily: quicksandFont,
-            backgroundColor: '#20c997',
-            padding: '4px 16px',
-            borderRadius: '20px',
-            display: 'inline-block'
-          }}>giveU</span>
+          <button
+            onClick={() => router.push('/dashboard')}
+            className="active:scale-95 transition-transform"
+            style={{ 
+              fontWeight: '700', 
+              fontSize: '18px', 
+              color: 'white',
+              fontFamily: quicksandFont,
+              backgroundColor: '#20c997',
+              padding: '8px 20px',
+              borderRadius: '20px',
+              border: 'none',
+              cursor: 'pointer',
+              minHeight: '44px'
+            }}
+          >
+            giveU
+          </button>
         </div>
         
         <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>

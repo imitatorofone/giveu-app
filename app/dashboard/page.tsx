@@ -1069,20 +1069,21 @@ export default function MemberDashboard() {
       <main style={{ maxWidth: '1200px', margin: '0 auto', padding: '16px' }}
       className="sm:px-6 lg:px-8"
       >
-        <div style={{ marginBottom: '30px' }}>
+        <div style={{ marginBottom: '24px' }}>
           <h1 style={{ 
             fontSize: '28px', 
             fontWeight: '700',
             marginBottom: '8px',
             color: BRAND.colors.text,
-            fontFamily: BRAND.fonts.heading // Use brand heading font
+            fontFamily: BRAND.fonts.heading
           }}>
             Ways to Serve
           </h1>
           <div style={{ 
             color: BRAND.colors.textLight,
             fontFamily: BRAND.fonts.body,
-            fontSize: '16px'
+            fontSize: '16px',
+            marginBottom: '12px'
           }}>
             {sortedOpportunities.length} opportunities • {sortedOpportunities.filter(opp => 
               opp.tags.some(tag => {
@@ -1094,12 +1095,9 @@ export default function MemberDashboard() {
               })
             ).length} match your gifts
           </div>
-        </div>
-
-
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-          <div style={{ flex: 1 }}></div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          
+          {/* Sort Dropdown - Left aligned */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '16px' }}>
             <span style={{ 
               fontSize: '14px', 
               color: '#64748b',
@@ -1183,6 +1181,7 @@ export default function MemberDashboard() {
           </div>
         </div>
 
+        {/* Need Cards Grid */}
         <div style={{ 
           display: 'grid', 
           gridTemplateColumns: '1fr',
@@ -1198,28 +1197,25 @@ export default function MemberDashboard() {
             <div 
               key={opportunity.id} 
               data-card-id={opportunity.id}
+              className="bg-white rounded-xl border mb-4"
               style={{ 
-                backgroundColor: 'white',
-                borderRadius: '12px',
-                border: isHelping ? '2px solid #E0F2F1' : '1px solid #e2e8f0',
+                borderColor: isHelping ? '#E0F2F1' : '#E0E0E0',
+                borderWidth: isHelping ? '2px' : '1px',
                 overflow: 'hidden',
                 display: 'flex',
                 flexDirection: 'column',
                 minHeight: '280px',
                 position: 'relative',
-                boxShadow: '0 2px 8px rgba(0, 0, 0, 0.06)'
+                boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)'
               }}
               /* Disabled for MVP - modal functionality
               onClick={() => handleNeedClick(opportunity.id)}
               */
             >
               {/* Card Header */}
-              <div style={{ padding: '16px 16px 0 16px' }}>
-                <h3 style={{ 
-                  fontSize: '18px', 
-                  fontWeight: '600',
-                  marginBottom: '12px',
-                  color: BRAND.colors.text,
+              <div style={{ padding: '20px 20px 0 20px' }}>
+                <h3 className="font-semibold text-lg mb-2" style={{ 
+                  color: '#424242',
                   lineHeight: '1.3',
                   fontFamily: BRAND.fonts.heading,
                   display: 'flex',
@@ -1234,112 +1230,65 @@ export default function MemberDashboard() {
                   )}
                 </h3>
                 
-                {/* Metadata Row - 3 columns horizontal layout */}
+                {/* Metadata Row - Horizontal layout with icons */}
                 <div style={{ 
                   display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'flex-start',
-                  marginBottom: '16px',
-                  fontSize: '13px',
+                  alignItems: 'center',
+                  gap: '12px',
+                  marginBottom: '12px',
+                  fontSize: '14px',
                   color: BRAND.colors.textLight,
-                  borderBottom: '1px solid #f1f5f9',
-                  paddingBottom: '12px',
-                  minHeight: '44px',
-                  opacity: 0.7
+                  opacity: 0.7,
+                  flexWrap: 'wrap'
                 }}>
-                  {/* Column 1 - Date */}
-                  <div style={{ 
-                    display: 'flex', 
-                    flexDirection: 'column',
-                    alignItems: 'center', 
-                    flex: 1,
-                    minHeight: '44px'
-                  }}>
-                    <Calendar size={18} style={{ 
-                      marginBottom: '4px', 
-                      color: BRAND.colors.primary,
-                      flexShrink: 0
-                    }} />
-                    <div style={{ fontSize: '13px', lineHeight: '1.3', textAlign: 'center' }}>
-                      <div style={{ fontWeight: '500', color: BRAND.colors.text }}>{opportunity.date}</div>
-                      {opportunity.time && (
-                        <div style={{ 
-                          color: BRAND.colors.textLight, 
-                          fontSize: '12px', 
-                          marginTop: '2px',
-                          fontWeight: '400'
-                        }}>
-                          {opportunity.time}
-                        </div>
-                      )}
-                    </div>
+                  {/* Date */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <Calendar size={20} style={{ color: BRAND.colors.primary, flexShrink: 0 }} />
+                    <span style={{ fontFamily: BRAND.fonts.body }}>{opportunity.date}</span>
                   </div>
                   
-                  {/* Column 2 - Location */}
-                  <div style={{ 
-                    display: 'flex', 
-                    flexDirection: 'column',
-                    alignItems: 'center', 
-                    flex: 1,
-                    minHeight: '44px'
-                  }}>
-                    <MapPin size={18} style={{ 
-                      marginBottom: '4px', 
-                      color: BRAND.colors.primary,
-                      flexShrink: 0
-                    }} />
-                    <div style={{ fontSize: '13px', lineHeight: '1.3', textAlign: 'center' }}>
-                      <div style={{ fontWeight: '500', color: BRAND.colors.text }}>
-                        {getLocationLine1(opportunity.location)}
-                      </div>
-                      <div style={{ color: BRAND.colors.textLight, fontSize: '12px' }}>
-                        {getLocationLine2(opportunity.location)}
-                      </div>
-                    </div>
+                  {/* Location - with truncation */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', minWidth: 0, flex: 1 }}>
+                    <MapPin size={20} style={{ color: BRAND.colors.primary, flexShrink: 0 }} />
+                    <span style={{ 
+                      fontFamily: BRAND.fonts.body,
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap'
+                    }}>
+                      {(() => {
+                        const loc = getLocationLine1(opportunity.location);
+                        return loc.length > 25 ? loc.substring(0, 25) + '...' : loc;
+                      })()}
+                    </span>
                   </div>
                   
-                  {/* Column 3 - People */}
-                  <div style={{ 
-                    display: 'flex', 
-                    flexDirection: 'column',
-                    alignItems: 'center', 
-                    flex: 1,
-                    minHeight: '44px'
-                  }}>
-                    <Users size={18} style={{ 
-                      marginBottom: '4px', 
-                      color: BRAND.colors.primary,
-                      flexShrink: 0
-                    }} />
-                    <div style={{ fontSize: '13px', lineHeight: '1.3', textAlign: 'center' }}>
-                      <div style={{ fontWeight: '500', color: BRAND.colors.text }}>
-                        {(() => {
-                          const peopleNeeded = opportunity.people_needed || 1;
-                          const needsText = String(peopleNeeded);
-                          return needsText.includes('+') ? `${needsText} needed` : `${needsText}+ needed`;
-                        })()}
-                      </div>
-                      <div style={{ color: BRAND.colors.textLight, fontSize: '12px' }}>
-                        {opportunity.volunteers_count || 0} committed
-                      </div>
-                    </div>
+                  {/* People */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap' }}>
+                    <Users size={20} style={{ color: BRAND.colors.primary, flexShrink: 0 }} />
+                    <span style={{ fontFamily: BRAND.fonts.body }}>
+                      {(() => {
+                        const peopleNeeded = opportunity.people_needed || 1;
+                        const needsText = String(peopleNeeded);
+                        return needsText.includes('+') ? `${needsText} needed` : `${needsText}+ needed`;
+                      })()} • {opportunity.volunteers_count || 0} committed
+                    </span>
                   </div>
                 </div>
               </div>
 
               {/* Card Body */}
               <div style={{ 
-                padding: '0 16px',
+                padding: '0 20px',
                 flex: 1,
                 display: 'flex',
                 flexDirection: 'column'
               }}>
-                <p style={{ 
+                <p className="line-clamp-3" style={{ 
                   color: '#424242',
                   fontSize: '15px',
                   lineHeight: '1.5',
-                  marginBottom: '12px',
-                  flex: 1,
+                  marginBottom: '16px',
                   fontFamily: BRAND.fonts.body
                 }}>
                   {opportunity.description}
@@ -1425,7 +1374,7 @@ export default function MemberDashboard() {
 
               {/* Card Footer */}
               <div style={{ 
-                padding: '16px 16px',
+                padding: '20px',
                 borderTop: '1px solid #f1f5f9',
                 backgroundColor: '#fafbfc'
               }}>
