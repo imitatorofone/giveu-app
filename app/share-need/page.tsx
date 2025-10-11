@@ -484,7 +484,7 @@ export default function ShareNeedScreen() {
       padding: '20px',
       borderRadius: '16px',
       boxShadow: '0 4px 16px rgba(0, 0, 0, 0.08)',
-      maxWidth: '680px',
+      maxWidth: '100%',
       margin: '0 auto',
       border: '1px solid #f3f4f6'
     };
@@ -495,7 +495,7 @@ export default function ShareNeedScreen() {
       border: '1px solid #e5e7eb',
       borderRadius: '8px',
       fontSize: '16px',
-      minHeight: '44px',
+      minHeight: '48px',
       fontFamily: BRAND.fonts.body,
       transition: 'border-color 0.2s, box-shadow 0.2s'
     };
@@ -723,7 +723,7 @@ export default function ShareNeedScreen() {
                 </div>
 
               {isHydrated && formData.urgency === 'specific' && (
-                <div style={{ marginTop: '20px', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
+                <div style={{ marginTop: '20px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }} className="sm:grid-cols-2">
                   <div>
                     <label style={{ ...labelStyle, marginBottom: '8px' }}>
                       <Calendar size={16} color='#20c997' />
@@ -773,7 +773,7 @@ export default function ShareNeedScreen() {
                   <h4 style={{ fontSize: '16px', marginBottom: '16px', fontWeight: '600', color: BRAND.colors.text, fontFamily: BRAND.fonts.heading }}>
                     Ongoing Schedule
                   </h4>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '16px', marginBottom: '12px' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '12px' }} className="sm:grid-cols-2">
                     <div>
                       <label style={{ ...labelStyle, marginBottom: '8px' }}>
                         <Calendar size={16} color='#20c997' />
@@ -1853,8 +1853,8 @@ export default function ShareNeedScreen() {
         </div>
       </header>
 
-      <div style={{ maxWidth: 600, margin: '0 auto', padding: '16px' }}
-      className="sm:p-6"
+      <div style={{ maxWidth: '100%', margin: '0 auto', padding: '16px', overflow: 'hidden' }}
+      className="sm:max-w-[600px] sm:p-6"
       >
         {renderStep()}
 
