@@ -1249,17 +1249,14 @@ export default function MemberDashboard() {
                   </div>
                   
                   {/* Location - with truncation */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', minWidth: 0, flex: 1 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                     <MapPin size={20} style={{ color: BRAND.colors.primary, flexShrink: 0 }} />
                     <span style={{ 
-                      fontFamily: BRAND.fonts.body,
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap'
+                      fontFamily: BRAND.fonts.body
                     }}>
                       {(() => {
                         const loc = getLocationLine1(opportunity.location);
-                        return loc.length > 25 ? loc.substring(0, 25) + '...' : loc;
+                        return loc.length > 20 ? loc.substring(0, 20) + '...' : loc;
                       })()}
                     </span>
                   </div>
