@@ -48,7 +48,7 @@ export default function Footer() {
       path: '/dashboard'
     },
     {
-      name: 'Committed',
+      name: 'Plans',
       icon: CalendarDays,
       path: '/commitments'
     },
@@ -68,34 +68,24 @@ export default function Footer() {
     const Icon = tab.icon;
     const isActive = pathname === tab.path || 
                     (tab.path === '/dashboard' && pathname === '/') ||
-                    (tab.path === '/leader/tools' && pathname.startsWith('/leader'));
+                    (tab.path === '/leader/tools' && pathname.startsWith('/leader')) ||
+                    (tab.path === '/feedback' && pathname === '/feedback');
     
     return (
       <button
         onClick={() => router.push(tab.path)}
-        className="flex flex-col items-center justify-end active:opacity-70 transition-opacity min-w-0"
-        style={{ 
-          paddingBottom: '8px',
-          paddingTop: '8px',
-          paddingLeft: '12px',
-          paddingRight: '12px',
-          height: '64px'
-        }}
+        className="flex flex-col items-center gap-1 active:opacity-70 transition-opacity min-w-[60px]"
       >
-        {/* Icon */}
-        <div className="flex items-center justify-center mb-1">
-          <Icon 
-            size={24}
-            strokeWidth={isActive ? 2.5 : 2}
-            style={{ color: isActive ? BRAND.colors.primary : '#9ca3af' }}
-          />
-        </div>
+        <Icon 
+          size={24}
+          strokeWidth={isActive ? 2.5 : 2}
+          className={isActive ? '' : 'text-gray-600'}
+          style={{ color: isActive ? BRAND.colors.primary : undefined }}
+        />
         
-        {/* Text aligned to bottom */}
         <span 
-          className="text-xs leading-tight"
+          className={`text-xs ${isActive ? 'font-semibold' : ''}`}
           style={{ 
-            fontWeight: isActive ? 600 : 500,
             fontFamily: BRAND.fonts.heading,
             color: isActive ? BRAND.colors.primary : '#6b7280'
           }}
@@ -108,67 +98,6 @@ export default function Footer() {
 
   if (loading) {
     return (
-      <>
-        <nav 
-          className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-40"
-          style={{ 
-            height: '64px',
-            boxShadow: '0 -2px 8px rgba(0, 0, 0, 0.08)',
-            paddingBottom: 'env(safe-area-inset-bottom, 8px)'
-          }}
-        >
-          <div className="relative h-full flex items-center justify-around max-w-screen-xl mx-auto px-4">
-            <div className="relative flex flex-col items-center justify-between opacity-50" style={{ minWidth: '64px', height: '64px', paddingTop: '8px', paddingBottom: '24px' }}>
-              <div className="flex items-center justify-center">
-                <div style={{ width: '22px', height: '22px', backgroundColor: '#e5e7eb', borderRadius: '4px' }} />
-              </div>
-            </div>
-            <div className="relative flex flex-col items-center justify-between opacity-50" style={{ minWidth: '64px', height: '64px', paddingTop: '8px', paddingBottom: '24px' }}>
-              <div className="flex items-center justify-center">
-                <div style={{ width: '22px', height: '22px', backgroundColor: '#e5e7eb', borderRadius: '4px' }} />
-              </div>
-            </div>
-            <div style={{ width: '70px' }} />
-            <div className="relative flex flex-col items-center justify-between opacity-50" style={{ minWidth: '64px', height: '64px', paddingTop: '8px', paddingBottom: '24px' }}>
-              <div className="flex items-center justify-center">
-                <div style={{ width: '22px', height: '22px', backgroundColor: '#e5e7eb', borderRadius: '4px' }} />
-              </div>
-            </div>
-            <div className="relative flex flex-col items-center justify-between opacity-50" style={{ minWidth: '64px', height: '64px', paddingTop: '8px', paddingBottom: '24px' }}>
-              <div className="flex items-center justify-center">
-                <div style={{ width: '22px', height: '22px', backgroundColor: '#e5e7eb', borderRadius: '4px' }} />
-              </div>
-            </div>
-          </div>
-        </nav>
-        
-        <div 
-          className="fixed left-1/2 z-50 opacity-50"
-          style={{
-            bottom: 'calc(34px + env(safe-area-inset-bottom, 8px))',
-            transform: 'translateX(-50%)'
-          }}
-        >
-          <button
-            className="flex items-center justify-center rounded-full"
-            style={{
-              width: '60px',
-              height: '60px',
-              backgroundColor: BRAND.colors.primary,
-              border: 'none',
-              boxShadow: '0 6px 20px rgba(0, 0, 0, 0.18), 0 3px 12px rgba(0, 0, 0, 0.12)'
-            }}
-          >
-            <Plus size={28} className="text-white" strokeWidth={2.5} />
-          </button>
-        </div>
-      </>
-    );
-  }
-
-  return (
-    <>
-      {/* Nav bar */}
       <nav 
         className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-40"
         style={{ 
@@ -177,58 +106,58 @@ export default function Footer() {
           paddingBottom: 'env(safe-area-inset-bottom, 8px)'
         }}
       >
-        <div className="relative h-full flex items-center justify-around max-w-screen-xl mx-auto px-4">
-          <RegularTab tab={regularTabs[0]} />
-          <RegularTab tab={regularTabs[1]} />
-          
-          {/* Spacer for center button */}
-          <div style={{ width: '70px' }} />
-          
-          <RegularTab tab={regularTabs[2]} />
-          <RegularTab tab={regularTabs[3]} />
+        <div className="relative h-full flex items-end justify-between max-w-lg mx-auto px-6 opacity-50">
+          {[1, 2, 3, 4, 5].map((i) => (
+            <div key={i} className="flex flex-col items-center justify-center gap-0.5" style={{ width: '64px', paddingTop: '8px', paddingBottom: '8px' }}>
+              <div style={{ width: '20px', height: '20px', backgroundColor: '#e5e7eb', borderRadius: '4px' }} />
+              <div style={{ width: '32px', height: '10px', backgroundColor: '#e5e7eb', borderRadius: '2px', marginTop: '2px' }} />
+            </div>
+          ))}
         </div>
       </nav>
+    );
+  }
 
-      {/* Center button - button only, NO text */}
-      <div 
-        className="fixed left-1/2 z-50"
-        style={{
-          bottom: 'calc(34px + env(safe-area-inset-bottom, 8px))',
-          transform: 'translateX(-50%)'
-        }}
+  const CenterButton = () => {
+    const isActive = pathname === '/share-need';
+    
+    return (
+      <button
+        onClick={() => router.push('/share-need?modal=1')}
+        className="flex flex-col items-center gap-1 -mt-6 active:scale-95 transition-all min-w-[60px]"
       >
-        <button
-          onClick={() => router.push('/share-need?modal=1')}
-          className="flex items-center justify-center rounded-full active:scale-95 transition-transform"
-          style={{
-            width: '60px',
-            height: '60px',
-            backgroundColor: BRAND.colors.primary,
-            border: 'none',
-            boxShadow: '0 6px 20px rgba(0, 0, 0, 0.18), 0 3px 12px rgba(0, 0, 0, 0.12)'
+        <div className="w-16 h-16 bg-[#20c997] rounded-full flex items-center justify-center shadow-lg mb-1">
+          <Plus size={32} className="text-white" strokeWidth={2.5} />
+        </div>
+        <span 
+          className="text-xs font-medium"
+          style={{ 
+            fontFamily: BRAND.fonts.heading,
+            color: BRAND.colors.primary
           }}
         >
-          <Plus size={28} className="text-white" strokeWidth={2.5} />
-        </button>
-      </div>
+          Share
+        </span>
+      </button>
+    );
+  };
 
-      {/* Text - SEPARATE element, same level as nav */}
-      <span 
-        className="fixed left-1/2"
-        style={{ 
-          bottom: '10px',
-          transform: 'translateX(-50%)',
-          fontSize: '12px',
-          lineHeight: '14px',
-          fontWeight: 600,
-          fontFamily: BRAND.fonts.heading,
-          color: BRAND.colors.primary,
-          whiteSpace: 'nowrap',
-          zIndex: 51
-        }}
-      >
-        Share
-      </span>
-    </>
+  return (
+    <nav 
+      className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-40"
+      style={{ 
+        boxShadow: '0 -2px 8px rgba(0, 0, 0, 0.08)',
+        paddingTop: '12px',
+        paddingBottom: 'calc(12px + env(safe-area-inset-bottom, 8px))'
+      }}
+    >
+      <div className="relative flex items-end justify-around max-w-md mx-auto px-4">
+        <RegularTab tab={regularTabs[0]} />
+        <RegularTab tab={regularTabs[1]} />
+        <CenterButton />
+        <RegularTab tab={regularTabs[2]} />
+        <RegularTab tab={regularTabs[3]} />
+      </div>
+    </nav>
   );
 }
