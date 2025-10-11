@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { supabaseBrowser as supabase } from '../../lib/supabaseBrowser';
 import { useRouter } from 'next/navigation';
 import { Icon } from '../../icons/index';
-import { ArrowLeft, MapPin, Users, Calendar, Clock, AlertCircle, CheckCircle, FileText, Plus, Sun, Cloud, Moon, Home, ArrowRight, ChevronDown } from 'lucide-react';
+import { ArrowLeft, MapPin, Users, Calendar, Clock, AlertCircle, CheckCircle, FileText, Plus, Sun, Cloud, Moon, Home, ArrowRight, ChevronDown, X } from 'lucide-react';
 import { createNotification } from '../../lib/notificationHelper';
 import { BRAND } from '../../lib/brandConfig';
 import { GIFT_CATEGORIES } from '../../lib/giftsConfig';
@@ -1164,63 +1164,6 @@ export default function ShareNeedScreen() {
               />
             </div>
 
-            {/* Selected Skills Section */}
-            {formData.giftingsNeeded.length > 0 && (
-              <div style={{ 
-                marginBottom: '16px', 
-                padding: '16px', 
-                backgroundColor: `${BRAND.colors.primary}0D`, 
-                borderRadius: '12px', 
-                border: `1px solid ${BRAND.colors.primary}33`
-              }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
-                  <span style={{ fontSize: '14px', fontWeight: '600', color: BRAND.colors.text, fontFamily: BRAND.fonts.heading }}>
-                    Selected: {formData.giftingsNeeded.length} skills
-                  </span>
-                  <button
-                    onClick={() => setFormData(prev => ({ ...prev, giftingsNeeded: [] }))}
-                    style={{
-                      fontSize: '13px',
-                      color: '#ef4444',
-                      fontWeight: '500',
-                      border: 'none',
-                      background: 'none',
-                      cursor: 'pointer',
-                      padding: '4px 8px',
-                      fontFamily: BRAND.fonts.heading
-                    }}
-                  >
-                    Clear all
-                  </button>
-                </div>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                  {formData.giftingsNeeded.map(skill => (
-                    <button
-                      key={skill}
-                      onClick={() => toggleGifting(skill)}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '6px',
-                        padding: '6px 12px',
-                        backgroundColor: BRAND.colors.primary,
-                        color: 'white',
-                        borderRadius: '9999px',
-                        fontSize: '13px',
-                        fontWeight: '500',
-                        border: 'none',
-                        cursor: 'pointer',
-                        fontFamily: BRAND.fonts.heading
-                      }}
-                    >
-                      <span>{skill}</span>
-                      <ArrowLeft size={14} style={{ transform: 'rotate(180deg)' }} />
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-
             {/* Gift Categories */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: '24px' }}>
               {GIFT_CATEGORIES.filter(category => {
@@ -1322,14 +1265,62 @@ export default function ShareNeedScreen() {
               })}
             </div>
 
-            {/* Selected Count */}
-            <div style={{ textAlign: 'center', marginTop: '16px' }}>
-              <p style={{ fontSize: '14px', color: BRAND.colors.textLight, fontFamily: BRAND.fonts.body }}>
-                Selected: <span style={{ fontWeight: '600', color: BRAND.colors.text }}>
-                  {formData.giftingsNeeded.length} skill{formData.giftingsNeeded.length !== 1 ? 's' : ''}
-                </span>
-              </p>
-            </div>
+            {/* Selected Skills Section - MOVED TO BOTTOM */}
+            {formData.giftingsNeeded.length > 0 && (
+              <div style={{ 
+                marginTop: '24px',
+                padding: '16px', 
+                backgroundColor: `${BRAND.colors.primary}0D`, 
+                borderRadius: '12px', 
+                border: `1px solid ${BRAND.colors.primary}33`
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+                  <span style={{ fontSize: '14px', fontWeight: '600', color: BRAND.colors.text, fontFamily: BRAND.fonts.heading }}>
+                    Selected: {formData.giftingsNeeded.length} {formData.giftingsNeeded.length === 1 ? 'skill' : 'skills'}
+                  </span>
+                  <button
+                    onClick={() => setFormData(prev => ({ ...prev, giftingsNeeded: [] }))}
+                    style={{
+                      fontSize: '13px',
+                      color: '#ef4444',
+                      fontWeight: '500',
+                      border: 'none',
+                      background: 'none',
+                      cursor: 'pointer',
+                      padding: '4px 8px',
+                      fontFamily: BRAND.fonts.heading
+                    }}
+                  >
+                    Clear all
+                  </button>
+                </div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', justifyContent: 'center' }}>
+                  {formData.giftingsNeeded.map(skill => (
+                    <button
+                      key={skill}
+                      onClick={() => toggleGifting(skill)}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        padding: '6px 12px',
+                        backgroundColor: BRAND.colors.primary,
+                        color: 'white',
+                        borderRadius: '9999px',
+                        fontSize: '13px',
+                        fontWeight: '500',
+                        border: 'none',
+                        cursor: 'pointer',
+                        fontFamily: BRAND.fonts.heading
+                      }}
+                    >
+                      <span>{skill}</span>
+                      <X size={14} />
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         );
 
