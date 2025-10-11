@@ -515,31 +515,8 @@ export default function ShareNeedScreen() {
       case 0:
         return (
           <div style={cardStyle} className="sm:p-8">
-            {/* Progress Bar */}
-            <div style={{ marginBottom: '24px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-                <span style={{ fontSize: '14px', fontWeight: '500', color: BRAND.colors.textLight, fontFamily: BRAND.fonts.body }}>
-                  Step 1 of 3
-                </span>
-                <span style={{ fontSize: '14px', fontWeight: '500', color: BRAND.colors.textLight, fontFamily: BRAND.fonts.body }}>
-                  33% complete
-                </span>
-              </div>
-              <div style={{ width: '100%', backgroundColor: '#e5e7eb', borderRadius: '9999px', height: '8px' }}>
-                <div style={{ 
-                  width: '33%', 
-                  backgroundColor: '#20c997', 
-                  height: '8px', 
-                  borderRadius: '9999px',
-                  transition: 'width 0.3s ease'
-                }}></div>
-              </div>
-            </div>
-
-            <h2 style={{ fontSize: '28px', marginBottom: '8px', fontWeight: 'bold', color: BRAND.colors.text, fontFamily: BRAND.fonts.heading }}>
-              Share a Need
-            </h2>
-            <p style={{ color: BRAND.colors.textLight, marginBottom: '32px', fontSize: '16px', fontFamily: BRAND.fonts.body }}>
+            {/* Step 1 Subtitle */}
+            <p style={{ color: BRAND.colors.textLight, marginBottom: '24px', fontSize: '16px', fontFamily: BRAND.fonts.body, textAlign: 'center' }}>
               Making it easy for your church family to step in and help
             </p>
 
@@ -1004,31 +981,8 @@ export default function ShareNeedScreen() {
       case 1:
         return (
           <div style={cardStyle} className="sm:p-8">
-            {/* Progress Bar */}
-            <div style={{ marginBottom: '24px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-                <span style={{ fontSize: '14px', fontWeight: '500', color: BRAND.colors.textLight, fontFamily: BRAND.fonts.body }}>
-                  Step 2 of 3
-                </span>
-                <span style={{ fontSize: '14px', fontWeight: '500', color: BRAND.colors.textLight, fontFamily: BRAND.fonts.body }}>
-                  67% complete
-                </span>
-              </div>
-              <div style={{ width: '100%', backgroundColor: '#e5e7eb', borderRadius: '9999px', height: '8px' }}>
-                <div style={{ 
-                  width: '67%', 
-                  backgroundColor: '#20c997', 
-                  height: '8px', 
-                  borderRadius: '9999px',
-                  transition: 'width 0.3s ease'
-                }}></div>
-              </div>
-            </div>
-
-            <h2 style={{ fontSize: '28px', marginBottom: '8px', fontWeight: 'bold', color: BRAND.colors.text, fontFamily: BRAND.fonts.heading }}>
-              Where & How Many?
-            </h2>
-            <p style={{ color: BRAND.colors.textLight, marginBottom: '32px', fontSize: '16px', fontFamily: BRAND.fonts.body }}>
+            {/* Step 2 Subtitle */}
+            <p style={{ color: BRAND.colors.textLight, marginBottom: '24px', fontSize: '16px', fontFamily: BRAND.fonts.body, textAlign: 'center' }}>
               Let people know where to meet and how many helpers you need
             </p>
 
@@ -1171,31 +1125,8 @@ export default function ShareNeedScreen() {
       case 2:
         return (
           <div style={cardStyle} className="sm:p-8">
-            {/* Progress Bar */}
-            <div style={{ marginBottom: '24px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-                <span style={{ fontSize: '14px', fontWeight: '500', color: BRAND.colors.textLight, fontFamily: BRAND.fonts.body }}>
-                  Step 3 of 3
-                </span>
-                <span style={{ fontSize: '14px', fontWeight: '500', color: BRAND.colors.textLight, fontFamily: BRAND.fonts.body }}>
-                  100% complete
-                </span>
-              </div>
-              <div style={{ width: '100%', backgroundColor: '#e5e7eb', borderRadius: '9999px', height: '8px' }}>
-                <div style={{ 
-                  width: '100%', 
-                  backgroundColor: '#20c997', 
-                  height: '8px', 
-                  borderRadius: '9999px',
-                  transition: 'width 0.3s ease'
-                }}></div>
-              </div>
-            </div>
-
-            <h2 style={{ fontSize: '28px', marginBottom: '8px', fontWeight: 'bold', color: BRAND.colors.text, fontFamily: BRAND.fonts.heading }}>
-              What skills are needed?
-            </h2>
-            <p style={{ color: BRAND.colors.textLight, marginBottom: '24px', fontSize: '16px', fontFamily: BRAND.fonts.body }}>
+            {/* Step 3 Subtitle */}
+            <p style={{ color: BRAND.colors.textLight, marginBottom: '20px', fontSize: '16px', fontFamily: BRAND.fonts.body, textAlign: 'center' }}>
               Select the gift areas and specific skills that would be most helpful
             </p>
 
@@ -1413,7 +1344,7 @@ export default function ShareNeedScreen() {
             </div>
 
             {/* Selected Count */}
-            <div style={{ textAlign: 'center', marginBottom: '24px' }}>
+            <div style={{ textAlign: 'center', marginTop: '16px' }}>
               <p style={{ fontSize: '14px', color: BRAND.colors.textLight, fontFamily: BRAND.fonts.body }}>
                 Selected: <span style={{ fontWeight: '600', color: BRAND.colors.text }}>
                   {formData.giftingsNeeded.length} skill{formData.giftingsNeeded.length !== 1 ? 's' : ''}
