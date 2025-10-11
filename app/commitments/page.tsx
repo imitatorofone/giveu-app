@@ -366,7 +366,7 @@ function CalendarView({ commitments, currentMonth, onMonthChange }: {
             >
               {/* Day Number with green circle for today */}
               <div 
-                className={`text-sm font-semibold font-quicksand relative z-10 flex items-center justify-center ${
+                className={`text-base font-semibold font-quicksand relative z-10 flex items-center justify-center ${
                   isToday ? 'w-7 h-7 rounded-full text-white' : ''
                 } ${
                   isCurrentMonth ? (isToday ? '' : 'text-gray-900') : 'text-gray-400'
@@ -381,22 +381,24 @@ function CalendarView({ commitments, currentMonth, onMonthChange }: {
                 <div className="absolute bottom-1">
                   {dayCommitments.length === 1 ? (
                     <div
-                      className={`w-1.5 h-1.5 rounded-full ${
+                      className={`w-2 h-2 rounded-full ${
                         isToday ? 'bg-white' : 'bg-[#20c997]'
                       }`}
                       title={`${dayCommitments[0].need.title} - Click to add to calendar`}
                     />
                   ) : (
                     <div
-                      className={`w-1.5 h-1.5 rounded-full relative ${
+                      className={`w-2 h-2 rounded-full relative ${
                         isToday ? 'bg-white' : 'bg-[#20c997]'
                       }`}
                       title={`${dayCommitments.length} commitments: ${dayCommitments.map(c => c.need.title).join(', ')} - Click to add to calendar`}
                     >
                       {/* Show count for multiple commitments */}
-                      <span className={`absolute -top-1 -right-1 text-xs rounded-full w-3 h-3 flex items-center justify-center font-quicksand text-[10px] ${
+                      <span className={`absolute -top-1 -right-1 text-xs rounded-full w-4 h-4 flex items-center justify-center font-quicksand ${
                         isToday ? 'bg-white text-[#20c997]' : 'bg-[#20c997] text-white'
-                      }`}>
+                      }`}
+                      style={{ fontSize: '11px', fontWeight: '600' }}
+                      >
                         {dayCommitments.length}
                       </span>
                     </div>
@@ -494,12 +496,12 @@ function CommitmentCard({ commitment, onCantMakeIt }: {
       
       <div className="space-y-3">
         {/* Date and Time Info */}
-        <div className="flex items-center gap-6 text-gray-600" style={{ fontSize: '14px' }}>
-          <div className="flex items-center gap-2">
-            <Calendar className="w-4 h-4" />
-            <span>
+        <div className="flex items-center justify-start gap-3 mb-3" style={{ fontSize: '14px', opacity: 0.7 }}>
+          <div className="flex items-center gap-1.5">
+            <Calendar className="w-5 h-5 flex-shrink-0" style={{ color: BRAND.colors.primary }} />
+            <span className="text-sm font-medium" style={{ color: BRAND.colors.text }}>
               {need.urgency === 'asap' 
-                ? 'As Soon As Possible' 
+                ? 'ASAP' 
                 : need.urgency === 'ongoing'
                 ? 'Ongoing'
                 : need.specific_date
@@ -508,14 +510,14 @@ function CommitmentCard({ commitment, onCantMakeIt }: {
               }
             </span>
           </div>
-          <div className="flex items-center gap-2">
-            <MapPin className="w-4 h-4" />
-            <span>{need.city || 'Location not specified'}</span>
+          <div className="flex items-center gap-1.5">
+            <MapPin className="w-5 h-5 flex-shrink-0" style={{ color: BRAND.colors.primary }} />
+            <span className="text-sm font-medium" style={{ color: BRAND.colors.text }}>{need.city || 'Location not specified'}</span>
           </div>
           {need.specific_time && (
-            <div className="flex items-center gap-2">
-              <Clock className="w-4 h-4" />
-              <span>{formatTime(need.specific_time)}</span>
+            <div className="flex items-center gap-1.5">
+              <Clock className="w-5 h-5 flex-shrink-0" style={{ color: BRAND.colors.primary }} />
+              <span className="text-sm font-medium" style={{ color: BRAND.colors.text }}>{formatTime(need.specific_time)}</span>
             </div>
           )}
         </div>
@@ -547,8 +549,8 @@ function CommitmentSection({ title, commitments, onCantMakeIt }: {
   onCantMakeIt: (id: string) => void 
 }) {
   return (
-    <div className="mb-8">
-      <h2 className="text-xl font-semibold mb-3" style={{ fontFamily: BRAND.fonts.heading, color: BRAND.colors.text }}>
+    <div className="mb-8 mt-8">
+      <h2 className="text-lg font-semibold mb-4" style={{ fontFamily: BRAND.fonts.heading, color: BRAND.colors.text }}>
         {title}
       </h2>
       <div className="space-y-4">
@@ -1059,10 +1061,10 @@ export default function CommitmentsPage() {
       <div className="bg-white px-4 pt-6 pb-4 sm:px-6">
         <div className="flex justify-between items-center mb-4">
           <div>
-            <h1 className="text-3xl font-bold mb-6" style={{ fontFamily: BRAND.fonts.heading, color: BRAND.colors.text }}>
-              My Commitments
+            <h1 className="text-3xl font-bold mb-2" style={{ fontFamily: BRAND.fonts.heading, color: BRAND.colors.text }}>
+              Commitments
             </h1>
-            <p className="text-gray-600" style={{ fontFamily: BRAND.fonts.body }}>Track your volunteering commitments and schedule</p>
+            <p className="text-gray-600 text-base mb-6" style={{ fontFamily: BRAND.fonts.body }}>Track your volunteering commitments and schedule</p>
           </div>
           
           {/* View Mode Toggle */}
