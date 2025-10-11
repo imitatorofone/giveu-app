@@ -337,6 +337,7 @@ export default function AuthPage() {
                     router.replace('/setup');
                   }
                 }}
+                className="active:scale-95"
                 style={{
                   width: '100%',
                   padding: '16px 24px',
@@ -345,21 +346,22 @@ export default function AuthPage() {
                   borderRadius: '12px',
                   fontSize: '16px',
                   fontWeight: '600',
+                  minHeight: '56px',
                   border: 'none',
                   cursor: 'pointer',
-                  transition: 'all 0.2s ease',
+                  transition: 'all 0.15s ease',
                   boxShadow: '0 4px 12px rgba(32, 201, 151, 0.3)',
                   marginBottom: '16px'
                 }}
-                onMouseEnter={(e) => {
+                onTouchStart={(e) => {
                   e.currentTarget.style.backgroundColor = BRAND.colors.primaryHover;
-                  e.currentTarget.style.transform = 'translateY(-1px)';
-                  e.currentTarget.style.opacity = '0.9';
+                  e.currentTarget.style.transform = 'scale(0.98)';
                 }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = BRAND.colors.primary;
-                  e.currentTarget.style.transform = 'translateY(0)';
-                  e.currentTarget.style.opacity = '1';
+                onTouchEnd={(e) => {
+                  setTimeout(() => {
+                    e.currentTarget.style.backgroundColor = BRAND.colors.primary;
+                    e.currentTarget.style.transform = 'scale(1)';
+                  }, 150);
                 }}
               >
                 Continue
@@ -367,25 +369,19 @@ export default function AuthPage() {
               
               <button
                 onClick={handleSignOut}
+                className="active:bg-gray-50"
                 style={{
                   width: '100%',
                   padding: '12px 24px',
                   backgroundColor: 'transparent',
                   color: '#6b7280',
                   borderRadius: '8px',
-                  fontSize: '14px',
+                  fontSize: '15px',
                   fontWeight: '500',
+                  minHeight: '48px',
                   border: '1px solid #e5e7eb',
                   cursor: 'pointer',
-                  transition: 'all 0.2s ease'
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = '#f9fafb';
-                  e.currentTarget.style.borderColor = '#d1d5db';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = 'transparent';
-                  e.currentTarget.style.borderColor = '#e5e7eb';
+                  transition: 'all 0.15s ease'
                 }}
               >
                 Switch account
@@ -461,11 +457,13 @@ export default function AuthPage() {
         <div style={{ 
           width: '100%',
           backgroundColor: 'white',
-          padding: '40px',
+          padding: '24px',
           borderRadius: '20px',
           border: '1px solid #e5e7eb',
           boxShadow: '0 8px 25px -5px rgba(0, 0, 0, 0.15), 0 4px 6px -1px rgba(0, 0, 0, 0.1)'
-        }}>
+        }}
+        className="sm:p-10"
+        >
           <div style={{ marginBottom: '16px' }}>
             <input
               type="email"
@@ -478,6 +476,7 @@ export default function AuthPage() {
                 border: '2px solid #e5e7eb',
                 borderRadius: '12px',
                 fontSize: '16px',
+                minHeight: '56px',
                 outline: 'none',
                 transition: 'all 0.2s ease',
                 backgroundColor: 'white'
@@ -496,6 +495,7 @@ export default function AuthPage() {
           <button
             onClick={handleSignIn}
             disabled={loading}
+            className={!loading ? 'active:scale-95' : ''}
             style={{
               width: '100%',
               padding: '16px 24px',
@@ -504,23 +504,24 @@ export default function AuthPage() {
               borderRadius: '12px',
               fontSize: '16px',
               fontWeight: '600',
+              minHeight: '56px',
               border: 'none',
               cursor: loading ? 'not-allowed' : 'pointer',
-              transition: 'all 0.2s ease',
+              transition: 'all 0.15s ease',
               boxShadow: loading ? 'none' : '0 4px 12px rgba(32, 201, 151, 0.3)'
             }}
-            onMouseEnter={(e) => {
+            onTouchStart={(e) => {
               if (!loading) {
                 e.currentTarget.style.backgroundColor = BRAND.colors.primaryHover;
-                e.currentTarget.style.transform = 'translateY(-1px)';
-                e.currentTarget.style.opacity = '0.9';
+                e.currentTarget.style.transform = 'scale(0.98)';
               }
             }}
-            onMouseLeave={(e) => {
+            onTouchEnd={(e) => {
               if (!loading) {
-                e.currentTarget.style.backgroundColor = BRAND.colors.primary;
-                e.currentTarget.style.transform = 'translateY(0)';
-                e.currentTarget.style.opacity = '1';
+                setTimeout(() => {
+                  e.currentTarget.style.backgroundColor = BRAND.colors.primary;
+                  e.currentTarget.style.transform = 'scale(1)';
+                }, 150);
               }
             }}
           >

@@ -112,8 +112,12 @@ export default function SurveyStep1() {
   if (!user) return <div>Loading...</div>;
 
   return (
-    <main style={{ minHeight: '100vh', backgroundColor: BRAND.colors.background, padding: '48px 16px' }}>
-      <div style={{ maxWidth: '672px', margin: '0 auto', backgroundColor: 'white', borderRadius: '12px', boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)', border: '1px solid #e5e7eb', padding: '32px 24px' }}>
+    <main style={{ minHeight: '100vh', backgroundColor: BRAND.colors.background, padding: '24px 16px' }}
+    className="sm:py-12"
+    >
+      <div style={{ maxWidth: '672px', margin: '0 auto', backgroundColor: 'white', borderRadius: '12px', boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)', border: '1px solid #e5e7eb', padding: '24px' }}
+      className="sm:p-8"
+      >
         {/* Progress indicator */}
         <div style={{ width: '100%', height: '8px', backgroundColor: '#e5e7eb', borderRadius: '9999px', marginBottom: '24px' }}>
           <div style={{ backgroundColor: BRAND.colors.primary, height: '8px', borderRadius: '9999px', transition: 'all 0.3s', width: '25%' }}></div>
@@ -139,7 +143,7 @@ export default function SurveyStep1() {
               value={fullName}
               onChange={(e) => setFullName(e.target.value)}
               placeholder="Sarah Johnson"
-              style={{ width: '100%', padding: '12px 16px', border: '1px solid #e5e7eb', borderRadius: '8px', fontSize: '14px', fontFamily: BRAND.fonts.body, minHeight: '44px' }}
+              style={{ width: '100%', padding: '14px 16px', border: '1px solid #e5e7eb', borderRadius: '8px', fontSize: '16px', fontFamily: BRAND.fonts.body, minHeight: '52px' }}
             />
         </div>
 
@@ -153,7 +157,7 @@ export default function SurveyStep1() {
               value={age}
               onChange={(e) => setAge(e.target.value)}
               placeholder="25"
-              style={{ width: '100%', padding: '12px 16px', border: '1px solid #e5e7eb', borderRadius: '8px', fontSize: '14px', fontFamily: BRAND.fonts.body, minHeight: '44px' }}
+              style={{ width: '100%', padding: '14px 16px', border: '1px solid #e5e7eb', borderRadius: '8px', fontSize: '16px', fontFamily: BRAND.fonts.body, minHeight: '52px' }}
             />
           </div>
 
@@ -167,7 +171,7 @@ export default function SurveyStep1() {
               value={city}
               onChange={(e) => setCity(e.target.value)}
               placeholder="Austin"
-              style={{ width: '100%', padding: '12px 16px', border: '1px solid #e5e7eb', borderRadius: '8px', fontSize: '14px', fontFamily: BRAND.fonts.body, minHeight: '44px' }}
+              style={{ width: '100%', padding: '14px 16px', border: '1px solid #e5e7eb', borderRadius: '8px', fontSize: '16px', fontFamily: BRAND.fonts.body, minHeight: '52px' }}
             />
           </div>
 
@@ -181,7 +185,7 @@ export default function SurveyStep1() {
               value={phone}
               onChange={handlePhoneChange}
               placeholder="(555) 123-4567"
-              style={{ width: '100%', padding: '12px 16px', border: '1px solid #e5e7eb', borderRadius: '8px', fontSize: '14px', fontFamily: BRAND.fonts.body, minHeight: '44px' }}
+              style={{ width: '100%', padding: '14px 16px', border: '1px solid #e5e7eb', borderRadius: '8px', fontSize: '16px', fontFamily: BRAND.fonts.body, minHeight: '52px' }}
             />
           </div>
 
@@ -197,32 +201,19 @@ export default function SurveyStep1() {
                   key={time}
                   type="button"
                   onClick={() => toggleAvailability(time)}
+                  className="active:scale-95"
                   style={{
                     backgroundColor: availability.includes(time) ? BRAND.colors.primary : '#f3f4f6',
                     color: availability.includes(time) ? 'white' : BRAND.colors.text,
                     border: availability.includes(time) ? `2px solid ${BRAND.colors.primary}` : '1px solid #e5e7eb',
-                    padding: '12px 16px',
+                    padding: '14px 16px',
                     borderRadius: '8px',
-                    fontSize: '14px',
+                    fontSize: '15px',
                     fontWeight: '500',
                     fontFamily: BRAND.fonts.heading,
                     cursor: 'pointer',
-                    transition: 'all 0.2s',
-                    minHeight: '44px'
-                  }}
-                  onMouseEnter={(e) => {
-                    if (availability.includes(time)) {
-                      e.currentTarget.style.backgroundColor = BRAND.colors.primaryHover;
-                    } else {
-                      e.currentTarget.style.backgroundColor = '#e5e7eb';
-                    }
-                  }}
-                  onMouseLeave={(e) => {
-                    if (availability.includes(time)) {
-                      e.currentTarget.style.backgroundColor = BRAND.colors.primary;
-                    } else {
-                      e.currentTarget.style.backgroundColor = '#f3f4f6';
-                    }
+                    transition: 'all 0.15s ease',
+                    minHeight: '48px'
                   }}
                 >
                   {time}
@@ -234,33 +225,36 @@ export default function SurveyStep1() {
           <button
             onClick={handleNext}
             disabled={!fullName || !age || !city || !phone}
+            className={(fullName && age && city && phone) ? 'active:scale-95' : ''}
             style={{
               width: '100%',
               backgroundColor: (fullName && age && city && phone) ? BRAND.colors.primary : '#9ca3af',
               color: 'white',
-              padding: '12px 24px',
+              padding: '16px 24px',
               borderRadius: '8px',
               border: 'none',
               fontSize: '16px',
               fontWeight: '600',
               fontFamily: BRAND.fonts.heading,
               cursor: (fullName && age && city && phone) ? 'pointer' : 'not-allowed',
-              minHeight: '44px',
+              minHeight: '56px',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               gap: '8px',
-              transition: 'all 0.2s',
+              transition: 'all 0.15s ease',
               opacity: (fullName && age && city && phone) ? 1 : 0.5
             }}
-            onMouseEnter={(e) => {
+            onTouchStart={(e) => {
               if (fullName && age && city && phone) {
                 e.currentTarget.style.backgroundColor = BRAND.colors.primaryHover;
               }
             }}
-            onMouseLeave={(e) => {
+            onTouchEnd={(e) => {
               if (fullName && age && city && phone) {
-                e.currentTarget.style.backgroundColor = BRAND.colors.primary;
+                setTimeout(() => {
+                  e.currentTarget.style.backgroundColor = BRAND.colors.primary;
+                }, 150);
               }
             }}
           >

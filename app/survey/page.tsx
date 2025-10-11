@@ -27,7 +27,7 @@ export default function SurveyWelcome() {
 
   return (
     <main className="min-h-screen bg-gray-50 py-12 px-4">
-      <div className="max-w-2xl mx-auto bg-white rounded-xl shadow-md border border-gray-100 p-8">
+      <div className="max-w-2xl mx-auto bg-white rounded-xl shadow-md border border-gray-100 p-6 sm:p-8">
         <div style={{ 
           width: 80, 
           height: 80, 
@@ -61,9 +61,10 @@ export default function SurveyWelcome() {
 
         <button 
           onClick={() => router.push('/survey/step1')}
-          className="w-full py-3 bg-[#20c997] text-white rounded-lg font-semibold hover:bg-[#1ba87f] transition flex items-center justify-center gap-2 mb-6"
+          className="w-full py-3 bg-[#20c997] text-white rounded-lg font-semibold active:bg-[#1ba87f] transition-all active:scale-95 flex items-center justify-center gap-2 mb-6"
           style={{ 
-            minHeight: '44px',
+            minHeight: '52px',
+            fontSize: '16px',
             fontFamily: 'Quicksand, sans-serif'
           }}
         >
@@ -71,7 +72,7 @@ export default function SurveyWelcome() {
           <ArrowRight size={18} strokeWidth={1.5} />
         </button>
 
-        <p className="text-sm text-gray-500 text-center">
+        <p className="text-gray-500 text-center" style={{ fontSize: '14px' }}>
           4 quick steps • 2 minutes
         </p>
       </div>
