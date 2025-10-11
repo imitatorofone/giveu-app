@@ -158,6 +158,8 @@ export default function AuthPage() {
     
     if (confirm('Sign out? You\'ll need your email again to sign in.')) {
       console.log('[auth] User confirmed sign out');
+      // Clear cached role
+      sessionStorage.removeItem('user_role');
       await supabase.auth.signOut();
       console.log('[auth] Sign out complete, redirecting to auth');
       router.replace('/auth');

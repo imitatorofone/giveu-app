@@ -369,10 +369,11 @@ export default function MemberDashboard() {
     }
     checkAuth();
     
-    // Sync volunteer counts on initial load
-    syncVolunteerCounts();
-    
-    fetchNeeds();
+    // 🚀 PERFORMANCE: Run sync and fetch in parallel
+    Promise.all([
+      syncVolunteerCounts(),
+      fetchNeeds()
+    ]);
   }, []);
 
   // Profile completeness check - redirect incomplete users to onboarding
@@ -497,54 +498,48 @@ export default function MemberDashboard() {
     };
   }, [sortOpen]);
 
-  // Add this useEffect to fetch real user gifts
+  // 🚀 PERFORMANCE: Fetch user gifts and commitments in parallel
   useEffect(() => {
-    async function fetchUserGifts() {
+    async function fetchUserData() {
       try {
         const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return;
-
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('gift_selections')
-          .eq('id', user.id)
-          .single();
-
-        if (profile?.gift_selections) {
-          setUserGifts(profile.gift_selections);
-          console.log('User gifts loaded for filtering:', profile.gift_selections);
-        }
-      } catch (error) {
-        console.error('Error fetching user gifts:', error);
-      }
-    }
-
-    fetchUserGifts();
-  }, []);
-
-  // Fetch user commitments when component loads
-  useEffect(() => {
-    async function fetchUserCommitments() {
-      try {
         const { data: { session } } = await supabase.auth.getSession();
-        if (!session?.user) return;
+        
+        const userId = user?.id || session?.user?.id;
+        if (!userId) return;
 
-        const { data: commitments } = await supabase
-          .from('opportunity_responses')
-          .select('need_id, status')
-          .eq('user_id', session.user.id)
-          .in('status', ['pending', 'accepted']);
+        // 🚀 Run both queries in parallel
+        const [profileResult, commitmentsResult] = await Promise.all([
+          supabase
+            .from('profiles')
+            .select('gift_selections')
+            .eq('id', userId)
+            .single(),
+          supabase
+            .from('opportunity_responses')
+            .select('need_id, status')
+            .eq('user_id', userId)
+            .in('status', ['pending', 'accepted'])
+        ]);
 
-        if (commitments) {
-          setUserCommitments(commitments.map(c => c.need_id));
-          console.log('User commitments loaded:', commitments.map(c => c.need_id));
+        // Update user gifts
+        if (profileResult.data?.gift_selections) {
+          setUserGifts(profileResult.data.gift_selections);
+          console.log('User gifts loaded for filtering:', profileResult.data.gift_selections);
+        }
+
+        // Update user commitments
+        if (commitmentsResult.data) {
+          const needIds = commitmentsResult.data.map(c => c.need_id);
+          setUserCommitments(needIds);
+          console.log('User commitments loaded:', needIds);
         }
       } catch (error) {
-        console.error('Error fetching user commitments:', error);
+        console.error('Error fetching user data:', error);
       }
     }
 
-    fetchUserCommitments();
+    fetchUserData();
   }, []);
 
 

@@ -40,6 +40,16 @@ export default function MembersPage() {
 
   const checkAuthAndLoadData = async () => {
     try {
+      // 🚀 PERFORMANCE: Check cache first
+      const cachedChurchCode = sessionStorage.getItem('user_church_code');
+      const cachedIsLeader = sessionStorage.getItem('user_is_leader');
+      
+      if (cachedChurchCode && cachedIsLeader === 'true') {
+        setUserChurchCode(cachedChurchCode);
+        setLoading(false);
+        return; // ✅ Skip profile query!
+      }
+
       const { data: { session } } = await supabase.auth.getSession();
       
       if (!session?.user) {
@@ -73,11 +83,12 @@ export default function MembersPage() {
         return;
       }
 
+      // 🚀 PERFORMANCE: Cache for future page loads
+      sessionStorage.setItem('user_church_code', profileData.church_code);
+      sessionStorage.setItem('user_is_leader', 'true');
+
       // Store church code for filtering
       setUserChurchCode(profileData.church_code);
-
-      // Load members data
-      await fetchMembers();
 
     } catch (error) {
       console.error('Auth error:', error);

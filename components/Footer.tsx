@@ -15,25 +15,45 @@ export default function Footer() {
   useEffect(() => {
     const run = async () => {
       try {
+        // 🚀 PERFORMANCE: Check cache first
+        const cachedRole = sessionStorage.getItem('user_role');
+        const cachedChurchCode = sessionStorage.getItem('user_church_code');
+        
+        if (cachedRole) {
+          setIsLeader(cachedRole === 'leader' || cachedRole === 'admin');
+          setLoading(false);
+          return; // ✅ Skip Supabase query!
+        }
+
+        // Only query if not cached
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) {
           setIsLeader(false);
+          sessionStorage.setItem('user_role', 'member');
           return;
         }
+        
         const { data: prof } = await supabase
           .from('profiles')
-          .select('role')
+          .select('role, is_leader, church_code')
           .eq('id', user.id)
           .single();
 
         const norm = (v?: string) => (v ?? '').toLowerCase().trim();
         const role = norm(prof?.role);
-        const isLeaderResult = role === 'leader' || role === 'admin';
+        const isLeaderResult = prof?.is_leader || role === 'leader' || role === 'admin';
+        
+        // 🚀 PERFORMANCE: Cache the results
+        sessionStorage.setItem('user_role', role || 'member');
+        sessionStorage.setItem('user_is_leader', String(isLeaderResult));
+        if (prof?.church_code) {
+          sessionStorage.setItem('user_church_code', prof.church_code);
+        }
         
         setIsLeader(isLeaderResult);
       } catch (error) {
         console.error('Error checking user role:', error);
-        setIsLeader(true);
+        setIsLeader(false);
       } finally {
         setLoading(false);
       }
@@ -147,8 +167,8 @@ export default function Footer() {
       className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-40"
       style={{ 
         boxShadow: '0 -2px 8px rgba(0, 0, 0, 0.08)',
-        paddingTop: '4px',
-        paddingBottom: 'calc(4px + env(safe-area-inset-bottom, 8px))'
+        paddingTop: '2px',
+        paddingBottom: 'calc(6px + env(safe-area-inset-bottom, 8px))'
       }}
     >
       <div className="relative flex items-end justify-around max-w-md mx-auto px-4">

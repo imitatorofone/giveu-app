@@ -643,6 +643,9 @@ export default function ProfilePage() {
           <button
             onClick={async () => {
               if (confirm('Sign out? You\'ll need your email again to sign in.')) {
+                // Clear cached role
+                sessionStorage.removeItem('user_role');
+                
                 const { error } = await supabase.auth.signOut();
                 if (error) {
                   toast.error('Error signing out');
@@ -924,8 +927,7 @@ function GiftSelectionSection({ selectedGifts, isEditing, onChange }: { selected
     <div>
       {/* Skill Bubbles Display - Always show if gifts selected */}
       {selectedGifts.length > 0 && (
-        <div style={{ marginBottom: '24px' }}>
-          <h4 style={{ fontSize: '14px', fontWeight: '600', color: '#374151', marginBottom: '12px', fontFamily: 'Quicksand, sans-serif' }}>Selected Skills</h4>
+        <div style={{ marginBottom: isEditing ? '24px' : '0' }}>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', justifyContent: 'center' }}>
             {[...selectedGifts].sort().map((gift: string) => (
               <span
