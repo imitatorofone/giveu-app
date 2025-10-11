@@ -358,9 +358,12 @@ export default function AuthPage() {
                   e.currentTarget.style.transform = 'scale(0.98)';
                 }}
                 onTouchEnd={(e) => {
+                  const target = e.currentTarget;
                   setTimeout(() => {
-                    e.currentTarget.style.backgroundColor = BRAND.colors.primary;
-                    e.currentTarget.style.transform = 'scale(1)';
+                    if (target && target.style) {
+                      target.style.backgroundColor = BRAND.colors.primary;
+                      target.style.transform = 'scale(1)';
+                    }
                   }, 150);
                 }}
               >
@@ -518,9 +521,12 @@ export default function AuthPage() {
             }}
             onTouchEnd={(e) => {
               if (!loading) {
+                const target = e.currentTarget;
                 setTimeout(() => {
-                  e.currentTarget.style.backgroundColor = BRAND.colors.primary;
-                  e.currentTarget.style.transform = 'scale(1)';
+                  if (target && target.style) {
+                    target.style.backgroundColor = BRAND.colors.primary;
+                    target.style.transform = 'scale(1)';
+                  }
                 }, 150);
               }
             }}

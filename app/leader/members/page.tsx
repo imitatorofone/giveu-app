@@ -249,8 +249,11 @@ export default function MembersPage() {
                   }}
                   onTouchStart={(e) => e.currentTarget.style.backgroundColor = '#1ba87f'}
                   onTouchEnd={(e) => {
+                    const target = e.currentTarget;
                     setTimeout(() => {
-                      e.currentTarget.style.backgroundColor = '#20c997';
+                      if (target && target.style) {
+                        target.style.backgroundColor = '#20c997';
+                      }
                     }, 150);
                   }}
                 >
@@ -394,8 +397,11 @@ export default function MembersPage() {
                                 }}
                                 onTouchStart={(e) => e.currentTarget.style.backgroundColor = BRAND.colors.primaryHover}
                                 onTouchEnd={(e) => {
+                                  const target = e.currentTarget;
                                   setTimeout(() => {
-                                    e.currentTarget.style.backgroundColor = BRAND.colors.primary;
+                                    if (target && target.style) {
+                                      target.style.backgroundColor = BRAND.colors.primary;
+                                    }
                                   }, 150);
                                 }}
                               >

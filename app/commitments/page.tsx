@@ -444,9 +444,12 @@ function CommitmentCard({ commitment, onCantMakeIt }: {
               e.currentTarget.style.transform = 'scale(0.98)';
             }}
             onTouchEnd={(e) => {
+              const target = e.currentTarget;
               setTimeout(() => {
-                e.currentTarget.style.backgroundColor = BRAND.colors.primary;
-                e.currentTarget.style.transform = 'scale(1)';
+                if (target && target.style) {
+                  target.style.backgroundColor = BRAND.colors.primary;
+                  target.style.transform = 'scale(1)';
+                }
               }, 150);
             }}
             title="Add to Google Calendar"
@@ -469,9 +472,12 @@ function CommitmentCard({ commitment, onCantMakeIt }: {
               e.currentTarget.style.transform = 'scale(0.98)';
             }}
             onTouchEnd={(e) => {
+              const target = e.currentTarget;
               setTimeout(() => {
-                e.currentTarget.style.backgroundColor = BRAND.colors.danger;
-                e.currentTarget.style.transform = 'scale(1)';
+                if (target && target.style) {
+                  target.style.backgroundColor = BRAND.colors.danger;
+                  target.style.transform = 'scale(1)';
+                }
               }, 150);
             }}
             title="Cancel this commitment"

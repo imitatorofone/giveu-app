@@ -373,8 +373,11 @@ export default function ProfilePage() {
                   }}
                   onTouchEnd={(e) => {
                     if (!saving) {
+                      const target = e.currentTarget;
                       setTimeout(() => {
-                        e.currentTarget.style.backgroundColor = BRAND.colors.primary;
+                        if (target && target.style) {
+                          target.style.backgroundColor = BRAND.colors.primary;
+                        }
                       }, 150);
                     }
                   }}

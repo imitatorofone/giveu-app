@@ -252,8 +252,11 @@ export default function SurveyStep1() {
             }}
             onTouchEnd={(e) => {
               if (fullName && age && city && phone) {
+                const target = e.currentTarget;
                 setTimeout(() => {
-                  e.currentTarget.style.backgroundColor = BRAND.colors.primary;
+                  if (target && target.style) {
+                    target.style.backgroundColor = BRAND.colors.primary;
+                  }
                 }, 150);
               }
             }}

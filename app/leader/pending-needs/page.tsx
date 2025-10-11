@@ -285,8 +285,11 @@ export default function PendingNeedsPage() {
                   }}
                   onTouchStart={(e) => e.currentTarget.style.backgroundColor = '#1ba87f'}
                   onTouchEnd={(e) => {
+                    const target = e.currentTarget;
                     setTimeout(() => {
-                      e.currentTarget.style.backgroundColor = '#20c997';
+                      if (target && target.style) {
+                        target.style.backgroundColor = '#20c997';
+                      }
                     }, 150);
                   }}
                 >
@@ -439,8 +442,11 @@ export default function PendingNeedsPage() {
                         }}
                         onTouchEnd={(e) => {
                           if (actingId !== need.id) {
+                            const target = e.currentTarget;
                             setTimeout(() => {
-                              e.currentTarget.style.backgroundColor = BRAND.colors.primary;
+                              if (target && target.style) {
+                                target.style.backgroundColor = BRAND.colors.primary;
+                              }
                             }, 150);
                           }
                         }}
@@ -465,8 +471,11 @@ export default function PendingNeedsPage() {
                         }}
                         onTouchEnd={(e) => {
                           if (actingId !== need.id) {
+                            const target = e.currentTarget;
                             setTimeout(() => {
-                              e.currentTarget.style.backgroundColor = BRAND.colors.danger;
+                              if (target && target.style) {
+                                target.style.backgroundColor = BRAND.colors.danger;
+                              }
                             }, 150);
                           }
                         }}

@@ -1640,8 +1640,11 @@ export default function ShareNeedScreen() {
               e.currentTarget.style.backgroundColor = '#e5e7eb';
             }}
             onTouchEnd={(e) => {
+              const target = e.currentTarget;
               setTimeout(() => {
-                e.currentTarget.style.backgroundColor = '#f3f4f6';
+                if (target && target.style) {
+                  target.style.backgroundColor = '#f3f4f6';
+                }
               }, 150);
             }}
           >
@@ -1673,9 +1676,12 @@ export default function ShareNeedScreen() {
             }}
             onTouchEnd={(e) => {
               if (canContinue()) {
+                const target = e.currentTarget;
                 setTimeout(() => {
-                  e.currentTarget.style.backgroundColor = BRAND.colors.primary;
-                  e.currentTarget.style.transform = 'scale(1)';
+                  if (target && target.style) {
+                    target.style.backgroundColor = BRAND.colors.primary;
+                    target.style.transform = 'scale(1)';
+                  }
                 }, 150);
               }
             }}
