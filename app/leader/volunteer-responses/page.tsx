@@ -198,12 +198,12 @@ export default function VolunteerResponsesPage() {
       </header>
 
       {/* Page Title */}
-      <div className="px-4 pt-6 pb-4 bg-white border-b border-gray-200">
+      <div className="px-4 pt-6 pb-4 bg-white">
         <h1 className="text-2xl font-bold text-gray-900 mb-2" style={{ fontFamily: BRAND.fonts.heading }}>
           Volunteer Responses
         </h1>
         <p className="text-gray-600 text-base" style={{ fontFamily: BRAND.fonts.body }}>
-          Monitor volunteer commitments to community needs. New volunteers are auto-accepted but can be managed here.
+          Monitor volunteer commitments. New volunteers are auto-accepted.
         </p>
       </div>
 

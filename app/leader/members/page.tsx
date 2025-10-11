@@ -205,7 +205,7 @@ export default function MembersPage() {
       </header>
 
       {/* Page Title */}
-      <div className="px-4 pt-6 pb-4 bg-white border-b border-gray-200">
+      <div className="px-4 pt-6 pb-4 bg-white">
         <h1 className="text-2xl font-bold text-gray-900 mb-2" style={{ fontFamily: BRAND.fonts.heading }}>
           Members
         </h1>
