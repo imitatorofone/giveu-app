@@ -373,8 +373,7 @@ export default function MembersPage() {
 
       {/* Members List */}
       <main className="px-4 pt-4 pb-32">
-            {/* Members List */}
-            <div className="space-y-8">
+        <div className="space-y-8">
               {/* Pending Members */}
               {pendingMembers.length > 0 && (
                 <div>
@@ -545,8 +544,6 @@ export default function MembersPage() {
                   </p>
                 </div>
               )}
-            </div>
-          </div>
         </div>
       </main>
       
