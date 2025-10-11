@@ -3,8 +3,8 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabaseBrowser as supabase } from '@/lib/supabaseBrowser';
-import Header from '@/components/Header';
 import Footer from '@/components/Footer';
+import NotificationDropdown from '@/components/NotificationDropdown';
 import { ArrowLeft } from 'lucide-react';
 import { BRAND } from '@/lib/brandConfig';
 import toast from 'react-hot-toast';
@@ -166,24 +166,46 @@ export default function MembersPage() {
 
   return (
     <div className="min-h-screen pb-20" style={{ backgroundColor: BRAND.colors.background }}>
-      {/* Header with logo and notifications */}
-      <Header />
+      {/* Integrated Header with Back Button */}
+      <header className="sticky top-0 z-50 bg-white border-b border-gray-200 shadow-sm">
+        <div className="flex items-center justify-between px-4 py-3">
+          {/* Back button integrated on left */}
+          <button 
+            onClick={() => router.push('/leader/tools')}
+            className="flex items-center gap-2 text-gray-700 transition-colors active:opacity-70"
+            style={{ minWidth: '60px', minHeight: '44px' }}
+          >
+            <ArrowLeft size={20} />
+            <span className="text-sm font-medium" style={{ fontFamily: BRAND.fonts.heading }}>Tools</span>
+          </button>
+          
+          {/* Centered logo */}
+          <button
+            onClick={() => router.push('/dashboard')}
+            className="active:scale-95 transition-transform"
+            style={{ 
+              fontWeight: '700', 
+              fontSize: '20px', 
+              color: 'white',
+              fontFamily: BRAND.fonts.heading,
+              backgroundColor: BRAND.colors.primary,
+              padding: '8px 20px',
+              borderRadius: '20px',
+              border: 'none',
+              cursor: 'pointer',
+              minHeight: '44px'
+            }}
+          >
+            giveU
+          </button>
+          
+          {/* Notification bell on right */}
+          <NotificationDropdown />
+        </div>
+      </header>
 
-      {/* Back to Tools Button + Page Title */}
+      {/* Page Title */}
       <div className="px-4 pt-6 pb-4 bg-white border-b border-gray-200">
-        <button
-          onClick={() => router.push('/leader/tools')}
-          className="flex items-center gap-2 mb-4 px-4 py-2 text-white rounded-lg font-medium transition-all active:scale-95"
-          style={{ 
-            minHeight: '44px',
-            fontSize: '15px',
-            backgroundColor: BRAND.colors.primary,
-            fontFamily: BRAND.fonts.heading
-          }}
-        >
-          <ArrowLeft size={16} />
-          Back to Tools
-        </button>
         <h1 className="text-2xl font-bold text-gray-900 mb-2" style={{ fontFamily: BRAND.fonts.heading }}>
           Members
         </h1>
