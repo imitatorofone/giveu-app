@@ -41,26 +41,26 @@ export default function Header({ profileActions }: HeaderProps = {}) {
   }, []);
 
   return (
-    <header style={{ 
-      backgroundColor: 'white', 
-      borderBottom: '1px solid #e5e7eb',
-      padding: '12px 24px',
+    <header className="sticky top-0 z-50 bg-white border-b border-gray-200 shadow-sm" style={{ 
       fontFamily: merriweatherFont
     }}>
-      <div style={{ 
-        display: 'flex', 
-        alignItems: 'center', 
-        justifyContent: 'space-between',
+      <div className="flex items-center justify-between px-4 py-3" style={{ 
         maxWidth: '1200px',
         margin: '0 auto'
       }}>
-        <div style={{ display: 'flex', alignItems: 'center' }}>
+        {/* Left spacer for balance (empty when no profile actions) */}
+        <div className="w-10" style={{ minWidth: isProfilePage ? 'auto' : '40px' }}>
+          {/* Profile actions appear here on profile page, otherwise empty for balance */}
+        </div>
+        
+        {/* Centered Logo */}
+        <div className="flex items-center justify-center flex-1">
           <button
             onClick={() => router.push('/dashboard')}
             className="active:scale-95 transition-transform"
             style={{ 
               fontWeight: '700', 
-              fontSize: '18px', 
+              fontSize: '20px', 
               color: 'white',
               fontFamily: quicksandFont,
               backgroundColor: '#20c997',
@@ -75,7 +75,8 @@ export default function Header({ profileActions }: HeaderProps = {}) {
           </button>
         </div>
         
-        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+        {/* Right side - Notifications (and profile actions if on profile page) */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           {isProfilePage && profileActions}
           {userId && (
             <NotificationDropdown />

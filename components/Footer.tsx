@@ -43,12 +43,12 @@ export default function Footer() {
 
   const regularTabs = [
     {
-      name: 'Ways to Serve',
+      name: 'Serve',
       icon: Heart,
       path: '/dashboard'
     },
     {
-      name: 'Commitments',
+      name: 'Committed',
       icon: CalendarDays,
       path: '/commitments'
     },
@@ -73,16 +73,17 @@ export default function Footer() {
     return (
       <button
         onClick={() => router.push(tab.path)}
-        className="relative flex flex-col items-center justify-between active:opacity-70 transition-opacity"
+        className="flex flex-col items-center justify-end active:opacity-70 transition-opacity min-w-0"
         style={{ 
-          minWidth: '72px',
-          height: '64px',
-          paddingTop: '6px',
-          paddingBottom: '24px'
+          paddingBottom: '8px',
+          paddingTop: '8px',
+          paddingLeft: '12px',
+          paddingRight: '12px',
+          height: '64px'
         }}
       >
-        {/* Icon in upper area */}
-        <div className="flex items-center justify-center" style={{ minWidth: '44px', minHeight: '44px' }}>
+        {/* Icon */}
+        <div className="flex items-center justify-center mb-1">
           <Icon 
             size={24}
             strokeWidth={isActive ? 2.5 : 2}
@@ -90,19 +91,13 @@ export default function Footer() {
           />
         </div>
         
-        {/* Text absolutely positioned at bottom */}
+        {/* Text aligned to bottom */}
         <span 
+          className="text-xs leading-tight"
           style={{ 
-            position: 'absolute',
-            bottom: '10px',
-            left: '50%',
-            transform: 'translateX(-50%)',
-            fontSize: '12px',
-            lineHeight: '14px',
             fontWeight: isActive ? 600 : 500,
             fontFamily: BRAND.fonts.heading,
-            color: isActive ? BRAND.colors.primary : '#6b7280',
-            whiteSpace: 'nowrap'
+            color: isActive ? BRAND.colors.primary : '#6b7280'
           }}
         >
           {tab.name}
@@ -232,7 +227,7 @@ export default function Footer() {
           zIndex: 51
         }}
       >
-        Share a Need
+        Share
       </span>
     </>
   );

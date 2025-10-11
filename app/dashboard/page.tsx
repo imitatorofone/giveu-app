@@ -1234,6 +1234,7 @@ export default function MemberDashboard() {
                 <div style={{ 
                   display: 'flex',
                   alignItems: 'center',
+                  justifyContent: 'center',
                   gap: '12px',
                   marginBottom: '12px',
                   fontSize: '14px',
