@@ -1292,11 +1292,7 @@ export default function ShareNeedScreen() {
                         backgroundColor: '#f9fafb',
                         borderTop: '1px solid #e5e7eb'
                       }}>
-                        <div style={{ 
-                          display: 'flex',
-                          flexWrap: 'wrap',
-                          gap: '8px'
-                        }}>
+                        <div className="grid grid-cols-2 gap-2">
                           {category.tags.filter(tag => {
                             // Filter tags based on search
                             if (!searchQuery) return true;
@@ -1307,29 +1303,12 @@ export default function ShareNeedScreen() {
                               <button
                                 key={tag}
                                 onClick={() => toggleGifting(tag)}
-                                style={{
-                                  padding: '8px 16px',
-                                  borderRadius: '9999px',
-                                  fontSize: '14px',
-                                  fontWeight: '500',
-                                  cursor: 'pointer',
-                                  minHeight: '36px',
-                                  border: isSelected ? 'none' : '1px solid #e5e7eb',
-                                  backgroundColor: isSelected ? '#20c997' : 'white',
-                                  color: isSelected ? 'white' : '#4b5563',
-                                  transition: 'all 0.2s',
-                                  fontFamily: BRAND.fonts.heading
-                                }}
-                                onMouseEnter={(e) => {
-                                  if (!isSelected) {
-                                    e.currentTarget.style.borderColor = '#d1d5db';
-                                  }
-                                }}
-                                onMouseLeave={(e) => {
-                                  if (!isSelected) {
-                                    e.currentTarget.style.borderColor = '#e5e7eb';
-                                  }
-                                }}
+                                className={`min-h-[40px] px-3 py-2 rounded-full font-medium text-sm transition-all text-center ${
+                                  isSelected
+                                    ? 'bg-[#20c997] text-white shadow-sm'
+                                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                }`}
+                                style={{ fontFamily: BRAND.fonts.heading }}
                               >
                                 {tag}
                               </button>
