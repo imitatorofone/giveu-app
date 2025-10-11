@@ -1054,146 +1054,144 @@ export default function CommitmentsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen" style={{ backgroundColor: BRAND.colors.background }}>
       <Header />
 
-      {/* Page title section - match dashboard style */}
-      <div className="bg-white px-4 pt-6 pb-4 sm:px-6">
-        <div className="flex justify-between items-center mb-4">
-          <div>
-            <h1 className="text-3xl font-bold mb-2" style={{ fontFamily: BRAND.fonts.heading, color: BRAND.colors.text }}>
-              Commitments
-            </h1>
-            <p className="text-gray-600 text-base mb-6" style={{ fontFamily: BRAND.fonts.body }}>Track your volunteering commitments and schedule</p>
-          </div>
+      {/* Title Section */}
+      <div className="bg-white px-4 pt-6 pb-4">
+        <h1 className="text-2xl font-bold text-gray-900 mb-2" style={{ fontFamily: BRAND.fonts.heading }}>
+          Commitments
+        </h1>
+        <p className="text-gray-600 text-base" style={{ fontFamily: BRAND.fonts.body }}>
+          Track your volunteering commitments and schedule
+        </p>
+      </div>
+      
+      {/* List/Calendar Toggle - Full Width Tabs */}
+      <div className="bg-white border-b border-gray-200">
+        <div className="flex">
+          {/* List Tab */}
+          <button 
+            onClick={() => setViewMode('list')}
+            className={`flex-1 py-3 px-4 text-center font-medium transition-colors relative ${
+              viewMode === 'list' 
+                ? 'text-[#20c997] border-b-2 border-[#20c997]' 
+                : 'text-gray-500 border-b-2 border-transparent'
+            }`}
+            style={{ minHeight: '48px', fontFamily: BRAND.fonts.heading }}
+          >
+            <div className="flex items-center justify-center gap-2">
+              <List className="w-5 h-5" />
+              <span>List</span>
+            </div>
+          </button>
           
-          {/* View Mode Toggle */}
-          <div className="flex bg-gray-100 rounded-lg p-1">
-            <button
-              onClick={() => setViewMode('list')}
-              className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                viewMode === 'list'
-                  ? 'bg-white text-[#20c997] shadow-sm'
-                  : 'text-gray-600 hover:text-gray-900'
-              }`}
-            >
-              <List className="w-4 h-4" />
-              List
-            </button>
-            <button
-              onClick={() => setViewMode('calendar')}
-              className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                viewMode === 'calendar'
-                  ? 'bg-white text-[#20c997] shadow-sm'
-                  : 'text-gray-600 hover:text-gray-900'
-              }`}
-            >
-              <Grid className="w-4 h-4" />
-              Calendar
-            </button>
-          </div>
-        </div>
-
-        {/* Search Bar */}
-        <div className="mb-4">
-          <div className="relative max-w-md">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-            <input
-              type="text"
-              placeholder="Search by title or location..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#20c997] focus:border-transparent"
-            />
-          </div>
+          {/* Calendar Tab */}
+          <button 
+            onClick={() => setViewMode('calendar')}
+            className={`flex-1 py-3 px-4 text-center font-medium transition-colors relative ${
+              viewMode === 'calendar' 
+                ? 'text-[#20c997] border-b-2 border-[#20c997]' 
+                : 'text-gray-500 border-b-2 border-transparent'
+            }`}
+            style={{ minHeight: '48px', fontFamily: BRAND.fonts.heading }}
+          >
+            <div className="flex items-center justify-center gap-2">
+              <Grid className="w-5 h-5" />
+              <span>Calendar</span>
+            </div>
+          </button>
         </div>
       </div>
 
-      {/* Filter tabs and sort options */}
-      <div className="bg-white px-6 pb-6 border-b border-gray-100">
-        <div className="flex flex-col gap-4">
-          {/* Filter buttons */}
-          <div className="flex gap-2 overflow-x-auto">
-            <button 
-              onClick={() => setActiveFilter('All')}
-              className={`px-4 py-2 rounded-full font-medium whitespace-nowrap ${
-                activeFilter === 'All' 
-                  ? 'bg-[#20c997] text-white' 
-                  : 'border border-gray-300 text-gray-700 hover:bg-gray-50'
-              }`}
-            >
-              All
-            </button>
+      {/* Filter Pills */}
+      <div className="bg-white px-4 py-4 border-b border-gray-200">
+        <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
+          <button 
+            onClick={() => setActiveFilter('All')}
+            className={`px-5 py-2 rounded-full whitespace-nowrap font-medium transition-all active:scale-95 ${
+              activeFilter === 'All' 
+                ? 'bg-[#20c997] text-white' 
+                : 'bg-gray-100 text-gray-700'
+            }`}
+            style={{ minHeight: '40px', fontFamily: BRAND.fonts.heading }}
+          >
+            All
+          </button>
             <button 
               onClick={() => setActiveFilter('This Week')}
-              className={`px-4 py-2 rounded-full font-medium whitespace-nowrap ${
+              className={`px-5 py-2 rounded-full whitespace-nowrap font-medium transition-all active:scale-95 ${
                 activeFilter === 'This Week' 
                   ? 'bg-[#20c997] text-white' 
-                  : 'border border-gray-300 text-gray-700 hover:bg-gray-50'
+                  : 'bg-gray-100 text-gray-700'
               }`}
+              style={{ minHeight: '40px', fontFamily: BRAND.fonts.heading }}
             >
               This Week
             </button>
             <button 
               onClick={() => setActiveFilter('This Month')}
-              className={`px-4 py-2 rounded-full font-medium whitespace-nowrap ${
+              className={`px-5 py-2 rounded-full whitespace-nowrap font-medium transition-all active:scale-95 ${
                 activeFilter === 'This Month' 
                   ? 'bg-[#20c997] text-white' 
-                  : 'border border-gray-300 text-gray-700 hover:bg-gray-50'
+                  : 'bg-gray-100 text-gray-700'
               }`}
+              style={{ minHeight: '40px', fontFamily: BRAND.fonts.heading }}
             >
               This Month
             </button>
             <button 
               onClick={() => setActiveFilter('Upcoming')}
-              className={`px-4 py-2 rounded-full font-medium whitespace-nowrap ${
+              className={`px-5 py-2 rounded-full whitespace-nowrap font-medium transition-all active:scale-95 ${
                 activeFilter === 'Upcoming' 
                   ? 'bg-[#20c997] text-white' 
-                  : 'border border-gray-300 text-gray-700 hover:bg-gray-50'
+                  : 'bg-gray-100 text-gray-700'
               }`}
+              style={{ minHeight: '40px', fontFamily: BRAND.fonts.heading }}
             >
               Upcoming
             </button>
             <button 
               onClick={() => setActiveFilter('Ongoing')}
-              className={`px-4 py-2 rounded-full font-medium whitespace-nowrap ${
+              className={`px-5 py-2 rounded-full whitespace-nowrap font-medium transition-all active:scale-95 ${
                 activeFilter === 'Ongoing' 
                   ? 'bg-[#20c997] text-white' 
-                  : 'border border-gray-300 text-gray-700 hover:bg-gray-50'
+                  : 'bg-gray-100 text-gray-700'
               }`}
+              style={{ minHeight: '40px', fontFamily: BRAND.fonts.heading }}
             >
               Ongoing
             </button>
-          </div>
-
-          {/* Sort options */}
-          <div className="flex items-center gap-2">
-            <ArrowUpDown className="w-4 h-4 text-gray-500" />
-            <span className="text-sm text-gray-600">Sort by:</span>
-            <select
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value as 'date' | 'urgency' | 'location')}
-              className="px-3 py-1 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-[#20c997] focus:border-transparent"
-            >
-              <option value="urgency">Urgency</option>
-              <option value="date">Date</option>
-              <option value="location">Location</option>
-            </select>
-          </div>
         </div>
       </div>
 
-      {/* Commitments count - match dashboard pattern */}
-      <div className="px-4 py-4 sm:px-6">
-        <p className="text-sm text-gray-600">
+      {/* Search Bar */}
+      <div className="bg-white px-4 pb-4 border-b border-gray-200">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+          <input
+            type="text"
+            placeholder="Search by title or location..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full pl-10 pr-4 rounded-lg border border-gray-200 focus:border-[#20c997] focus:outline-none"
+            style={{ 
+              height: '48px',
+              fontSize: '16px',
+              fontFamily: BRAND.fonts.body
+            }}
+          />
+        </div>
+      </div>
+
+      {/* Content area */}
+      <div className="px-4 pt-4 pb-20 sm:px-6">
+        {/* Results count */}
+        <p className="text-sm text-gray-600 mb-4" style={{ fontFamily: BRAND.fonts.body }}>
           {filteredAndSortedCommitments.length} commitments
           {searchTerm && ` matching "${searchTerm}"`}
           {activeFilter !== 'All' && ` in ${activeFilter.toLowerCase()}`}
         </p>
-      </div>
-
-      {/* Content area */}
-      <div className="px-4 pb-20 sm:px-6">
         {filteredAndSortedCommitments.length === 0 ? (
           <div className="text-center py-12">
             <Calendar className="w-16 h-16 text-gray-400 mx-auto mb-4" />
