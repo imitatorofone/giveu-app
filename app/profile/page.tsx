@@ -336,162 +336,48 @@ export default function ProfilePage() {
 
   return (
     <>
-      <Header 
-        profileActions={
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            {isEditing ? (
-              <>
-                <button
-                  onClick={() => setIsEditing(false)}
-                  className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg active:bg-gray-50 transition-colors"
-                  style={{ 
-                    minHeight: '48px', 
-                    color: BRAND.colors.text, 
-                    fontFamily: BRAND.fonts.heading,
-                    fontSize: '15px'
-                  }}
-                >
-                  <X size={16} />
-                  Cancel
-                </button>
-                <button
-                  onClick={handleSaveProfile}
-                  disabled={saving}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-lg text-white font-medium transition-all ${!saving ? 'active:scale-95' : ''}`}
-                  style={{ 
-                    backgroundColor: BRAND.colors.primary,
-                    minHeight: '48px',
-                    fontFamily: BRAND.fonts.heading,
-                    fontSize: '15px',
-                    opacity: saving ? 0.5 : 1,
-                    cursor: saving ? 'not-allowed' : 'pointer'
-                  }}
-                  onTouchStart={(e) => {
-                    if (!saving) {
-                      e.currentTarget.style.backgroundColor = BRAND.colors.primaryHover;
-                    }
-                  }}
-                  onTouchEnd={(e) => {
-                    if (!saving) {
-                      const target = e.currentTarget;
-                      setTimeout(() => {
-                        if (target && target.style) {
-                          target.style.backgroundColor = BRAND.colors.primary;
-                        }
-                      }, 150);
-                    }
-                  }}
-                >
-                  <Check size={16} />
-                  {saving ? 'Saving...' : 'Save'}
-                </button>
-              </>
-            ) : (
-              <>
-                <button
-                  onClick={() => setIsEditing(true)}
-                  className="flex items-center gap-2 px-4 py-2 rounded-lg text-white font-medium transition-all active:scale-95"
-                  style={{ 
-                    backgroundColor: BRAND.colors.primary,
-                    minHeight: '48px',
-                    fontFamily: BRAND.fonts.heading,
-                    fontSize: '15px'
-                  }}
-                  onTouchStart={(e) => {
-                    e.currentTarget.style.backgroundColor = BRAND.colors.primaryHover;
-                  }}
-                  onTouchEnd={(e) => {
-                    setTimeout(() => {
-                      e.currentTarget.style.backgroundColor = BRAND.colors.primary;
-                    }, 150);
-                  }}
-                >
-                  <Edit2 size={16} />
-                  Edit Profile
-                </button>
-                <button
-                  onClick={async () => {
-                    console.log('[Profile] Sign out requested');
-                    
-                    if (confirm('Sign out? You\'ll need your email again to sign in.')) {
-                      console.log('[Profile] User confirmed sign out');
-                      const { error } = await supabase.auth.signOut();
-                      
-                      if (error) {
-                        console.error('[Profile] Error signing out:', error);
-                        toast.error('Error signing out');
-                        return;
-                      }
-                      
-                      console.log('[Profile] Sign out successful, redirecting');
-                      router.push('/auth');
-                    } else {
-                      console.log('[Profile] User cancelled sign out');
-                    }
-                  }}
-                  className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg active:bg-gray-50 transition-colors"
-                  style={{ 
-                    minHeight: '48px', 
-                    color: '#6b7280', 
-                    fontFamily: BRAND.fonts.heading,
-                    fontSize: '15px'
-                  }}
-                >
-                  <LogOut size={16} />
-                  Sign out
-                </button>
-              </>
-            )}
-          </div>
-        }
-      />
+      <Header onEditClick={() => setIsEditing(!isEditing)} />
       <div style={{ 
-        backgroundColor: '#f9fafb', 
+        backgroundColor: BRAND.colors.background, 
         minHeight: '100vh', 
         paddingBottom: '80px',
         fontFamily: merriweatherFont
       }}>
 
-      {/* Profile Content */}
-      <div style={{ maxWidth: '1024px', margin: '0 auto', padding: '16px' }}
-      className="sm:p-6"
-      >
-        
-        {/* Top Section - Avatar and Name */}
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '32px' }}>
+      {/* Avatar + Name Section - White Background */}
+      <div className="bg-white pb-4">
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: '24px' }}>
           {/* Avatar Display */}
-          <div style={{ position: 'relative', marginBottom: '16px' }}>
+          <div style={{ position: 'relative', marginBottom: '12px' }}>
             {isEditing ? (
               <>
                 {avatarUrl ? (
                   <img 
                     src={avatarUrl}
                     alt="Profile"
+                    className="w-24 h-24"
                     style={{
-                      width: '128px',
-                      height: '128px',
                       borderRadius: '50%',
                       objectFit: 'cover',
-                      border: '4px solid white',
-                      boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)'
+                      border: '3px solid white',
+                      boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)'
                     }}
                   />
                 ) : (
                   <div 
+                    className="w-24 h-24"
                     style={{
-                      width: '128px',
-                      height: '128px',
                       borderRadius: '50%',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
                       color: 'white',
-                      fontSize: '48px',
+                      fontSize: '36px',
                       fontWeight: 'bold',
                       fontFamily: BRAND.fonts.heading,
                       backgroundColor: BRAND.colors.primary,
-                      border: '4px solid white',
-                      boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)'
+                      border: '3px solid white',
+                      boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)'
                     }}
                   >
                     {profile?.full_name?.charAt(0)?.toUpperCase() || 'U'}
@@ -535,31 +421,29 @@ export default function ProfilePage() {
                   <img 
                     src={avatarUrl}
                     alt="Profile"
+                    className="w-24 h-24"
                     style={{
-                      width: '128px',
-                      height: '128px',
                       borderRadius: '50%',
                       objectFit: 'cover',
-                      border: '4px solid white',
-                      boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)'
+                      border: '3px solid white',
+                      boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)'
                     }}
                   />
                 ) : (
                   <div 
+                    className="w-24 h-24"
                     style={{
-                      width: '128px',
-                      height: '128px',
                       borderRadius: '50%',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
                       color: 'white',
-                      fontSize: '48px',
+                      fontSize: '36px',
                       fontWeight: 'bold',
                       fontFamily: BRAND.fonts.heading,
                       backgroundColor: BRAND.colors.primary,
-                      border: '4px solid white',
-                      boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)'
+                      border: '3px solid white',
+                      boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)'
                     }}
                   >
                     {profile?.full_name?.charAt(0)?.toUpperCase() || 'U'}
@@ -575,69 +459,46 @@ export default function ProfilePage() {
             </p>
           )}
           
-          {/* Name - ONLY place name appears */}
-          <h1 style={{ 
-            fontSize: '28px',
-            fontWeight: 'bold',
-            fontFamily: BRAND.fonts.heading, 
-            color: BRAND.colors.text,
-            marginBottom: '4px'
+          {/* Name - Smaller for mobile */}
+          <h1 className="text-xl font-bold mb-1" style={{ 
+            fontFamily: BRAND.fonts.heading,
+            color: BRAND.colors.text
           }}>
             {profile?.full_name || 'User'}
           </h1>
           
           {/* Email - Small and subtle */}
-          <p style={{ fontSize: '14px', color: BRAND.colors.textLight }}>
+          <p className="text-sm" style={{ color: BRAND.colors.textLight }}>
             {profile?.email}
           </p>
         </div>
-        
-        {/* Profile Info Card - No avatar, no name, just details */}
-        <div className="bg-white rounded-xl shadow-md border border-gray-200 p-4 sm:p-6" style={{ marginBottom: '24px' }}>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      </div>
+      
+      {/* Profile Info Card - Mobile-optimized with dividers */}
+      <div className="mx-4 mt-6 mb-6">
+        <div className="bg-white rounded-xl border border-gray-200 p-5">
+          <div className="space-y-0">
             {/* City */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <div style={{ 
-                flexShrink: 0, 
-                width: '40px', 
-                height: '40px', 
-                borderRadius: '50%', 
-                backgroundColor: '#f3f4f6', 
-                display: 'flex', 
-                alignItems: 'center', 
-                justifyContent: 'center' 
-              }}>
-                <MapPin size={18} style={{ color: BRAND.colors.primary }} />
-              </div>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <p style={{ fontSize: '12px', fontWeight: '500', color: '#6b7280', marginBottom: '2px' }}>City</p>
+            <div className="flex items-center gap-3 py-3 border-b border-gray-100">
+              <MapPin className="w-5 h-5 flex-shrink-0" style={{ color: BRAND.colors.primary }} />
+              <div className="flex-1">
+                <p className="text-xs text-gray-500 mb-0.5" style={{ fontFamily: BRAND.fonts.body }}>City</p>
                 {isEditing ? (
                   <input
                     type="text"
                     value={profile.city}
                     onChange={(e) => setProfile(prev => ({ ...prev, city: e.target.value }))}
                     placeholder="Enter city"
+                    className="text-base font-medium w-full border border-gray-200 rounded px-2 py-1"
                     style={{
                       fontSize: '16px',
-                      width: '100%',
-                      border: '1px solid #e5e7eb',
-                      borderRadius: '6px',
-                      padding: '12px 12px',
                       color: BRAND.colors.text,
                       fontFamily: BRAND.fonts.body,
-                      minHeight: '48px'
+                      minHeight: '44px'
                     }}
                   />
                 ) : (
-                  <p style={{ 
-                    fontSize: '14px', 
-                    fontWeight: '500', 
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    whiteSpace: 'nowrap',
-                    color: BRAND.colors.text,
-                    fontFamily: BRAND.fonts.body
-                  }}>
+                  <p className="text-base font-medium text-gray-900" style={{ fontFamily: BRAND.fonts.body }}>
                     {profile?.city || 'Not set'}
                   </p>
                 )}
@@ -645,45 +506,26 @@ export default function ProfilePage() {
             </div>
             
             {/* Age */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <div style={{ 
-                flexShrink: 0, 
-                width: '40px', 
-                height: '40px', 
-                borderRadius: '50%', 
-                backgroundColor: '#f3f4f6', 
-                display: 'flex', 
-                alignItems: 'center', 
-                justifyContent: 'center' 
-              }}>
-                <User size={18} style={{ color: BRAND.colors.primary }} />
-              </div>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <p style={{ fontSize: '12px', fontWeight: '500', color: '#6b7280', marginBottom: '2px' }}>Age</p>
+            <div className="flex items-center gap-3 py-3 border-b border-gray-100">
+              <User className="w-5 h-5 flex-shrink-0" style={{ color: BRAND.colors.primary }} />
+              <div className="flex-1">
+                <p className="text-xs text-gray-500 mb-0.5" style={{ fontFamily: BRAND.fonts.body }}>Age</p>
                 {isEditing ? (
                   <input
                     type="number"
                     value={profile.age}
                     onChange={(e) => setProfile(prev => ({ ...prev, age: e.target.value }))}
                     placeholder="Age"
+                    className="text-base font-medium w-full border border-gray-200 rounded px-2 py-1"
                     style={{
                       fontSize: '16px',
-                      width: '100%',
-                      border: '1px solid #e5e7eb',
-                      borderRadius: '6px',
-                      padding: '12px 12px',
                       color: BRAND.colors.text,
                       fontFamily: BRAND.fonts.body,
-                      minHeight: '48px'
+                      minHeight: '44px'
                     }}
                   />
                 ) : (
-                  <p style={{ 
-                    fontSize: '14px', 
-                    fontWeight: '500',
-                    color: BRAND.colors.text,
-                    fontFamily: BRAND.fonts.body
-                  }}>
+                  <p className="text-base font-medium text-gray-900" style={{ fontFamily: BRAND.fonts.body }}>
                     {profile?.age ? `${profile.age} years` : 'Not set'}
                   </p>
                 )}
@@ -691,45 +533,26 @@ export default function ProfilePage() {
             </div>
             
             {/* Phone */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <div style={{ 
-                flexShrink: 0, 
-                width: '40px', 
-                height: '40px', 
-                borderRadius: '50%', 
-                backgroundColor: '#f3f4f6', 
-                display: 'flex', 
-                alignItems: 'center', 
-                justifyContent: 'center' 
-              }}>
-                <Phone size={18} style={{ color: BRAND.colors.primary }} />
-              </div>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <p style={{ fontSize: '12px', fontWeight: '500', color: '#6b7280', marginBottom: '2px' }}>Phone</p>
+            <div className="flex items-center gap-3 py-3">
+              <Phone className="w-5 h-5 flex-shrink-0" style={{ color: BRAND.colors.primary }} />
+              <div className="flex-1">
+                <p className="text-xs text-gray-500 mb-0.5" style={{ fontFamily: BRAND.fonts.body }}>Phone</p>
                 {isEditing ? (
                   <input
                     type="tel"
                     value={profile.phone}
                     onChange={(e) => setProfile(prev => ({ ...prev, phone: e.target.value }))}
                     placeholder="Phone number"
+                    className="text-base font-medium w-full border border-gray-200 rounded px-2 py-1"
                     style={{
                       fontSize: '16px',
-                      width: '100%',
-                      border: '1px solid #e5e7eb',
-                      borderRadius: '6px',
-                      padding: '12px 12px',
                       color: BRAND.colors.text,
                       fontFamily: BRAND.fonts.body,
-                      minHeight: '48px'
+                      minHeight: '44px'
                     }}
                   />
                 ) : (
-                  <p style={{ 
-                    fontSize: '14px', 
-                    fontWeight: '500',
-                    color: BRAND.colors.text,
-                    fontFamily: BRAND.fonts.body
-                  }}>
+                  <p className="text-base font-medium text-gray-900" style={{ fontFamily: BRAND.fonts.body }}>
                     {profile?.phone || 'Not set'}
                   </p>
                 )}
@@ -737,12 +560,14 @@ export default function ProfilePage() {
             </div>
           </div>
         </div>
+      </div>
 
-        {/* Availability Card */}
-        <div className="bg-white border border-gray-200 rounded-xl shadow-md p-4 sm:p-6" style={{ marginBottom: '24px' }}>
-          <h3 style={{ fontSize: '18px', fontWeight: '600', color: '#111827', fontFamily: 'Quicksand, sans-serif', marginBottom: '16px' }}>
-            Availability
-          </h3>
+      {/* Availability Section */}
+      <div className="mx-4 mb-6">
+        <h2 className="text-lg font-semibold text-gray-900 mb-4" style={{ fontFamily: BRAND.fonts.heading }}>
+          Availability
+        </h2>
+        <div className="bg-white border border-gray-200 rounded-xl p-4">
           <AvailabilitySection 
             availability={profile.availability}
             isEditing={isEditing}
@@ -751,13 +576,14 @@ export default function ProfilePage() {
             }
           />
         </div>
+      </div>
 
-        {/* Enhanced Interactive Gifts Section */}
-        <div className="bg-white border border-gray-200 rounded-xl shadow-md p-4 sm:p-6" style={{ marginBottom: '24px' }}>
-          <h3 style={{ fontSize: '18px', fontWeight: '600', color: '#111827', fontFamily: 'Quicksand, sans-serif', marginBottom: '16px' }}>
-            My Gifts & Skills
-          </h3>
-          
+      {/* My Gifts & Skills Section */}
+      <div className="mx-4 mb-6">
+        <h2 className="text-lg font-semibold text-gray-900 mb-4" style={{ fontFamily: BRAND.fonts.heading }}>
+          My Gifts & Skills
+        </h2>
+        <div className="bg-white border border-gray-200 rounded-xl p-4">
           <GiftSelectionSection
             selectedGifts={profile.gift_selections || []}
             isEditing={isEditing}
@@ -766,17 +592,18 @@ export default function ProfilePage() {
             }
           />
         </div>
+      </div>
 
-        {/* Notification Preferences Section - Only show in edit mode */}
-        {isEditing && (
-          <div className="bg-white border border-gray-200 rounded-xl shadow-md p-4 sm:p-6" style={{ marginBottom: '24px' }}>
-            <h3 style={{ fontSize: '18px', fontWeight: '600', color: '#111827', fontFamily: 'Quicksand, sans-serif', marginBottom: '8px' }}>
-              Notification Preferences
-            </h3>
-            <p style={{ fontSize: '14px', color: '#6b7280', marginBottom: '20px', fontFamily: 'Quicksand, sans-serif' }}>
+      {/* Notification Preferences Section - Only show in edit mode */}
+      {isEditing && (
+        <div className="mx-4 mb-6">
+          <h2 className="text-lg font-semibold text-gray-900 mb-4" style={{ fontFamily: BRAND.fonts.heading }}>
+            Notification Preferences
+          </h2>
+          <div className="bg-white border border-gray-200 rounded-xl p-4">
+            <p style={{ fontSize: '14px', color: '#6b7280', marginBottom: '16px', fontFamily: BRAND.fonts.body }}>
               Choose which notifications you'd like to receive
             </p>
-            
             <NotificationPreferencesSection
               preferences={profile.notification_preferences}
               isLeader={profile.is_leader}
@@ -785,12 +612,55 @@ export default function ProfilePage() {
               }
             />
           </div>
-        )}
+        </div>
+      )}
 
+      {/* Edit/Save/Sign Out Buttons */}
+      <div className="mx-4 mb-24">
+        {isEditing ? (
+          <div className="flex flex-col gap-3">
+            <button
+              onClick={handleSaveProfile}
+              disabled={saving}
+              className="w-full h-12 rounded-lg text-white font-medium transition-all"
+              style={{
+                backgroundColor: saving ? '#9ca3af' : BRAND.colors.primary,
+                fontFamily: BRAND.fonts.heading,
+                cursor: saving ? 'not-allowed' : 'pointer'
+              }}
+            >
+              {saving ? 'Saving...' : 'Save Changes'}
+            </button>
+            <button
+              onClick={() => setIsEditing(false)}
+              className="w-full h-12 border border-gray-300 rounded-lg text-gray-700 font-medium active:bg-gray-50 transition-colors"
+              style={{ fontFamily: BRAND.fonts.heading }}
+            >
+              Cancel
+            </button>
+          </div>
+        ) : (
+          <button
+            onClick={async () => {
+              if (confirm('Sign out? You\'ll need your email again to sign in.')) {
+                const { error } = await supabase.auth.signOut();
+                if (error) {
+                  toast.error('Error signing out');
+                  return;
+                }
+                router.push('/auth');
+              }
+            }}
+            className="w-full h-12 border-2 border-red-500 rounded-lg text-red-500 font-medium active:bg-red-50 transition-colors"
+            style={{ fontFamily: BRAND.fonts.heading }}
+          >
+            Sign Out
+          </button>
+        )}
       </div>
 
-        {/* Persistent Footer */}
-        <Footer />
+      {/* Persistent Footer */}
+      <Footer />
       </div>
     </>
   );
@@ -926,7 +796,7 @@ function AvailabilitySection({ availability, isEditing, onChange }: { availabili
   };
 
   return (
-    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px' }}>
+    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', justifyContent: 'center' }}>
       {timeSlots.map((slot) => {
         const Icon = slot.icon;
         const isSelected = availability.includes(slot.id);
@@ -1056,8 +926,8 @@ function GiftSelectionSection({ selectedGifts, isEditing, onChange }: { selected
       {selectedGifts.length > 0 && (
         <div style={{ marginBottom: '24px' }}>
           <h4 style={{ fontSize: '14px', fontWeight: '600', color: '#374151', marginBottom: '12px', fontFamily: 'Quicksand, sans-serif' }}>Selected Skills</h4>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-            {selectedGifts.map((gift: string) => (
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', justifyContent: 'center' }}>
+            {[...selectedGifts].sort().map((gift: string) => (
               <span
                 key={gift}
                 className="px-3 py-1 rounded-full text-sm font-medium"

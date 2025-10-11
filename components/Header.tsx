@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { supabaseBrowser as supabase } from '../lib/supabaseBrowser';
 import NotificationDropdown from './NotificationDropdown';
+import { Edit2 } from 'lucide-react';
 
 // Brand typography
 const quicksandFont = 'Quicksand, -apple-system, BlinkMacSystemFont, sans-serif';
@@ -11,9 +12,10 @@ const merriweatherFont = 'Merriweather, Georgia, serif';
 
 interface HeaderProps {
   profileActions?: React.ReactNode;
+  onEditClick?: () => void;
 }
 
-export default function Header({ profileActions }: HeaderProps = {}) {
+export default function Header({ profileActions, onEditClick }: HeaderProps = {}) {
   const [userId, setUserId] = useState<string | null>(null);
   const [isLeader, setIsLeader] = useState(false);
   const pathname = usePathname();
@@ -48,9 +50,18 @@ export default function Header({ profileActions }: HeaderProps = {}) {
         maxWidth: '1200px',
         margin: '0 auto'
       }}>
-        {/* Left spacer for balance (empty when no profile actions) */}
-        <div className="w-10" style={{ minWidth: isProfilePage ? 'auto' : '40px' }}>
-          {/* Profile actions appear here on profile page, otherwise empty for balance */}
+        {/* Left side - Edit button on profile page */}
+        <div style={{ width: '44px', display: 'flex', alignItems: 'center' }}>
+          {isProfilePage && onEditClick && (
+            <button
+              onClick={onEditClick}
+              className="p-2 active:bg-gray-100 rounded-full transition-colors"
+              style={{ minWidth: '44px', minHeight: '44px' }}
+              aria-label="Edit profile"
+            >
+              <Edit2 size={22} style={{ color: '#374151' }} />
+            </button>
+          )}
         </div>
         
         {/* Centered Logo */}
@@ -75,9 +86,8 @@ export default function Header({ profileActions }: HeaderProps = {}) {
           </button>
         </div>
         
-        {/* Right side - Notifications (and profile actions if on profile page) */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          {isProfilePage && profileActions}
+        {/* Right side - Notifications */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           {userId && (
             <NotificationDropdown />
           )}
