@@ -196,14 +196,12 @@ export default function MemberDashboard() {
   // Helper function to sync volunteers_count with actual opportunity_responses
   const syncVolunteerCounts = async () => {
     try {
-      console.log('🔄 Starting volunteer count sync...');
       const { data: needs } = await supabase
         .from('needs')
         .select('id')
         .in('status', ['active', 'approved']);
       
       if (!needs || needs.length === 0) {
-        console.log('⚠️ No active needs found to sync');
         return;
       }
 
@@ -218,11 +216,7 @@ export default function MemberDashboard() {
           .from('needs')
           .update({ volunteers_count: count || 0 })
           .eq('id', need.id);
-        
-        console.log(`✅ Synced need ${need.id}: ${count || 0} volunteers`);
       }
-      
-      console.log('✅ Volunteer count sync complete');
     } catch (error) {
       console.error('❌ Error syncing volunteer counts:', error);
     }
@@ -252,8 +246,6 @@ export default function MemberDashboard() {
 
   const fetchNeeds = async () => {
     try {
-      console.log('Fetching real needs from database...');
-      
       const { data, error } = await supabase
         .from('needs')
         .select(`
@@ -265,11 +257,8 @@ export default function MemberDashboard() {
         .order('created_at', { ascending: false });
       
       if (error) {
-        console.log('Database error:', error);
         setOpportunities([]);
       } else {
-        console.log('Found needs:', data?.length || 0);
-        console.log('Sample need with commitments:', data?.[0]);
         
         if (data && data.length > 0) {
           const transformedOpportunities: Opportunity[] = data.map((need: any) => {
@@ -307,14 +296,12 @@ export default function MemberDashboard() {
             };
           });
           
-          console.log('Transformed opportunities:', transformedOpportunities);
           setOpportunities(transformedOpportunities);
         } else {
           setOpportunities([]);
         }
       }
     } catch (err) {
-      console.log('Connection error:', err);
       setOpportunities([]);
     }
     setLoading(false);
@@ -323,49 +310,19 @@ export default function MemberDashboard() {
   useEffect(() => {
     // Quick auth sanity check
     async function checkAuth() {
-      console.log('🔐 Dashboard auth check starting...');
-      
-      // Debug: Check localStorage for session data
-      const sessionStorage = localStorage.getItem('sb-rydvyhzbudmtldmfelby-auth-token');
-      console.log('🔐 Dashboard localStorage session:', sessionStorage ? 'EXISTS' : 'MISSING');
-      console.log('🔐 Dashboard localStorage content:', sessionStorage);
-      
-      // Add a small delay to ensure session is fully loaded
       await new Promise(resolve => setTimeout(resolve, 100));
       
-      // Try getUser() instead of getSession()
       const userResult = await supabase.auth.getUser();
-      console.log('🔐 Dashboard auth getUser result:', {
-        hasUser: !!userResult.data.user,
-        userId: userResult.data.user?.id,
-        userEmail: userResult.data.user?.email,
-        error: userResult.error?.message
-      });
-      
-      // Also try getSession() for comparison
       const s = await supabase.auth.getSession();
-      console.log('🔐 Dashboard auth getSession result:', {
-        hasSession: !!s.data.session,
-        hasUser: !!s.data.session?.user,
-        userId: s.data.session?.user?.id,
-        userEmail: s.data.session?.user?.email,
-        error: s.error?.message
-      });
       
       if (userResult.data.user?.id) {
-        console.log('🔐 Dashboard setting currentUserId to:', userResult.data.user.id);
         setCurrentUserId(userResult.data.user.id);
       } else if (s.data.session?.user?.id) {
-        console.log('🔐 Dashboard setting currentUserId from session to:', s.data.session.user.id);     
         setCurrentUserId(s.data.session.user.id);
       } else {
-        console.log('🔐 Dashboard no valid user found, redirecting to auth');
         router.push('/auth');
         return;
       }
-      
-      // Additional debugging for modal
-      console.log('🔐 Dashboard currentUserId state will be:', userResult.data.user?.id || s.data.session?.user?.id);
     }
     checkAuth();
     
@@ -379,13 +336,9 @@ export default function MemberDashboard() {
   // Profile completeness check - redirect incomplete users to onboarding
   useEffect(() => {
     async function checkProfileCompleteness() {
-      // Only run if we have a user ID
       if (!currentUserId) return;
       
-      console.log('[dashboard] 🔍 Checking profile completeness for user:', currentUserId);
-      
       try {
-        // Fetch complete profile
         const { data: profile, error } = await supabase
           .from('profiles')
           .select('church_code, gift_selections, full_name')
@@ -397,32 +350,18 @@ export default function MemberDashboard() {
           return;
         }
 
-        // Check if profile is complete
         const hasChurchCode = profile?.church_code && profile.church_code.trim() !== '';
         const hasGifts = profile?.gift_selections && profile.gift_selections.length > 0;
 
-        console.log('[dashboard] Profile completeness:', { 
-          hasChurchCode, 
-          hasGifts,
-          church_code: profile?.church_code,
-          gifts_count: profile?.gift_selections?.length,
-          full_name: profile?.full_name
-        });
-
-        // Redirect to appropriate onboarding step
         if (!hasChurchCode) {
-          console.log('[dashboard] Missing church_code, redirecting to /setup');
           router.push('/setup');
           return;
         }
 
         if (!hasGifts) {
-          console.log('[dashboard] Missing gifts, redirecting to /survey');
           router.push('/survey');
           return;
         }
-
-        console.log('[dashboard] ✅ Profile complete, allowing dashboard access');
       } catch (error) {
         console.error('[dashboard] Error in profile completeness check:', error);
       }
@@ -434,33 +373,17 @@ export default function MemberDashboard() {
   // Handle deep-link modal opening
   useEffect(() => {
     const needId = searchParams.get('needId');
-    console.log('[dashboard] Deep-link needId from URL:', needId);
-    console.log('[dashboard] Opportunities loaded:', opportunities.length);
-    console.log('[dashboard] Deep-link retry count:', deepLinkRetryCount);
-    
     if (needId && opportunities.length > 0) {
-      // Check if the need exists in loaded opportunities
       const needExists = opportunities.some(opp => opp.id === needId);
       
       if (needExists) {
-        console.log('[dashboard] Opening modal for need:', needId);
         setSelectedNeedId(needId);
-        setDeepLinkRetryCount(0); // Reset retry count on success
-      } else {
-        console.warn('[dashboard] Need not found in opportunities:', needId);
-        console.log('[dashboard] Available need IDs:', opportunities.map(opp => opp.id));
-        
-        // Retry fetching needs if we haven't tried too many times
-        if (deepLinkRetryCount < 2) {
-          console.log('[dashboard] Retrying fetchNeeds for deep-link...');
-          setDeepLinkRetryCount(prev => prev + 1);
-          fetchNeeds();
-        } else {
-          console.error('[dashboard] Max retries reached for deep-link need:', needId);
-        }
+        setDeepLinkRetryCount(0);
+      } else if (deepLinkRetryCount < 2) {
+        setDeepLinkRetryCount(prev => prev + 1);
+        fetchNeeds();
       }
     } else if (needId && opportunities.length === 0 && !loading) {
-      console.log('[dashboard] NeedId found but opportunities not loaded yet, retrying...');
       if (deepLinkRetryCount < 2) {
         setDeepLinkRetryCount(prev => prev + 1);
         fetchNeeds();
@@ -525,14 +448,12 @@ export default function MemberDashboard() {
         // Update user gifts
         if (profileResult.data?.gift_selections) {
           setUserGifts(profileResult.data.gift_selections);
-          console.log('User gifts loaded for filtering:', profileResult.data.gift_selections);
         }
 
         // Update user commitments
         if (commitmentsResult.data) {
           const needIds = commitmentsResult.data.map(c => c.need_id);
           setUserCommitments(needIds);
-          console.log('User commitments loaded:', needIds);
         }
       } catch (error) {
         console.error('Error fetching user data:', error);

@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
 import { supabase } from '../../lib/supabaseClient';
 import Footer from '../../components/Footer';
+import Header from '../../components/Header';
 import {
   ArrowBigUp,
   ArrowLeft,
@@ -350,8 +351,11 @@ export default function FeedbackListPage() {
 
   return (
     <>
-      {/* Mobile-First Header */}
-      <header className="sticky top-0 z-50 bg-white border-b border-gray-200 shadow-sm">
+      {/* Standard Header */}
+      <Header />
+      
+      {/* Page Title Bar */}
+      <div className="sticky top-16 z-40 bg-white border-b border-gray-200 shadow-sm">
         <div className="flex items-center justify-between px-4 py-3">
           {/* Left - Back to Tools button for leaders */}
           <div style={{ width: '44px', display: 'flex', alignItems: 'center' }}>
@@ -382,22 +386,23 @@ export default function FeedbackListPage() {
             <Plus size={22} style={{ color: BRAND.colors.primary }} />
           </button>
         </div>
-      </header>
+      </div>
 
       <div className="min-h-screen pb-24" style={{ backgroundColor: BRAND.colors.background }}>
-        {/* Filter Pills - Horizontal Scroll */}
-        <div className="bg-white px-4 py-3 border-b border-gray-200">
-          <div className="flex gap-2 overflow-x-auto pb-1" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+        {/* Filter Pills - Centered */}
+        <div className="bg-white px-4 py-2 border-b border-gray-200">
+          <div className="flex gap-2 justify-center">
             {CATS.map((c) => (
               <button
                 key={c.id}
                 onClick={() => setCat(c.id)}
-                className="px-5 py-2 rounded-full whitespace-nowrap font-medium transition-colors active:scale-95"
+                className="px-3 py-1 rounded-full whitespace-nowrap font-medium transition-colors active:scale-95"
                 style={{
                   backgroundColor: cat === c.id ? BRAND.colors.primary : '#f3f4f6',
                   color: cat === c.id ? 'white' : '#374151',
                   fontFamily: BRAND.fonts.heading,
-                  minHeight: '40px',
+                  minHeight: '32px',
+                  fontSize: '13px',
                 }}
               >
                 {c.label}
@@ -407,27 +412,29 @@ export default function FeedbackListPage() {
         </div>
 
         {/* Sort Options - Below Filters */}
-        <div className="bg-white px-4 pb-3 border-b border-gray-200">
+        <div className="bg-white px-4 py-2 border-b border-gray-200">
           <div className="flex items-center gap-2">
-            <span className="text-sm text-gray-600" style={{ fontFamily: BRAND.fonts.body }}>Sort:</span>
+            <span className="text-xs text-gray-600" style={{ fontFamily: BRAND.fonts.body }}>Sort:</span>
             <button
               onClick={() => setSort('top')}
-              className="px-3 py-1 rounded-full text-sm font-medium transition-colors active:scale-95"
+              className="px-2.5 py-1 rounded-full text-xs font-medium transition-colors active:scale-95"
               style={{
                 backgroundColor: sort === 'top' ? BRAND.colors.primary : '#f3f4f6',
                 color: sort === 'top' ? 'white' : '#374151',
                 fontFamily: BRAND.fonts.heading,
+                minHeight: '28px',
               }}
             >
               Top
             </button>
             <button
               onClick={() => setSort('new')}
-              className="px-3 py-1 rounded-full text-sm font-medium transition-colors active:scale-95"
+              className="px-2.5 py-1 rounded-full text-xs font-medium transition-colors active:scale-95"
               style={{
                 backgroundColor: sort === 'new' ? BRAND.colors.primary : '#f3f4f6',
                 color: sort === 'new' ? 'white' : '#374151',
                 fontFamily: BRAND.fonts.heading,
+                minHeight: '28px',
               }}
             >
               New
