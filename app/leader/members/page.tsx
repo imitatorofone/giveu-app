@@ -102,7 +102,6 @@ export default function MembersPage() {
     try {
       // Don't fetch if we don't have church_code yet
       if (!userChurchCode) {
-        console.log('Skipping fetch - no church_code yet');
         return;
       }
 

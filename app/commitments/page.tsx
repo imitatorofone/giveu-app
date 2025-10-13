@@ -270,15 +270,6 @@ function groupCommitmentsByTime(commitments: Commitment[]) {
     }
   });
 
-  console.log('📊 Grouped commitments:', { 
-    today: today.length, 
-    tomorrow: tomorrow.length, 
-    thisWeek: thisWeek.length, 
-    ongoing: ongoing.length, 
-    asap: asap.length, 
-    other: other.length 
-  });
-  
   return { today, tomorrow, thisWeek, ongoing, asap, other };
 }
 
@@ -581,9 +572,6 @@ export default function CommitmentsPage() {
       if (!session?.user) return;
 
       try {
-        // First, fetch opportunity_responses
-        console.log('🔍 [Fetch Debug] Fetching commitments for user:', session.user.id);
-        
         const { data: responses, error: responsesError } = await supabase
           .from('opportunity_responses')
           .select('id, status, created_at, need_id, user_id')
@@ -591,74 +579,27 @@ export default function CommitmentsPage() {
           .eq('status', 'accepted')
           .order('created_at', { ascending: false });
 
-        console.log('🔍 [Fetch Debug] Raw responses query result:', {
-          responses,
-          responsesError,
-          count: responses?.length || 0,
-          statuses: responses?.map(r => r.status) || []
-        });
-
         if (responsesError) {
-          console.error('❌ [Fetch Debug] Error fetching responses:', responsesError);
+          console.error('❌ Error fetching responses:', responsesError);
           toast.error('Failed to load commitments');
           setLoading(false);
           return;
         }
 
         if (!responses || responses.length === 0) {
-          console.log('🔍 [Fetch Debug] No accepted commitments found');
           setCommitments([]);
           setLoading(false);
           return;
         }
 
-        // Extract unique need_ids and filter for valid UUIDs
         const needIds = responses
           .map(r => r.need_id)
           .filter(id => id && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id));
 
-        console.log('📋 Valid need IDs:', needIds);
-
         // Fetch needs data if we have valid IDs
         let needsData: any[] = [];
         if (needIds.length > 0) {
-          console.log('📋 Fetching needs for IDs:', needIds);
-          
           try {
-            // First, let's check what columns exist in the needs table
-            console.log('📋 Testing needs table access...');
-            const { data: testNeed, error: testError } = await supabase
-              .from('needs')
-              .select('*')
-              .limit(1);
-
-            if (testError) {
-              console.error('Error testing needs table:', testError);
-              console.error('Test error type:', typeof testError);
-              console.error('Test error keys:', Object.keys(testError));
-              console.error('Test error stringified:', JSON.stringify(testError, null, 2));
-            } else {
-              console.log('📋 Needs table accessible, structure:', testNeed && testNeed.length > 0 ? Object.keys(testNeed[0]) : 'No data');
-            }
-
-            // Try a simple query first
-            console.log('📋 Trying simple needs query...');
-            const { data: simpleNeeds, error: simpleError } = await supabase
-              .from('needs')
-              .select('id, title, created_by_email')
-              .limit(5);
-
-            if (simpleError) {
-              console.error('Simple needs query error:', simpleError);
-              console.error('Simple error type:', typeof simpleError);
-              console.error('Simple error keys:', Object.keys(simpleError));
-              console.error('Simple error stringified:', JSON.stringify(simpleError, null, 2));
-            } else {
-              console.log('📋 Simple needs query successful:', simpleNeeds);
-            }
-
-            // Now try the full query with actual existing columns
-            console.log('📋 Trying full needs query...');
             const { data: needs, error: needsError } = await supabase
               .from('needs')
               .select('id, title, description, urgency, specific_date, specific_time, city, created_by_email')
@@ -666,26 +607,12 @@ export default function CommitmentsPage() {
 
             if (needsError) {
               console.error('Error fetching needs:', needsError);
-              console.error('Error type:', typeof needsError);
-              console.error('Error keys:', Object.keys(needsError || {}));
-              console.error('Error stringified:', JSON.stringify(needsError, null, 2));
-              console.error('Error message:', needsError?.message);
-              console.error('Error code:', needsError?.code);
-              console.error('Error details:', needsError?.details);
-              console.error('Error hint:', needsError?.hint);
-              
-              // Try to continue with empty data instead of failing completely
-              console.log('📋 Continuing with empty needs data due to error');
               needsData = [];
             } else {
-              console.log('📋 Fetched needs data successfully:', needs);
               needsData = needs || [];
             }
           } catch (catchError) {
-            console.error('📋 Catch block error:', catchError);
-            console.error('Catch error type:', typeof catchError);
-            console.error('Catch error keys:', Object.keys(catchError || {}));
-            console.error('Catch error stringified:', JSON.stringify(catchError, null, 2));
+            console.error('Error fetching needs:', catchError);
             needsData = [];
           }
         }
@@ -710,7 +637,6 @@ export default function CommitmentsPage() {
           };
         });
 
-        console.log('📋 Combined commitments data:', combinedData.length, combinedData);
         setCommitments(combinedData);
         
         // Show a helpful message if we couldn't load need details
@@ -734,34 +660,20 @@ export default function CommitmentsPage() {
   // Test function to verify database schema
   const testDatabaseSchema = async () => {
     try {
-      console.log('🧪 [Schema Test] Testing database schema...');
-      
       // Test 1: Check if cancelled_at column exists
       const { data: testData, error: testError } = await supabase
         .from('opportunity_responses')
         .select('id, status, cancelled_at')
         .limit(1);
-      
-      console.log('🧪 [Schema Test] Column test result:', {
-        testData,
-        testError,
-        hasCancelledAt: testData?.[0] ? 'cancelled_at' in testData[0] : 'no data'
-      });
 
       // Test 2: Check all statuses in the table
       const { data: statusData, error: statusError } = await supabase
         .from('opportunity_responses')
         .select('id, status, cancelled_at')
         .order('created_at', { ascending: false });
-      
-      console.log('🧪 [Schema Test] All statuses in table:', {
-        statusData: statusData?.map(r => ({ id: r.id, status: r.status, cancelled_at: r.cancelled_at })),
-        statusError,
-        uniqueStatuses: [...new Set(statusData?.map(r => r.status) || [])]
-      });
 
     } catch (error) {
-      console.error('🧪 [Schema Test] Error:', error);
+      console.error('Schema test error:', error);
     }
   };
 
@@ -785,96 +697,48 @@ export default function CommitmentsPage() {
         return;
       }
 
-      // Find the commitment to get current status
-      const currentCommitment = commitments.find(c => c.id === commitmentId);
-      console.log('🔍 [Cancellation Debug] Before update:', {
-        commitmentId,
-        currentStatus: currentCommitment?.status,
-        commitmentExists: !!currentCommitment,
-        totalCommitments: commitments.length,
-        currentUserId: session.user.id
-      });
-
       const updateData = { 
         status: 'cancelled',
         cancelled_at: new Date().toISOString()
       };
-      
-      console.log('🔍 [Cancellation Debug] Update data:', updateData);
-      console.log('🔍 [Cancellation Debug] WHERE clause:', { id: commitmentId });
 
-      // First, let's check if the record exists before updating
-      console.log('🔍 [Cancellation Debug] Checking if record exists...');
       const { data: existingRecord, error: checkError } = await supabase
         .from('opportunity_responses')
         .select('id, status, user_id')
         .eq('id', commitmentId)
         .single();
 
-      console.log('🔍 [Cancellation Debug] Record existence check:', {
-        existingRecord,
-        checkError,
-        recordExists: !!existingRecord,
-        currentUserId: session.user.id
-      });
-
       if (checkError) {
-        console.error('❌ [Cancellation Debug] Record not found or access denied:', checkError);
+        console.error('❌ Record not found or access denied:', checkError);
         toast.error(`Record not found: ${checkError.message}`, { id: t });
         return;
       }
 
       if (!existingRecord) {
-        console.error('❌ [Cancellation Debug] No record found with ID:', commitmentId);
+        console.error('❌ No record found with ID:', commitmentId);
         toast.error('Commitment not found', { id: t });
         return;
       }
 
-      // Now attempt the update
       const { data, error } = await supabase
         .from('opportunity_responses')
         .update(updateData)
         .eq('id', commitmentId)
         .select();
 
-      console.log('🔍 [Cancellation Debug] Supabase response:', {
-        data,
-        error,
-        dataLength: data?.length,
-        errorType: typeof error,
-        errorKeys: error ? Object.keys(error) : null
-      });
-
       if (error) {
-        console.error('❌ [Cancellation Debug] Database error:', {
-          message: error.message,
-          code: error.code,
-          details: error.details,
-          hint: error.hint,
-          fullError: error
-        });
+        console.error('❌ Database error:', error);
         toast.error(`Failed to cancel commitment: ${error.message}`, { id: t });
         return;
       }
 
       if (!data || data.length === 0) {
-        console.error('❌ [Cancellation Debug] No data returned from update');
+        console.error('❌ No data returned from update');
         toast.error('Failed to cancel commitment: No record updated', { id: t });
         return;
       }
 
-      console.log('✅ [Cancellation Debug] Update successful:', data[0]);
-
-      // Update local state
-      setCommitments(prev => {
-        const filtered = prev.filter(commitment => commitment.id !== commitmentId);
-        console.log('🔍 [Cancellation Debug] Local state update:', {
-          beforeCount: prev.length,
-          afterCount: filtered.length,
-          removedId: commitmentId
-        });
-        return filtered;
-      });
+      setCommitments(prev => prev.filter(commitment => commitment.id !== commitmentId));
       
       toast.success('Commitment cancelled successfully', { id: t });
     } catch (error) {
