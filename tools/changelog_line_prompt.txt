@@ -1,0 +1,13 @@
+Based on the following diff/commit text, produce ONE changelog line in this exact format:
+
+📅 YYYY-MM-DD — <TAG> <concise description>
+
+Where TAG is one of: ✅ (success) | ⚠️ (false fix) | ❌ (mistake) | 🔄 (decision)
+
+Examples:
+- 📅 2025-10-02 — ✅ FEAT: volunteer_signed_up → leaders + creator notifications
+- 📅 2025-10-02 — ⚠️ False fix: Cursor claimed signout fix, no diff found
+- 📅 2025-10-02 — 🔄 Decision: keep DIY inbox for MVP; Knock inbox post-BETA
+
+Input:
+<PASTE COMMIT OR DIFF HERE>

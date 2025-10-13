@@ -1,11 +1,13 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { supabase } from '../../lib/supabaseClient';
-import { Calendar, MapPin, Users, Clock, Bell } from 'lucide-react';
-import { format, isToday, isTomorrow, isThisWeek, parseISO } from 'date-fns';
-import PageHeader from '../../components/PageHeader';
+import { supabaseBrowser as supabase } from '../../lib/supabaseBrowser';
+import { Calendar, MapPin, Clock, Bell, List, Grid, Mail, X, Search, ArrowUpDown } from 'lucide-react';
+import { format, isToday, isTomorrow, isThisWeek, isThisMonth, isFuture, parseISO, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, parse, addHours, isValid } from 'date-fns';
+import Header from '../../components/Header';
 import Footer from '../../components/Footer';
+import { Toaster, toast } from 'react-hot-toast';
+import { BRAND } from '../../lib/brandConfig';
 
 // Helper function to format time with AM/PM
 function formatTime(timeString: string): string {
@@ -27,6 +29,196 @@ function formatTime(timeString: string): string {
   }
 }
 
+// Enhanced Google Calendar link generator with proper time zone and recurring event support
+function generateCalendarLink(commitment: Commitment): string {
+  const need = commitment.need;
+  
+  try {
+    // Helper function to parse time strings (handles both 24-hour and 12-hour formats)
+    const parseTimeString = (timeString: string): { hours: number; minutes: number } | null => {
+      if (!timeString) return null;
+      
+      try {
+        // Try 24-hour format first (HH:MM)
+        if (timeString.includes(':') && !timeString.includes('AM') && !timeString.includes('PM')) {
+          const [hours, minutes] = timeString.split(':');
+          const hour = parseInt(hours);
+          const minute = parseInt(minutes);
+          if (hour >= 0 && hour <= 23 && minute >= 0 && minute <= 59) {
+            return { hours: hour, minutes: minute };
+          }
+        }
+        
+        // Try 12-hour format (H:MM AM/PM)
+        const timeRegex = /^(\d{1,2}):(\d{2})\s*(AM|PM)$/i;
+        const match = timeString.match(timeRegex);
+        if (match) {
+          let hour = parseInt(match[1]);
+          const minute = parseInt(match[2]);
+          const ampm = match[3].toUpperCase();
+          
+          if (ampm === 'PM' && hour !== 12) hour += 12;
+          if (ampm === 'AM' && hour === 12) hour = 0;
+          
+          if (hour >= 0 && hour <= 23 && minute >= 0 && minute <= 59) {
+            return { hours: hour, minutes: minute };
+          }
+        }
+        
+        return null;
+      } catch {
+        return null;
+      }
+    };
+    
+    // Helper function to get day abbreviation for RRULE
+    const getDayAbbreviation = (date: Date): string => {
+      const days = ['SU', 'MO', 'TU', 'WE', 'TH', 'FR', 'SA'];
+      return days[date.getDay()];
+    };
+    
+    // Initialize event details
+    let startDate: Date;
+    let endDate: Date;
+    let eventTitle = need.title || 'Untitled Commitment';
+    let eventDescription = need.description || '';
+    let eventLocation = need.city || '';
+    let isRecurring = false;
+    let recurrenceRule = '';
+    
+    // Determine start date and time based on commitment type
+    if (need.specific_date && need.specific_date !== 'ASAP') {
+      // Specific date commitment
+      try {
+        startDate = parseISO(need.specific_date);
+        if (!isValid(startDate)) {
+          throw new Error('Invalid date format');
+        }
+      } catch {
+        // Fallback to tomorrow if date parsing fails
+        startDate = new Date();
+        startDate.setDate(startDate.getDate() + 1);
+      }
+      
+      // Parse time if specified
+      const parsedTime = parseTimeString(need.specific_time);
+      if (parsedTime) {
+        startDate.setHours(parsedTime.hours, parsedTime.minutes, 0, 0);
+      } else {
+        // Default to 6:00 PM if no valid time specified
+        startDate.setHours(18, 0, 0, 0);
+      }
+      
+      // Set end time (2 hours later by default)
+      endDate = addHours(startDate, 2);
+      
+    } else if (need.urgency === 'ASAP') {
+      // ASAP commitment - set for tomorrow at 6:00 PM
+      startDate = new Date();
+      startDate.setDate(startDate.getDate() + 1);
+      startDate.setHours(18, 0, 0, 0);
+      endDate = addHours(startDate, 2);
+      
+      // Add note about ASAP nature
+      eventDescription = `🚨 ASAP COMMITMENT - Please coordinate timing with organizer\n\n${eventDescription}`;
+      
+    } else if (need.urgency === 'ongoing') {
+      // Ongoing commitment - set for next occurrence of the day from specific_date, or next Monday
+      if (need.specific_date && need.specific_date !== 'ASAP') {
+        try {
+          const originalDate = parseISO(need.specific_date);
+          if (isValid(originalDate)) {
+            // Use the day of the week from the original date
+            const targetDay = originalDate.getDay();
+            startDate = new Date();
+            const daysUntilTarget = (targetDay - startDate.getDay() + 7) % 7;
+            startDate.setDate(startDate.getDate() + (daysUntilTarget || 7));
+          } else {
+            throw new Error('Invalid original date');
+          }
+        } catch {
+          // Fallback to next Monday
+          startDate = new Date();
+          const daysUntilMonday = (1 - startDate.getDay() + 7) % 7;
+          startDate.setDate(startDate.getDate() + (daysUntilMonday || 7));
+        }
+      } else {
+        // No specific date, default to next Monday
+        startDate = new Date();
+        const daysUntilMonday = (1 - startDate.getDay() + 7) % 7;
+        startDate.setDate(startDate.getDate() + (daysUntilMonday || 7));
+      }
+      
+      // Parse time if specified, otherwise default to 6:00 PM
+      const parsedTime = parseTimeString(need.specific_time);
+      if (parsedTime) {
+        startDate.setHours(parsedTime.hours, parsedTime.minutes, 0, 0);
+      } else {
+        startDate.setHours(18, 0, 0, 0);
+      }
+      
+      endDate = addHours(startDate, 2);
+      
+      // Set up recurring event (weekly)
+      isRecurring = true;
+      const dayAbbr = getDayAbbreviation(startDate);
+      recurrenceRule = `FREQ=WEEKLY;BYDAY=${dayAbbr}`;
+      
+      // Add note about ongoing nature
+      eventDescription = `🔄 ONGOING COMMITMENT - Repeats weekly on ${format(startDate, 'EEEE')}s\n\n${eventDescription}`;
+      
+    } else {
+      // Fallback case - set for tomorrow at 6:00 PM
+      startDate = new Date();
+      startDate.setDate(startDate.getDate() + 1);
+      startDate.setHours(18, 0, 0, 0);
+      endDate = addHours(startDate, 2);
+      
+      eventDescription = `📅 COMMITMENT - Please coordinate timing with organizer\n\n${eventDescription}`;
+    }
+    
+    // Format dates for Google Calendar (local time zone, no Z suffix)
+    const formatGoogleDate = (date: Date) => {
+      return format(date, "yyyyMMdd'T'HHmmss");
+    };
+    
+    // Create URL parameters with proper encoding
+    const params = new URLSearchParams({
+      action: 'TEMPLATE',
+      text: eventTitle,
+      dates: `${formatGoogleDate(startDate)}/${formatGoogleDate(endDate)}`,
+      details: eventDescription,
+      location: eventLocation
+    });
+    
+    // Add recurrence rule for ongoing commitments
+    if (isRecurring && recurrenceRule) {
+      params.append('recur', `RRULE:${recurrenceRule}`);
+    }
+    
+    return `https://calendar.google.com/calendar/render?${params.toString()}`;
+    
+  } catch (error) {
+    console.error('Error generating calendar link:', error);
+    
+    // Fallback to basic calendar link with tomorrow at 6:00 PM
+    const fallbackDate = new Date();
+    fallbackDate.setDate(fallbackDate.getDate() + 1);
+    fallbackDate.setHours(18, 0, 0, 0);
+    const endDate = addHours(fallbackDate, 2);
+    
+    const params = new URLSearchParams({
+      action: 'TEMPLATE',
+      text: need.title || 'Commitment',
+      dates: `${format(fallbackDate, "yyyyMMdd'T'HHmmss")}/${format(endDate, "yyyyMMdd'T'HHmmss")}`,
+      details: need.description || 'Please coordinate timing with organizer',
+      location: need.city || ''
+    });
+    
+    return `https://calendar.google.com/calendar/render?${params.toString()}`;
+  }
+}
+
 interface Commitment {
   id: string;
   status: string;
@@ -39,25 +231,29 @@ interface Commitment {
     specific_date: string;
     specific_time: string;
     city: string;
+    created_by_email: string;
   };
 }
 
 // Grouping function
 function groupCommitmentsByTime(commitments: Commitment[]) {
-  const today = [];
-  const tomorrow = [];
-  const thisWeek = [];
-  const ongoing = [];
-  const asap = [];
-  const other = [];
+  const today: Commitment[] = [];
+  const tomorrow: Commitment[] = [];
+  const thisWeek: Commitment[] = [];
+  const ongoing: Commitment[] = [];
+  const asap: Commitment[] = [];
+  const other: Commitment[] = [];
 
   commitments.forEach(commitment => {
-    if (commitment.need.urgency === 'asap') {
+    const need = commitment.need;
+    if (!need) return; // Skip if no need data
+    
+    if (need.urgency === 'asap') {
       asap.push(commitment);
-    } else if (commitment.need.urgency === 'ongoing') {
+    } else if (need.urgency === 'ongoing') {
       ongoing.push(commitment);
-    } else if (commitment.need.specific_date) {
-      const date = parseISO(commitment.need.specific_date);
+    } else if (need.specific_date) {
+      const date = parseISO(need.specific_date);
       if (isToday(date)) {
         today.push(commitment);
       } else if (isTomorrow(date)) {
@@ -74,59 +270,287 @@ function groupCommitmentsByTime(commitments: Commitment[]) {
     }
   });
 
-  console.log('📊 Grouped commitments:', { 
-    today: today.length, 
-    tomorrow: tomorrow.length, 
-    thisWeek: thisWeek.length, 
-    ongoing: ongoing.length, 
-    asap: asap.length, 
-    other: other.length 
-  });
-  
   return { today, tomorrow, thisWeek, ongoing, asap, other };
 }
 
-// Commitment section component
-function CommitmentSection({ title, commitments }: { title: string; commitments: Commitment[] }) {
+// Calendar view component
+function CalendarView({ commitments, currentMonth, onMonthChange }: { 
+  commitments: Commitment[], 
+  currentMonth: Date, 
+  onMonthChange: (date: Date) => void 
+}) {
+  const monthStart = startOfMonth(currentMonth);
+  const monthEnd = endOfMonth(currentMonth);
+  const calendarDays = eachDayOfInterval({ start: monthStart, end: monthEnd });
+
+  // Get commitments for a specific date
+  const getCommitmentsForDate = (date: Date) => {
+    return commitments.filter(commitment => {
+      if (!commitment.need.specific_date) return false;
+      return isSameDay(parseISO(commitment.need.specific_date), date);
+    });
+  };
+
   return (
-    <div className="mb-8">
-      <h2 className="text-lg font-semibold text-gray-900 mb-4">{title}</h2>
-      <div className="space-y-4">
-        {commitments.map((commitment) => (
-          <div key={commitment.id} className="bg-white rounded-xl border shadow-sm p-6">
-            <h3 className="text-lg font-bold text-gray-900 mb-3">
-              {commitment.need.title}
-            </h3>
-            <p className="text-gray-600 mb-4">
-              {commitment.need.description}
-            </p>
-            
-            <div className="flex items-center gap-6 text-sm text-gray-600">
-              <div className="flex items-center gap-2">
-                <Calendar className="w-4 h-4" />
-                <span>
-                  {commitment.need.urgency === 'asap' 
-                    ? 'As Soon As Possible' 
-                    : commitment.need.urgency === 'ongoing'
-                    ? 'Ongoing'
-                    : commitment.need.specific_date
-                    ? format(parseISO(commitment.need.specific_date), 'MMM d, yyyy')
-                    : 'Flexible'
-                  }
-                </span>
+    <div className="bg-white rounded-xl border shadow-sm p-4 font-quicksand max-w-[350px] mx-auto">
+      {/* Calendar Header */}
+      <div className="flex items-center justify-between mb-3">
+        <h2 className="text-lg font-semibold text-gray-900 font-quicksand">
+          {format(currentMonth, 'MMMM yyyy')}
+        </h2>
+        <div className="flex gap-1">
+          <button
+            onClick={() => onMonthChange(subMonths(currentMonth, 1))}
+            className="w-10 h-10 active:bg-gray-100 rounded-lg transition-colors flex items-center justify-center"
+            style={{ minWidth: '44px', minHeight: '44px' }}
+            aria-label="Previous month"
+          >
+            <span className="text-sm font-medium">←</span>
+          </button>
+          <button
+            onClick={() => onMonthChange(new Date())}
+            className="px-3 py-2 text-sm bg-[#20c997] text-white rounded-lg active:bg-[#1bb085] transition-colors font-quicksand"
+            style={{ minHeight: '44px' }}
+          >
+            Today
+          </button>
+          <button
+            onClick={() => onMonthChange(addMonths(currentMonth, 1))}
+            className="w-10 h-10 active:bg-gray-100 rounded-lg transition-colors flex items-center justify-center"
+            style={{ minWidth: '44px', minHeight: '44px' }}
+            aria-label="Next month"
+          >
+            <span className="text-sm font-medium">→</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Calendar Grid - Day Headers */}
+      <div className="grid grid-cols-7 mb-1">
+        {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((day, index) => (
+          <div key={`day-${index}`} className="text-center text-xs text-gray-600 font-semibold font-quicksand py-1">
+            {day}
+          </div>
+        ))}
+      </div>
+
+      {/* Calendar Grid - Days */}
+      <div className="grid grid-cols-7 gap-0.5">
+        {calendarDays.map(day => {
+          const dayCommitments = getCommitmentsForDate(day);
+          const isCurrentMonth = isSameMonth(day, currentMonth);
+          const isToday = isSameDay(day, new Date());
+          
+          return (
+            <div
+              key={day.toISOString()}
+              className={`w-12 h-12 flex flex-col items-center justify-center relative rounded-lg ${
+                isCurrentMonth ? 'bg-white' : 'bg-gray-50'
+              } active:bg-gray-100 transition-colors cursor-pointer`}
+              style={{ minWidth: '48px', minHeight: '48px' }}
+              onClick={() => {
+                if (dayCommitments.length > 0) {
+                  window.open(generateCalendarLink(dayCommitments[0]), '_blank');
+                  toast.success('Opening Google Calendar...');
+                }
+              }}
+            >
+              {/* Day Number with green circle for today */}
+              <div 
+                className={`text-base font-semibold font-quicksand relative z-10 flex items-center justify-center ${
+                  isToday ? 'w-7 h-7 rounded-full text-white' : ''
+                } ${
+                  isCurrentMonth ? (isToday ? '' : 'text-gray-900') : 'text-gray-400'
+                }`}
+                style={isToday ? { backgroundColor: BRAND.colors.primary } : {}}
+              >
+                {format(day, 'd')}
               </div>
-              <div className="flex items-center gap-2">
-                <MapPin className="w-4 h-4" />
-                <span>{commitment.need.city}</span>
-              </div>
-              {commitment.need.specific_time && (
-                <div className="flex items-center gap-2">
-                  <Clock className="w-4 h-4" />
-                  <span>{formatTime(commitment.need.specific_time)}</span>
+              
+              {/* Commitment Indicators */}
+              {dayCommitments.length > 0 && (
+                <div className="absolute bottom-1">
+                  {dayCommitments.length === 1 ? (
+                    <div
+                      className={`w-2 h-2 rounded-full ${
+                        isToday ? 'bg-white' : 'bg-[#20c997]'
+                      }`}
+                      title={`${dayCommitments[0].need.title} - Click to add to calendar`}
+                    />
+                  ) : (
+                    <div
+                      className={`w-2 h-2 rounded-full relative ${
+                        isToday ? 'bg-white' : 'bg-[#20c997]'
+                      }`}
+                      title={`${dayCommitments.length} commitments: ${dayCommitments.map(c => c.need.title).join(', ')} - Click to add to calendar`}
+                    >
+                      {/* Show count for multiple commitments */}
+                      <span className={`absolute -top-1 -right-1 text-xs rounded-full w-4 h-4 flex items-center justify-center font-quicksand ${
+                        isToday ? 'bg-white text-[#20c997]' : 'bg-[#20c997] text-white'
+                      }`}
+                      style={{ fontSize: '11px', fontWeight: '600' }}
+                      >
+                        {dayCommitments.length}
+                      </span>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// Enhanced commitment card component
+function CommitmentCard({ commitment, onCantMakeIt }: { 
+  commitment: Commitment, 
+  onCantMakeIt: (id: string) => void 
+}) {
+  const need = commitment.need;
+
+
+  return (
+    <div className="bg-white border border-gray-200 rounded-xl shadow-md p-4 sm:p-6">
+      {/* Title */}
+      <h3 className="text-lg font-bold mb-4" style={{ fontFamily: BRAND.fonts.heading, color: BRAND.colors.text }}>
+        {need.title || 'Untitled Need'}
+      </h3>
+      
+      {/* Action Buttons - Stack vertically on mobile, horizontal on tablet+ */}
+      <div className="flex flex-col gap-3 mb-4 sm:flex-row">
+          <a
+            href={generateCalendarLink(commitment)}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="px-6 py-3 rounded-lg text-white font-medium transition-all flex items-center gap-2 justify-center active:scale-95"
+            style={{ 
+              backgroundColor: BRAND.colors.primary,
+              minHeight: '48px',
+              fontFamily: BRAND.fonts.heading,
+              fontSize: '15px'
+            }}
+            onTouchStart={(e) => {
+              e.currentTarget.style.backgroundColor = BRAND.colors.primaryHover;
+              e.currentTarget.style.transform = 'scale(0.98)';
+            }}
+            onTouchEnd={(e) => {
+              const target = e.currentTarget;
+              setTimeout(() => {
+                if (target && target.style) {
+                  target.style.backgroundColor = BRAND.colors.primary;
+                  target.style.transform = 'scale(1)';
+                }
+              }, 150);
+            }}
+            title="Add to Google Calendar"
+            onClick={() => toast.success('Opening Google Calendar...')}
+          >
+            <Calendar className="w-4 h-4" />
+            <span>Add to Calendar</span>
+          </a>
+          <button
+            onClick={() => onCantMakeIt(commitment.id)}
+            className="px-6 py-3 rounded-lg text-white font-medium transition-all flex items-center gap-2 justify-center active:scale-95"
+            style={{ 
+              backgroundColor: BRAND.colors.danger,
+              minHeight: '48px',
+              fontFamily: BRAND.fonts.heading,
+              fontSize: '15px'
+            }}
+            onTouchStart={(e) => {
+              e.currentTarget.style.backgroundColor = BRAND.colors.dangerHover;
+              e.currentTarget.style.transform = 'scale(0.98)';
+            }}
+            onTouchEnd={(e) => {
+              const target = e.currentTarget;
+              setTimeout(() => {
+                if (target && target.style) {
+                  target.style.backgroundColor = BRAND.colors.danger;
+                  target.style.transform = 'scale(1)';
+                }
+              }, 150);
+            }}
+            title="Cancel this commitment"
+          >
+            <X className="w-4 h-4" />
+            <span>Can't Make It</span>
+          </button>
+      </div>
+      
+      {/* Description */}
+      <p className="text-gray-600 mb-4" style={{ fontSize: '15px', lineHeight: '1.5', fontFamily: BRAND.fonts.body }}>
+        {need.description || 'No description available'}
+      </p>
+      
+      <div className="space-y-3">
+        {/* Date and Time Info */}
+        <div className="flex items-center justify-start gap-3 mb-3" style={{ fontSize: '14px', opacity: 0.7 }}>
+          <div className="flex items-center gap-1.5">
+            <Calendar className="w-5 h-5 flex-shrink-0" style={{ color: BRAND.colors.primary }} />
+            <span className="text-sm font-medium" style={{ color: BRAND.colors.text }}>
+              {need.urgency === 'asap' 
+                ? 'ASAP' 
+                : need.urgency === 'ongoing'
+                ? 'Ongoing'
+                : need.specific_date
+                ? format(parseISO(need.specific_date), 'MMM d, yyyy')
+                : 'Flexible'
+              }
+            </span>
           </div>
+          <div className="flex items-center gap-1.5">
+            <MapPin className="w-5 h-5 flex-shrink-0" style={{ color: BRAND.colors.primary }} />
+            <span className="text-sm font-medium" style={{ color: BRAND.colors.text }}>{need.city || 'Location not specified'}</span>
+          </div>
+          {need.specific_time && (
+            <div className="flex items-center gap-1.5">
+              <Clock className="w-5 h-5 flex-shrink-0" style={{ color: BRAND.colors.primary }} />
+              <span className="text-sm font-medium" style={{ color: BRAND.colors.text }}>{formatTime(need.specific_time)}</span>
+            </div>
+          )}
+        </div>
+
+        {/* Contact Info */}
+        {need.created_by_email && (
+          <div className="border-t pt-3">
+            <h4 className="text-sm font-medium text-gray-900 mb-2">Contact:</h4>
+            <div className="flex flex-wrap gap-4 text-sm">
+              <a
+                href={`mailto:${need.created_by_email}`}
+                className="flex items-center gap-2 text-[#20c997] hover:text-[#1bb085]"
+              >
+                <Mail className="w-4 h-4" />
+                <span>Email Organizer</span>
+              </a>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// Commitment section component
+function CommitmentSection({ title, commitments, onCantMakeIt }: { 
+  title: string, 
+  commitments: Commitment[],
+  onCantMakeIt: (id: string) => void 
+}) {
+  return (
+    <div className="mb-8 mt-8">
+      <h2 className="text-lg font-semibold mb-4" style={{ fontFamily: BRAND.fonts.heading, color: BRAND.colors.text }}>
+        {title}
+      </h2>
+      <div className="space-y-4">
+        {commitments.map((commitment) => (
+          <CommitmentCard
+            key={commitment.id}
+            commitment={commitment}
+            onCantMakeIt={onCantMakeIt}
+          />
         ))}
       </div>
     </div>
@@ -137,184 +561,518 @@ export default function CommitmentsPage() {
   const [commitments, setCommitments] = useState<Commitment[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeFilter, setActiveFilter] = useState('All');
+  const [viewMode, setViewMode] = useState<'list' | 'calendar'>('list');
+  const [currentMonth, setCurrentMonth] = useState(new Date());
+  const [searchTerm, setSearchTerm] = useState('');
+  const [sortBy, setSortBy] = useState<'date' | 'urgency' | 'location'>('urgency');
 
   useEffect(() => {
     async function fetchCommitments() {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.user) return;
 
-      const { data, error } = await supabase
-        .from('commitments')
-        .select(`
-          id,
-          status,
-          created_at,
-          need:needs (
-            id,
-            title,
-            description,
-            urgency,
-            specific_date,
-            specific_time,
-            city
-          )
-        `)
-        .eq('user_id', session.user.id)
-        .eq('status', 'confirmed')
-        .order('created_at', { ascending: false });
+      try {
+        const { data: responses, error: responsesError } = await supabase
+          .from('opportunity_responses')
+          .select('id, status, created_at, need_id, user_id')
+          .eq('user_id', session.user.id)
+          .eq('status', 'accepted')
+          .order('created_at', { ascending: false });
 
-      if (data) {
-        console.log('📋 Loaded commitments:', data.length, data);
-        setCommitments(data);
+        if (responsesError) {
+          console.error('❌ Error fetching responses:', responsesError);
+          toast.error('Failed to load commitments');
+          setLoading(false);
+          return;
+        }
+
+        if (!responses || responses.length === 0) {
+          setCommitments([]);
+          setLoading(false);
+          return;
+        }
+
+        const needIds = responses
+          .map(r => r.need_id)
+          .filter(id => id && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id));
+
+        // Fetch needs data if we have valid IDs
+        let needsData: any[] = [];
+        if (needIds.length > 0) {
+          try {
+            const { data: needs, error: needsError } = await supabase
+              .from('needs')
+              .select('id, title, description, urgency, specific_date, specific_time, city, created_by_email')
+              .in('id', needIds);
+
+            if (needsError) {
+              console.error('Error fetching needs:', needsError);
+              needsData = [];
+            } else {
+              needsData = needs || [];
+            }
+          } catch (catchError) {
+            console.error('Error fetching needs:', catchError);
+            needsData = [];
+          }
+        }
+
+        // Combine the data
+        const combinedData = responses.map(response => {
+          const need = needsData.find(n => n.id === response.need_id);
+          return {
+            id: response.id,
+            status: response.status,
+            created_at: response.created_at,
+            need: need || {
+              id: response.need_id,
+              title: `Commitment #${response.id.slice(0, 8)}`,
+              description: 'Need details unavailable - this may be due to database access restrictions',
+              urgency: 'unknown',
+              specific_date: null,
+              specific_time: null,
+              city: 'Location not specified',
+              created_by_email: null
+            }
+          };
+        });
+
+        setCommitments(combinedData);
+        
+        // Show a helpful message if we couldn't load need details
+        if (responses.length > 0 && needsData.length === 0) {
+          toast.error('Commitments loaded but need details unavailable. This may be due to database access restrictions.');
+        }
+      } catch (error) {
+        console.error('Error in fetchCommitments:', error);
+        toast.error('Failed to load commitments');
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     }
 
     fetchCommitments();
+    
+    // Debug: Test database schema
+    testDatabaseSchema();
   }, []);
+
+  // Test function to verify database schema
+  const testDatabaseSchema = async () => {
+    try {
+      // Test 1: Check if cancelled_at column exists
+      const { data: testData, error: testError } = await supabase
+        .from('opportunity_responses')
+        .select('id, status, cancelled_at')
+        .limit(1);
+
+      // Test 2: Check all statuses in the table
+      const { data: statusData, error: statusError } = await supabase
+        .from('opportunity_responses')
+        .select('id, status, cancelled_at')
+        .order('created_at', { ascending: false });
+
+    } catch (error) {
+      console.error('Schema test error:', error);
+    }
+  };
+
+  // Handle "Can't Make It" functionality
+  const handleCantMakeIt = async (commitmentId: string) => {
+    // Show confirmation dialog
+    const confirmed = window.confirm(
+      'Are you sure you can\'t make this commitment? This will notify the organizer and remove it from your commitments.'
+    );
+    
+    if (!confirmed) return;
+    
+    const t = toast.loading('Updating commitment...');
+    
+    try {
+      // Get current session
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user) {
+        console.error('❌ [Cancellation Debug] No active session');
+        toast.error('Please log in to cancel commitments', { id: t });
+        return;
+      }
+
+      const updateData = { 
+        status: 'cancelled',
+        cancelled_at: new Date().toISOString()
+      };
+
+      const { data: existingRecord, error: checkError } = await supabase
+        .from('opportunity_responses')
+        .select('id, status, user_id')
+        .eq('id', commitmentId)
+        .single();
+
+      if (checkError) {
+        console.error('❌ Record not found or access denied:', checkError);
+        toast.error(`Record not found: ${checkError.message}`, { id: t });
+        return;
+      }
+
+      if (!existingRecord) {
+        console.error('❌ No record found with ID:', commitmentId);
+        toast.error('Commitment not found', { id: t });
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from('opportunity_responses')
+        .update(updateData)
+        .eq('id', commitmentId)
+        .select();
+
+      if (error) {
+        console.error('❌ Database error:', error);
+        toast.error(`Failed to cancel commitment: ${error.message}`, { id: t });
+        return;
+      }
+
+      if (!data || data.length === 0) {
+        console.error('❌ No data returned from update');
+        toast.error('Failed to cancel commitment: No record updated', { id: t });
+        return;
+      }
+
+      setCommitments(prev => prev.filter(commitment => commitment.id !== commitmentId));
+      
+      toast.success('Commitment cancelled successfully', { id: t });
+    } catch (error) {
+      console.error('❌ [Cancellation Debug] Catch block error:', error);
+      toast.error('Failed to cancel commitment', { id: t });
+    }
+  };
+
+  // Enhanced filtering and sorting logic
+  const filteredAndSortedCommitments = (() => {
+    // First apply search filter (title and city only)
+    const searchFiltered = commitments.filter(commitment => {
+      if (searchTerm === '') return true;
+      const need = commitment.need;
+      return need.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+             need.city.toLowerCase().includes(searchTerm.toLowerCase());
+    });
+
+    // Then apply time-based filter
+    const timeFiltered = searchFiltered.filter(commitment => {
+      const need = commitment.need;
+      
+      if (activeFilter === 'All') return true;
+      
+      if (activeFilter === 'This Week') {
+        // Show commitments this week OR ongoing commitments
+        return (need.specific_date && isThisWeek(parseISO(need.specific_date))) || 
+               need.urgency === 'ongoing';
+      }
+      
+      if (activeFilter === 'This Month') {
+        // Show commitments this month OR ongoing commitments
+        return (need.specific_date && isThisMonth(parseISO(need.specific_date))) || 
+               need.urgency === 'ongoing';
+      }
+      
+      if (activeFilter === 'Upcoming') {
+        // Show future dates OR ASAP commitments
+        return (need.specific_date && isFuture(parseISO(need.specific_date))) || 
+               need.urgency === 'asap';
+      }
+      
+      if (activeFilter === 'Ongoing') {
+        return need.urgency === 'ongoing';
+      }
+      
+      return true;
+    });
+
+    // Finally apply sorting
+    return timeFiltered.sort((a, b) => {
+      const needA = a.need;
+      const needB = b.need;
+      
+      if (sortBy === 'urgency') {
+        // ASAP → specific dates (soonest first) → ongoing
+        if (needA.urgency === 'asap' && needB.urgency !== 'asap') return -1;
+        if (needB.urgency === 'asap' && needA.urgency !== 'asap') return 1;
+        
+        if (needA.urgency === 'ongoing' && needB.urgency !== 'ongoing') return 1;
+        if (needB.urgency === 'ongoing' && needA.urgency !== 'ongoing') return -1;
+        
+        // Both have specific dates, sort by date
+        if (needA.specific_date && needB.specific_date) {
+          return parseISO(needA.specific_date).getTime() - parseISO(needB.specific_date).getTime();
+        }
+        
+        return 0;
+      }
+      
+      if (sortBy === 'date') {
+        // Sort by date (soonest first)
+        if (needA.specific_date && needB.specific_date) {
+          return parseISO(needA.specific_date).getTime() - parseISO(needB.specific_date).getTime();
+        }
+        if (needA.specific_date && !needB.specific_date) return -1;
+        if (!needA.specific_date && needB.specific_date) return 1;
+        return 0;
+      }
+      
+      if (sortBy === 'location') {
+        // Sort by city alphabetically
+        return needA.city.localeCompare(needB.city);
+      }
+      
+      return 0;
+    });
+  })();
 
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50">
-        {/* Top header - match dashboard exactly */}
-        <div className="bg-white border-b border-gray-100">
-          <div className="flex items-center justify-between p-6">
-            <div className="flex items-center gap-4">
-              <div className="bg-[#20c997] text-white px-4 py-2 rounded-lg font-semibold">
-                giveU
-              </div>
-            </div>
-            <div className="flex items-center gap-4">
-              <button className="p-2">
-                <Bell className="w-5 h-5 text-gray-600" />
-              </button>
-              <button className="text-sm text-gray-600 hover:text-gray-800">
-                Sign out
-              </button>
-            </div>
-          </div>
-        </div>
+        <Header />
         <div className="p-6">Loading your commitments...</div>
         <Footer />
       </div>
     );
   }
 
-  const grouped = groupCommitmentsByTime(commitments);
+  // Helper functions for empty states
+  const getEmptyStateTitle = () => {
+    if (searchTerm) return 'No commitments found';
+    if (activeFilter === 'This Week') return 'No commitments this week';
+    if (activeFilter === 'This Month') return 'No commitments this month';
+    if (activeFilter === 'Upcoming') return 'No upcoming commitments';
+    if (activeFilter === 'Ongoing') return 'No ongoing commitments';
+    return 'No commitments yet';
+  };
+
+  const getEmptyStateMessage = () => {
+    if (searchTerm) return `No commitments match "${searchTerm}". Try adjusting your search terms or filters.`;
+    if (activeFilter !== 'All') return `You don't have any ${activeFilter.toLowerCase()} commitments right now.`;
+    return 'When you sign up to help with needs, they\'ll appear here.';
+  };
+
+  // Enhanced grouping function that works with filtered data
+  const renderGroupedCommitments = (commitments: Commitment[]) => {
+    const grouped = groupCommitmentsByTime(commitments);
+    
+    return (
+      <>
+        {/* Today Section */}
+        {grouped.today.length > 0 && (
+          <CommitmentSection 
+            title="Today" 
+            commitments={grouped.today} 
+            onCantMakeIt={handleCantMakeIt}
+          />
+        )}
+        
+        {/* Tomorrow Section */}
+        {grouped.tomorrow.length > 0 && (
+          <CommitmentSection 
+            title="Tomorrow" 
+            commitments={grouped.tomorrow} 
+            onCantMakeIt={handleCantMakeIt}
+          />
+        )}
+        
+        {/* This Week Section */}
+        {grouped.thisWeek.length > 0 && (
+          <CommitmentSection 
+            title="This Week" 
+            commitments={grouped.thisWeek} 
+            onCantMakeIt={handleCantMakeIt}
+          />
+        )}
+        
+        {/* Ongoing Section */}
+        {grouped.ongoing.length > 0 && (
+          <CommitmentSection 
+            title="Ongoing" 
+            commitments={grouped.ongoing} 
+            onCantMakeIt={handleCantMakeIt}
+          />
+        )}
+        
+        {/* ASAP Section */}
+        {grouped.asap.length > 0 && (
+          <CommitmentSection 
+            title="Urgent" 
+            commitments={grouped.asap} 
+            onCantMakeIt={handleCantMakeIt}
+          />
+        )}
+        
+        {/* Other Section */}
+        {grouped.other.length > 0 && (
+          <CommitmentSection 
+            title="Other" 
+            commitments={grouped.other} 
+            onCantMakeIt={handleCantMakeIt}
+          />
+        )}
+      </>
+    );
+  };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Top header - match dashboard exactly */}
-      <div className="bg-white border-b border-gray-100">
-        <div className="flex items-center justify-between p-6">
-          <div className="flex items-center gap-4">
-            <div className="bg-[#20c997] text-white px-4 py-2 rounded-lg font-semibold">
-              giveU
+    <div className="min-h-screen" style={{ backgroundColor: BRAND.colors.background }}>
+      <Header />
+
+      {/* Title Section */}
+      <div className="bg-white px-4 pt-6 pb-4">
+        <h1 className="text-2xl font-bold text-gray-900 mb-2" style={{ fontFamily: BRAND.fonts.heading }}>
+          Commitments
+        </h1>
+        <p className="text-gray-600 text-base" style={{ fontFamily: BRAND.fonts.body }}>
+          Track your volunteering commitments and schedule
+        </p>
+      </div>
+      
+      {/* List/Calendar Toggle - Full Width Tabs */}
+      <div className="bg-white border-b border-gray-200">
+        <div className="flex">
+          {/* List Tab */}
+          <button 
+            onClick={() => setViewMode('list')}
+            className={`flex-1 py-3 px-4 text-center font-medium transition-colors relative ${
+              viewMode === 'list' 
+                ? 'text-[#20c997] border-b-2 border-[#20c997]' 
+                : 'text-gray-500 border-b-2 border-transparent'
+            }`}
+            style={{ minHeight: '48px', fontFamily: BRAND.fonts.heading }}
+          >
+            <div className="flex items-center justify-center gap-2">
+              <List className="w-5 h-5" />
+              <span>List</span>
             </div>
-          </div>
-          <div className="flex items-center gap-4">
-            <button className="p-2">
-              <Bell className="w-5 h-5 text-gray-600" />
-            </button>
-            <button className="text-sm text-gray-600 hover:text-gray-800">
-              Sign out
-            </button>
-          </div>
+          </button>
+          
+          {/* Calendar Tab */}
+          <button 
+            onClick={() => setViewMode('calendar')}
+            className={`flex-1 py-3 px-4 text-center font-medium transition-colors relative ${
+              viewMode === 'calendar' 
+                ? 'text-[#20c997] border-b-2 border-[#20c997]' 
+                : 'text-gray-500 border-b-2 border-transparent'
+            }`}
+            style={{ minHeight: '48px', fontFamily: BRAND.fonts.heading }}
+          >
+            <div className="flex items-center justify-center gap-2">
+              <Grid className="w-5 h-5" />
+              <span>Calendar</span>
+            </div>
+          </button>
         </div>
       </div>
 
-      {/* Page title section - match dashboard style */}
-      <div className="bg-white px-6 pt-6 pb-4">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">My Commitments</h1>
-        <p className="text-gray-600">Track your volunteering commitments and schedule</p>
-      </div>
-
-      {/* Filter tabs - similar to dashboard categories */}
-      <div className="bg-white px-6 pb-6 border-b border-gray-100">
-        <div className="flex gap-2 overflow-x-auto">
+      {/* Filter Pills - Centered */}
+      <div className="bg-white px-4 py-4 border-b border-gray-200">
+        <div className="flex gap-2 justify-center">
           <button 
             onClick={() => setActiveFilter('All')}
-            className={`px-4 py-2 rounded-full font-medium whitespace-nowrap ${
+            className={`px-6 py-2 rounded-full whitespace-nowrap font-medium transition-all active:scale-95 ${
               activeFilter === 'All' 
                 ? 'bg-[#20c997] text-white' 
-                : 'border border-gray-300 text-gray-700 hover:bg-gray-50'
+                : 'bg-gray-100 text-gray-700'
             }`}
+            style={{ minHeight: '40px', fontFamily: BRAND.fonts.heading }}
           >
             All
           </button>
           <button 
-            onClick={() => setActiveFilter('This Week')}
-            className={`px-4 py-2 rounded-full font-medium whitespace-nowrap ${
-              activeFilter === 'This Week' 
+            onClick={() => setActiveFilter('Upcoming')}
+            className={`px-6 py-2 rounded-full whitespace-nowrap font-medium transition-all active:scale-95 ${
+              activeFilter === 'Upcoming' 
                 ? 'bg-[#20c997] text-white' 
-                : 'border border-gray-300 text-gray-700 hover:bg-gray-50'
+                : 'bg-gray-100 text-gray-700'
             }`}
+            style={{ minHeight: '40px', fontFamily: BRAND.fonts.heading }}
           >
-            This Week
+            Upcoming
           </button>
           <button 
             onClick={() => setActiveFilter('Ongoing')}
-            className={`px-4 py-2 rounded-full font-medium whitespace-nowrap ${
+            className={`px-6 py-2 rounded-full whitespace-nowrap font-medium transition-all active:scale-95 ${
               activeFilter === 'Ongoing' 
                 ? 'bg-[#20c997] text-white' 
-                : 'border border-gray-300 text-gray-700 hover:bg-gray-50'
+                : 'bg-gray-100 text-gray-700'
             }`}
+            style={{ minHeight: '40px', fontFamily: BRAND.fonts.heading }}
           >
             Ongoing
           </button>
         </div>
       </div>
 
-      {/* Commitments count - match dashboard pattern */}
-      <div className="px-6 py-4">
-        <p className="text-sm text-gray-600">
-          {commitments.length} commitments
-        </p>
+      {/* Search Bar */}
+      <div className="bg-white px-4 pb-4 border-b border-gray-200">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+          <input
+            type="text"
+            placeholder="Search by title or location..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full pl-10 pr-4 rounded-lg border border-gray-200 focus:border-[#20c997] focus:outline-none"
+            style={{ 
+              height: '48px',
+              fontSize: '16px',
+              fontFamily: BRAND.fonts.body
+            }}
+          />
+        </div>
       </div>
 
       {/* Content area */}
-      <div className="px-6 pb-20">
-        {commitments.length === 0 ? (
+      <div className="px-4 pt-4 pb-20 sm:px-6">
+        {/* Results count */}
+        <p className="text-sm text-gray-600 mb-4" style={{ fontFamily: BRAND.fonts.body }}>
+          {filteredAndSortedCommitments.length} commitments
+          {searchTerm && ` matching "${searchTerm}"`}
+          {activeFilter !== 'All' && ` in ${activeFilter.toLowerCase()}`}
+        </p>
+        {filteredAndSortedCommitments.length === 0 ? (
           <div className="text-center py-12">
             <Calendar className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">No commitments yet</h3>
-            <p className="text-gray-500">When you sign up to help with needs, they'll appear here.</p>
+            <h3 className="text-lg font-medium text-gray-900 mb-2">
+              {getEmptyStateTitle()}
+            </h3>
+            <p className="text-gray-500">
+              {getEmptyStateMessage()}
+            </p>
           </div>
+        ) : viewMode === 'calendar' ? (
+          <CalendarView
+            commitments={filteredAndSortedCommitments}
+            currentMonth={currentMonth}
+            onMonthChange={setCurrentMonth}
+          />
         ) : (
-          <>
-            {/* Today Section */}
-            {grouped.today.length > 0 && (
-              <CommitmentSection title="Today" commitments={grouped.today} />
-            )}
-            
-            {/* Tomorrow Section */}
-            {grouped.tomorrow.length > 0 && (
-              <CommitmentSection title="Tomorrow" commitments={grouped.tomorrow} />
-            )}
-            
-            {/* This Week Section */}
-            {grouped.thisWeek.length > 0 && (
-              <CommitmentSection title="This Week" commitments={grouped.thisWeek} />
-            )}
-            
-            {/* Ongoing Section */}
-            {grouped.ongoing.length > 0 && (
-              <CommitmentSection title="Ongoing" commitments={grouped.ongoing} />
-            )}
-            
-            {/* ASAP Section */}
-            {grouped.asap.length > 0 && (
-              <CommitmentSection title="Urgent" commitments={grouped.asap} />
-            )}
-            
-            {/* Other Section */}
-            {grouped.other.length > 0 && (
-              <CommitmentSection title="Other" commitments={grouped.other} />
-            )}
-          </>
+          renderGroupedCommitments(filteredAndSortedCommitments)
         )}
       </div>
       <Footer />
+      <Toaster 
+        position="top-center"
+        toastOptions={{
+          style: {
+            background: 'white',
+            color: BRAND.colors.text,
+            border: `1px solid ${BRAND.colors.primary}`,
+            padding: '16px',
+            borderRadius: '8px',
+          },
+          success: {
+            iconTheme: {
+              primary: BRAND.colors.success,
+              secondary: 'white',
+            },
+          },
+        }}
+      />
     </div>
   );
 }

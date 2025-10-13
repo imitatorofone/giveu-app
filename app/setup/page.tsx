@@ -22,34 +22,29 @@ export default function ChurchSetup() {
       }
       setUser(authData.user);
 
-      // Check if user is already assigned to a church
-      const { data: membership } = await supabase
-        .from('org_members')
-        .select('org_id, role, orgs(name)')
-        .eq('user_id', authData.user.id)
+      // Check if user already has a church_code in their profile
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('church_code')
+        .eq('id', authData.user.id)
         .single();
 
-      if (membership) {
+      if (profile?.church_code && profile.church_code.trim() !== '') {
         // User already has a church, redirect to dashboard
+        console.log('User already has church_code:', profile.church_code);
         router.push('/dashboard');
         return;
       }
 
-      // Load available churches
-      const { data: churchData, error: churchError } = await supabase
-        .from('orgs')
-        .select('*')
-        .order('name');
+      // Load beta churches (hard-coded for consistency)
+      const betaChurches = [
+        { id: 'harmony', name: 'Harmony Church', city: 'Harmony', state: 'IA' },
+        { id: 'brighton', name: 'Brighton Bible Church', city: 'Brighton', state: 'IA' },
+        { id: 'newlondon', name: 'New London Christian Church', city: 'New London', state: 'IA' }
+      ];
 
-      console.log('Church query result:', { churchData, churchError });
-      
-      if (churchError) {
-        console.error('Church query error:', churchError);
-        alert(`Error loading churches: ${churchError.message}`);
-        setChurches([]);
-      } else {
-        setChurches(churchData || []);
-      }
+      console.log('Beta churches loaded:', betaChurches);
+      setChurches(betaChurches);
       setLoading(false);
     };
 
@@ -62,35 +57,47 @@ export default function ChurchSetup() {
     try {
       console.log('Attempting to join church:', { selectedChurch, userId: user.id, role });
 
-      // Create pending membership (not approved yet)
-      const { data: memberData, error: memberError } = await supabase
-        .from('org_members')
-        .insert({
-          org_id: selectedChurch,
-          user_id: user.id,
-          role: role,
-          status: 'pending'
-        })
-        .select();
+      // Find the selected church to get its name
+      const selectedChurchData = churches.find(church => church.id === selectedChurch);
+      if (!selectedChurchData) {
+        alert('Selected church not found. Please try again.');
+        return;
+      }
 
-      console.log('Member insert result:', { memberData, memberError });
-      if (memberError) throw memberError;
+      // Map church name to correct church_code
+      let churchCode;
+      if (selectedChurchData.name === "Harmony Church") {
+        churchCode = "123harmony";
+      } else if (selectedChurchData.name === "Brighton Bible Church") {
+        churchCode = "456brighton";
+      } else if (selectedChurchData.name === "New London Christian Church") {
+        churchCode = "789newlondon";
+      } else {
+        alert('Invalid church selection. Please try again.');
+        return;
+      }
 
-      // Update profile with org_id
+      console.log('Church mapping:', { selectedChurch: selectedChurchData.name, churchCode });
+
+      // Update profile with church_code and role information
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .upsert({
           id: user.id,
           email: user.email,
-          org_id: selectedChurch
+          church_code: churchCode,
+          role: role,
+          is_leader: role === 'leader',
+          approval_status: 'pending',
+          updated_at: new Date().toISOString()
         })
         .select();
 
       console.log('Profile update result:', { profileData, profileError });
       if (profileError) throw profileError;
 
-      // Redirect to pending page
-      router.push('/pending');
+      // Redirect to gift survey to complete profile
+      router.push('/survey');
       
     } catch (error) {
       console.error('Error joining church:', error);
@@ -117,13 +124,15 @@ export default function ChurchSetup() {
     }}>
       <div style={{ 
         backgroundColor: 'white', 
-        padding: 48, 
+        padding: '24px', 
         borderRadius: 12, 
         border: '1px solid #e5e7eb',
         boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
         maxWidth: 500,
         width: '100%'
-      }}>
+      }}
+      className="sm:p-12"
+      >
         <div style={{ textAlign: 'center', marginBottom: 32 }}>
           <div style={{ 
             width: 80, 
@@ -138,7 +147,7 @@ export default function ChurchSetup() {
           }}>
             <Gift size={40} />
           </div>
-          <h1 style={{ fontSize: 28, fontWeight: 'bold', margin: '0 0 8px' }}>Welcome to Engage</h1>
+          <h1 style={{ fontSize: 28, fontWeight: 'bold', margin: '0 0 8px' }}>Welcome to giveU</h1>
           <p style={{ color: '#6b7280' }}>Let's connect you with your church community</p>
         </div>
 
@@ -151,10 +160,11 @@ export default function ChurchSetup() {
             onChange={(e) => setSelectedChurch(e.target.value)}
             style={{ 
               width: '100%', 
-              padding: 12, 
+              padding: '14px 16px', 
               border: '1px solid #d1d5db',
               borderRadius: 8,
-              fontSize: 16
+              fontSize: 16,
+              minHeight: '52px'
             }}
           >
             <option value="">Choose your church...</option>
@@ -183,7 +193,7 @@ export default function ChurchSetup() {
                   checked={role === option.value}
                   onChange={(e) => setRole(e.target.value)}
                 />
-                <span style={{ fontSize: 14 }}>{option.label}</span>
+                <span style={{ fontSize: 15 }}>{option.label}</span>
               </label>
             ))}
           </div>
@@ -192,25 +202,28 @@ export default function ChurchSetup() {
         <button 
           onClick={handleJoinChurch}
           disabled={!selectedChurch}
+          className={selectedChurch ? 'active:scale-95' : ''}
           style={{
             width: '100%',
             backgroundColor: selectedChurch ? '#4ECDC4' : '#e5e7eb',
             color: selectedChurch ? 'white' : '#9ca3af',
             border: 'none',
-            padding: 16,
+            padding: '16px 24px',
             borderRadius: 8,
             fontSize: 16,
             fontWeight: 600,
-            cursor: selectedChurch ? 'pointer' : 'not-allowed'
+            minHeight: '56px',
+            cursor: selectedChurch ? 'pointer' : 'not-allowed',
+            transition: 'all 0.15s ease'
           }}
         >
           Join Church & Continue
         </button>
 
         <div style={{ marginTop: 24, padding: 16, backgroundColor: '#f9fafb', borderRadius: 8 }}>
-          <p style={{ fontSize: 12, color: '#6b7280', margin: 0 }}>
+          <p style={{ fontSize: 13, color: '#6b7280', margin: 0, lineHeight: 1.5 }}>
             Don't see your church? This is currently in beta testing with select churches. 
-            Contact your church leadership about joining the Engage beta program.
+            Contact your church leadership about joining the giveU beta program.
           </p>
         </div>
       </div>

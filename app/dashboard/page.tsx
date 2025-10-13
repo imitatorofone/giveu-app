@@ -1,19 +1,25 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { 
   Calendar, Clock, MapPin, Users, User, Bell, 
-  Heart, CalendarDays, Plus, UserCircle, MessageCircle, AlertCircle, Check 
+  CalendarDays, Plus, UserCircle, MessageCircle, AlertCircle, Check, Wrench 
 } from 'lucide-react';
-import { supabase } from '../../lib/supabaseClient'; // Use your shared client
+import { supabaseBrowser as supabase } from '../../lib/supabaseBrowser'; // Use browser client for session persistence
 import { GIFT_CATEGORIES } from '../../constants/giftCategories.js';
 import Footer from '../../components/Footer';
 import Header from '../../components/Header';
+import dynamic from 'next/dynamic';
+import { createNotification } from '@/lib/notificationHelper';
+import { BRAND } from '../../lib/brandConfig';
+
+const NeedDetailModal = dynamic(
+  () => import('../../components/NeedDetailModal'),
+  { ssr: false }
+);
 import toast from 'react-hot-toast';
 
-// Brand typography
-const quicksandFont = 'Quicksand, -apple-system, BlinkMacSystemFont, sans-serif';
-const merriweatherFont = 'Merriweather, Georgia, serif';
 
 interface Opportunity {
   id: string;
@@ -22,8 +28,9 @@ interface Opportunity {
   location: string;
   date: string;
   time: string;
-  committed: number;
+  volunteers_count: number;
   needed: number;
+  people_needed?: number;
   categories: string[];
   tags: string[];
   urgency?: string;
@@ -34,6 +41,10 @@ interface Opportunity {
   recurring_pattern?: string;
   time_preference?: string;
   ongoing_schedule?: string;
+  responses?: Array<{
+    user_id: string;
+    status: string;
+  }>;
 }
 
 // Helper functions for date/time formatting
@@ -114,14 +125,102 @@ const formatOngoingSchedule = (need: any): string => {
   return parts.join(' ');
 };
 
+const getLocationLine1 = (address: string | null | undefined) => {
+  if (!address) return 'Location TBD';
+  
+  const parts = address.split(',');
+  if (parts.length > 1) {
+    return parts[0].trim();
+  }
+  
+  return address;
+};
+
+const getLocationLine2 = (address: string | null | undefined) => {
+  if (!address) return '';
+  
+  const parts = address.split(',');
+  if (parts.length > 1) {
+    return parts.slice(1).join(',').trim();
+  }
+  
+  return '';
+};
+
 export default function MemberDashboard() {
-  const [activeFilter, setActiveFilter] = useState('All');
   const [opportunities, setOpportunities] = useState<Opportunity[]>([]);
   const [loading, setLoading] = useState(true);
   const [sortOpen, setSortOpen] = useState(false);
   const [selectedSort, setSelectedSort] = useState('Best Match');
   const [userGifts, setUserGifts] = useState<string[]>([]);
   const [userCommitments, setUserCommitments] = useState<string[]>([]);
+  const [selectedNeedId, setSelectedNeedId] = useState<string | null>(null);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [deepLinkRetryCount, setDeepLinkRetryCount] = useState(0);
+  const [expandedSkills, setExpandedSkills] = useState<Set<string>>(new Set());
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
+  // Helper function to sort skills with user matches first
+  const sortSkillsByMatch = (tags: string[]): string[] => {
+    const userMatches: string[] = [];
+    const nonMatches: string[] = [];
+    
+    tags.forEach(tag => {
+      const tagName = tag.replace(' ✓', '').toLowerCase();
+      const isMatch = userGifts.some(gift => 
+        gift.toLowerCase().includes(tagName) || tagName.includes(gift.toLowerCase())
+      );
+      
+      if (isMatch) {
+        userMatches.push(tag);
+      } else {
+        nonMatches.push(tag);
+      }
+    });
+    
+    return [...userMatches, ...nonMatches];
+  };
+
+  // Helper function to toggle skills expansion
+  const toggleSkillsExpansion = (opportunityId: string) => {
+    const newExpanded = new Set(expandedSkills);
+    if (newExpanded.has(opportunityId)) {
+      newExpanded.delete(opportunityId);
+    } else {
+      newExpanded.add(opportunityId);
+    }
+    setExpandedSkills(newExpanded);
+  };
+
+  // Helper function to sync volunteers_count with actual opportunity_responses
+  const syncVolunteerCounts = async () => {
+    try {
+      const { data: needs } = await supabase
+        .from('needs')
+        .select('id')
+        .in('status', ['active', 'approved']);
+      
+      if (!needs || needs.length === 0) {
+        return;
+      }
+
+      for (const need of needs) {
+        const { count } = await supabase
+          .from('opportunity_responses')
+          .select('*', { count: 'exact', head: true })
+          .eq('need_id', need.id)
+          .eq('status', 'accepted');
+        
+        await supabase
+          .from('needs')
+          .update({ volunteers_count: count || 0 })
+          .eq('id', need.id);
+      }
+    } catch (error) {
+      console.error('❌ Error syncing volunteer counts:', error);
+    }
+  };
 
   // Helper function for dynamic tag coloring
   const getTagColor = (tag: string) => {
@@ -134,36 +233,32 @@ export default function MemberDashboard() {
     return {
       isMatch,
       styles: isMatch ? {
-        backgroundColor: '#20c997', // Solid brand green background
-        color: 'white',             // White text (like "All" button)
-        border: '1px solid #20c997' // Same color border
+        backgroundColor: BRAND.colors.primary, // Brand green background
+        color: 'white',                        // White text
+        border: '1px solid ' + BRAND.colors.primary // Same color border
       } : {
-        backgroundColor: '#f8fafc',   // Light grey background
-        color: '#64748b',             // Grey text
-        border: '1px solid #cbd5e1'   // Grey border
+        backgroundColor: '#F5F5F5',   // Light gray background
+        color: '#757575',             // Medium gray text
+        border: '1px solid #F5F5F5'   // Same color border
       }
     };
   };
 
   const fetchNeeds = async () => {
     try {
-      console.log('Fetching real needs from database...');
-      
       const { data, error } = await supabase
         .from('needs')
         .select(`
           *,
-          commitments(count)
+          commitments(count),
+          responses:opportunity_responses(user_id, status)
         `)
-        .eq('status', 'active')
+        .in('status', ['active', 'approved'])
         .order('created_at', { ascending: false });
       
       if (error) {
-        console.log('Database error:', error);
         setOpportunities([]);
       } else {
-        console.log('Found needs:', data?.length || 0);
-        console.log('Sample need with commitments:', data?.[0]);
         
         if (data && data.length > 0) {
           const transformedOpportunities: Opportunity[] = data.map((need: any) => {
@@ -182,8 +277,9 @@ export default function MemberDashboard() {
               location: need.location || need.geographic_location || need.city || 'Location TBD',
               date: dateTimeDisplay.date,
               time: dateTimeDisplay.time,
-              committed: need.commitments?.[0]?.count || 0,
+              volunteers_count: need.volunteers_count || 0,
               needed: need.people_needed || 1,
+              people_needed: need.people_needed || 1,
               categories: need.giftings_needed && need.giftings_needed.length > 0 ? need.giftings_needed : ['Care'],
               tags: need.giftings_needed && need.giftings_needed.length > 0 
                 ? need.giftings_needed.map((gift: string) => `${gift} ✓`) 
@@ -195,18 +291,17 @@ export default function MemberDashboard() {
               ongoing_start_time: need.ongoing_start_time,
               recurring_pattern: need.recurring_pattern,
               time_preference: need.time_preference,
-              ongoing_schedule: formatOngoingSchedule(need)
+              ongoing_schedule: formatOngoingSchedule(need),
+              responses: need.responses
             };
           });
           
-          console.log('Transformed opportunities:', transformedOpportunities);
           setOpportunities(transformedOpportunities);
         } else {
           setOpportunities([]);
         }
       }
     } catch (err) {
-      console.log('Connection error:', err);
       setOpportunities([]);
     }
     setLoading(false);
@@ -215,13 +310,99 @@ export default function MemberDashboard() {
   useEffect(() => {
     // Quick auth sanity check
     async function checkAuth() {
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      const userResult = await supabase.auth.getUser();
       const s = await supabase.auth.getSession();
-      console.log('🔐 Dashboard auth sanity check - User ID:', s.session?.user?.id);
+      
+      if (userResult.data.user?.id) {
+        setCurrentUserId(userResult.data.user.id);
+      } else if (s.data.session?.user?.id) {
+        setCurrentUserId(s.data.session.user.id);
+      } else {
+        router.push('/auth');
+        return;
+      }
     }
     checkAuth();
     
-    fetchNeeds();
+    // 🚀 PERFORMANCE: Run sync and fetch in parallel
+    Promise.all([
+      syncVolunteerCounts(),
+      fetchNeeds()
+    ]);
   }, []);
+
+  // Profile completeness check - redirect incomplete users to onboarding
+  useEffect(() => {
+    async function checkProfileCompleteness() {
+      if (!currentUserId) return;
+      
+      try {
+        const { data: profile, error } = await supabase
+          .from('profiles')
+          .select('church_code, gift_selections, full_name')
+          .eq('id', currentUserId)
+          .single();
+
+        if (error) {
+          console.error('[dashboard] Error fetching profile for completeness check:', error);
+          return;
+        }
+
+        const hasChurchCode = profile?.church_code && profile.church_code.trim() !== '';
+        const hasGifts = profile?.gift_selections && profile.gift_selections.length > 0;
+
+        if (!hasChurchCode) {
+          router.push('/setup');
+          return;
+        }
+
+        if (!hasGifts) {
+          router.push('/survey');
+          return;
+        }
+      } catch (error) {
+        console.error('[dashboard] Error in profile completeness check:', error);
+      }
+    }
+
+    checkProfileCompleteness();
+  }, [currentUserId, router]);
+
+  // Handle deep-link modal opening
+  useEffect(() => {
+    const needId = searchParams.get('needId');
+    if (needId && opportunities.length > 0) {
+      const needExists = opportunities.some(opp => opp.id === needId);
+      
+      if (needExists) {
+        setSelectedNeedId(needId);
+        setDeepLinkRetryCount(0);
+      } else if (deepLinkRetryCount < 2) {
+        setDeepLinkRetryCount(prev => prev + 1);
+        fetchNeeds();
+      }
+    } else if (needId && opportunities.length === 0 && !loading) {
+      if (deepLinkRetryCount < 2) {
+        setDeepLinkRetryCount(prev => prev + 1);
+        fetchNeeds();
+      }
+    }
+  }, [searchParams, opportunities, loading, deepLinkRetryCount]); // Add dependencies
+
+  /* Disabled for MVP - modal functionality
+  const handleNeedClick = (needId: string) => {
+    console.log('[dashboard] Need clicked with ID:', needId);
+    setSelectedNeedId(needId);
+    router.replace(`/dashboard?needId=${needId}`, { scroll: false });
+  };
+
+  const handleModalClose = () => {
+    setSelectedNeedId(null);
+    router.replace('/dashboard', { scroll: false });
+  };
+  */
 
   // Close sort dropdown when clicking outside
   useEffect(() => {
@@ -240,60 +421,48 @@ export default function MemberDashboard() {
     };
   }, [sortOpen]);
 
-  // Add this useEffect to fetch real user gifts
+  // 🚀 PERFORMANCE: Fetch user gifts and commitments in parallel
   useEffect(() => {
-    async function fetchUserGifts() {
+    async function fetchUserData() {
       try {
         const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return;
-
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('gift_selections')
-          .eq('id', user.id)
-          .single();
-
-        if (profile?.gift_selections) {
-          setUserGifts(profile.gift_selections);
-          console.log('User gifts loaded for filtering:', profile.gift_selections);
-        }
-      } catch (error) {
-        console.error('Error fetching user gifts:', error);
-      }
-    }
-
-    fetchUserGifts();
-  }, []);
-
-  // Fetch user commitments when component loads
-  useEffect(() => {
-    async function fetchUserCommitments() {
-      try {
         const { data: { session } } = await supabase.auth.getSession();
-        if (!session?.user) return;
+        
+        const userId = user?.id || session?.user?.id;
+        if (!userId) return;
 
-        const { data: commitments } = await supabase
-          .from('commitments')
-          .select('need_id')
-          .eq('user_id', session.user.id)
-          .eq('status', 'confirmed');
+        // 🚀 Run both queries in parallel
+        const [profileResult, commitmentsResult] = await Promise.all([
+          supabase
+            .from('profiles')
+            .select('gift_selections')
+            .eq('id', userId)
+            .single(),
+          supabase
+            .from('opportunity_responses')
+            .select('need_id, status')
+            .eq('user_id', userId)
+            .in('status', ['pending', 'accepted'])
+        ]);
 
-        if (commitments) {
-          setUserCommitments(commitments.map(c => c.need_id));
-          console.log('User commitments loaded:', commitments.map(c => c.need_id));
+        // Update user gifts
+        if (profileResult.data?.gift_selections) {
+          setUserGifts(profileResult.data.gift_selections);
+        }
+
+        // Update user commitments
+        if (commitmentsResult.data) {
+          const needIds = commitmentsResult.data.map(c => c.need_id);
+          setUserCommitments(needIds);
         }
       } catch (error) {
-        console.error('Error fetching user commitments:', error);
+        console.error('Error fetching user data:', error);
       }
     }
 
-    fetchUserCommitments();
+    fetchUserData();
   }, []);
 
-  const categories = [
-    'All', 'Hands-On', 'People', 'Problem-Solving', 'Care', 
-    'Learning', 'Creativity', 'Leadership', 'Behind-the-Scenes', 'Physical', 'Pioneering'
-  ];
 
   const staticOpportunities = [
     {
@@ -303,7 +472,7 @@ export default function MemberDashboard() {
       location: 'Church Kitchen',
       time: '2-5pm',
       date: 'This Saturday',
-      committed: 1,
+      volunteers_count: 1,
       needed: 5,
       categories: ['Hands-On', 'Care'],
       tags: ['Cooking ✓', 'Setup/Tear Down ✓']
@@ -315,7 +484,7 @@ export default function MemberDashboard() {
       location: 'Church Grounds',
       time: '9am-12pm',
       date: 'This Saturday',
-      committed: 0,
+      volunteers_count: 0,
       needed: 4,
       categories: ['Hands-On', 'Physical'],
       tags: ['Gardening ✓', 'Physical ✓']
@@ -327,7 +496,7 @@ export default function MemberDashboard() {
       location: 'Church Office',
       time: '6-8pm',
       date: 'Thursday',
-      committed: 1,
+      volunteers_count: 1,
       needed: 2,
       categories: ['Leadership', 'Behind-the-Scenes'],
       tags: ['Planning ✓', 'Logistics ✓']
@@ -339,7 +508,7 @@ export default function MemberDashboard() {
       location: 'Food Bank',
       time: '10am-1pm',
       date: 'Next Saturday',
-      committed: 0,
+      volunteers_count: 0,
       needed: 6,
       categories: ['Care', 'Behind-the-Scenes'],
       tags: ['Administration ✓', 'Organization ✓']
@@ -351,19 +520,30 @@ export default function MemberDashboard() {
       location: 'Various Locations',
       time: '7-9pm',
       date: 'Next Tuesday',
-      committed: 0,
+      volunteers_count: 0,
       needed: 3,
       categories: ['Pioneering', 'People'],
       tags: ['Evangelism ✓', 'Networking ✓']
     }
   ];
 
-  const filteredOpportunities = opportunities.filter(opp => 
-    activeFilter === 'All' || opp.categories.some(cat => cat === activeFilter)
-  );
 
-  // Sort the filtered opportunities based on selectedSort
-  const sortedOpportunities = [...filteredOpportunities].sort((a, b) => {
+  // Helper function to parse people_needed field
+  const parsePeopleNeeded = (peopleNeeded: any): number => {
+    if (!peopleNeeded) return 1;
+    // Remove "+" if present and convert to number
+    return parseInt(peopleNeeded.toString().replace('+', '')) || 1;
+  };
+
+  // Filter out fully committed needs
+  const availableOpportunities = opportunities.filter(need => {
+    const needed = parsePeopleNeeded(need.people_needed);
+    const committed = need.volunteers_count || 0;
+    return committed < needed; // Only show if not fully committed
+  });
+
+  // Sort the opportunities based on selectedSort
+  const sortedOpportunities = [...availableOpportunities].sort((a, b) => {
     switch (selectedSort) {
       case 'Best Match':
         // Sort by gift matching - opportunities with more matching tags first
@@ -408,8 +588,8 @@ export default function MemberDashboard() {
       
       case 'Most Needed':
         // Sort by how many more people are needed
-        const aNeeded = a.needed - a.committed;
-        const bNeeded = b.needed - b.committed;
+        const aNeeded = a.needed - a.volunteers_count;
+        const bNeeded = b.needed - b.volunteers_count;
         return bNeeded - aNeeded;
       
       default:
@@ -429,10 +609,10 @@ export default function MemberDashboard() {
 
     console.log('✅ User session found:', session.user.id);
 
-    // Check if already committed
+    // Check if already submitted a response
     const { data: existing, error: checkError } = await supabase
-      .from('commitments')
-      .select('id')
+      .from('opportunity_responses')
+      .select('id, status')
       .eq('need_id', needId)
       .eq('user_id', session.user.id)
       .maybeSingle();
@@ -444,39 +624,109 @@ export default function MemberDashboard() {
     }
 
     if (existing) {
-      toast('You\'re already signed up for this!', {
-        icon: 'ℹ️',
-        style: {
-          background: '#3b82f6',
-          color: 'white',
-        },
-      });
+      if (existing.status === 'pending') {
+        toast('Your volunteer response is pending leader approval!', {
+          icon: '⏳',
+          style: {
+            background: '#f59e0b',
+            color: 'white',
+          },
+        });
+      } else if (existing.status === 'accepted') {
+        toast('You\'re already signed up to help with this need!', {
+          icon: '✅',
+          style: {
+            background: '#10b981',
+            color: 'white',
+          },
+        });
+      } else if (existing.status === 'declined') {
+        toast('Your volunteer response was declined. Please contact a leader if you have questions.', {
+          icon: '❌',
+          style: {
+            background: '#ef4444',
+            color: 'white',
+          },
+        });
+      }
       return;
     }
 
-    // Create commitment
-    console.log('📝 Creating commitment for need:', needId, 'user:', session.user.id);
+    // Create opportunity response (auto-accepted)
+    console.log('📝 Creating opportunity response for need:', needId, 'user:', session.user.id);
     
-    const { error } = await supabase
-      .from('commitments')
+    console.log('🔍 [Debug] Attempting to insert opportunity response:', {
+      need_id: needId,
+      user_id: session.user.id,
+      response_type: 'volunteer',
+      status: 'accepted'
+    });
+
+    const { data, error } = await supabase
+      .from('opportunity_responses')
       .insert({
         need_id: needId,
         user_id: session.user.id,
-        status: 'confirmed'
-      });
+        response_type: 'volunteer',
+        status: 'accepted'
+      })
+      .select();
 
     if (error) {
-      console.error('❌ Commitment error:', error);
-      toast.error('Failed to sign up');
-    } else {
-      console.log('✅ Successfully committed to need');
-      toast.success('You\'re signed up to help!');
+      console.error('❌ Opportunity response error:', error);
+      console.error('❌ Error details:', {
+        message: error.message,
+        code: error.code,
+        details: error.details,
+        hint: error.hint,
+        fullError: JSON.stringify(error, null, 2)
+      });
       
-      // Add the new commitment to state immediately for UI feedback
+      // Try to get more info about the table
+      console.log('🔍 Checking if opportunity_responses table exists...');
+      const { data: tableCheck, error: tableError } = await supabase
+        .from('opportunity_responses')
+        .select('*')
+        .limit(1);
+      
+      if (tableError) {
+        console.error('❌ Table check error:', tableError);
+        toast.error('Database table not found. Please contact support.');
+      } else {
+        console.log('✅ Table exists, but insert failed');
+        toast.error('Failed to submit volunteer response');
+      }
+    } else {
+      console.log('✅ Successfully submitted volunteer response:', data);
+      toast.success('You\'re signed up to help! Added to your commitments.');
+      
+      // Add the new response to state immediately for UI feedback
       setUserCommitments(prev => [...prev, needId]);
       
-      // Update volunteer count via RPC
-      console.log('📊 Updating volunteer count...');
+      // Get the current need to check volunteers_count
+      const { data: currentNeed } = await supabase
+        .from('needs')
+        .select('volunteers_count')
+        .eq('id', needId)
+        .single();
+      
+      // Update volunteers_count in needs table
+      console.log('📊 Updating volunteers_count...');
+      const { error: updateError } = await supabase
+        .from('needs')
+        .update({ 
+          volunteers_count: (currentNeed?.volunteers_count || 0) + 1 
+        })
+        .eq('id', needId);
+      
+      if (updateError) {
+        console.error('❌ Error updating committed count:', updateError);
+      } else {
+        console.log('✅ Committed count updated successfully');
+      }
+      
+      // Update volunteer count via RPC (backup method)
+      console.log('📊 Updating volunteer count via RPC...');
       const { error: rpcError } = await supabase.rpc('increment_volunteer_count', { need_id: needId });
       
       if (rpcError) {
@@ -487,6 +737,208 @@ export default function MemberDashboard() {
       // Refresh the needs list to show updated volunteer counts
       console.log('🔄 Refreshing needs list...');
       fetchNeeds();
+
+      // Check if need is now fulfilled and notify creator
+      try {
+        console.log('🎯 Checking if need is fulfilled...');
+        
+        // Get the need with current volunteer count and requirements
+        const { data: needData, error: needError } = await supabase
+          .from('needs')
+          .select(`
+            id,
+            title,
+            people_needed,
+            created_by,
+            commitments(count)
+          `)
+          .eq('id', needId)
+          .single();
+
+        if (needError) {
+          console.error('❌ Error fetching need for fulfillment check:', needError);
+          return;
+        }
+
+        if (needData && needData.created_by) {
+          const volunteerCount = needData.commitments?.[0]?.count || 0;
+          const peopleNeeded = needData.people_needed || 1;
+          
+          console.log(`🎯 Need fulfillment check: ${volunteerCount}/${peopleNeeded} volunteers`);
+          
+          // Check if need is fulfilled (has enough volunteers)
+          if (volunteerCount >= peopleNeeded) {
+            console.log('🎉 Need is fulfilled! Notifying creator...');
+            
+            // Create DIY notification for the need creator
+            await createNotification({
+              userId: needData.created_by,
+              eventType: 'need.fulfilled',
+              title: 'Your Need Has Enough Volunteers!',
+              description: `${volunteerCount} people signed up for ${needData.title}`,
+              path: '/commitments',
+              needId: needData.id,
+              need_title: needData.title
+            });
+            
+            // Trigger Knock workflow for push notification
+            try {
+              await fetch('/api/knock/trigger', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  workflow: 'need_fulfilled',
+                  userId: needData.created_by,
+                  data: {
+                    need_title: needData.title,
+                    need_id: needData.id,
+                    volunteer_count: volunteerCount
+                  }
+                })
+              });
+              console.log('✅ Knock workflow triggered for need_fulfilled to creator:', needData.created_by);
+            } catch (knockError) {
+              console.warn('Knock trigger failed for need_fulfilled:', knockError);
+            }
+          } else {
+            console.log('📊 Need not yet fulfilled, no notification sent');
+          }
+        }
+      } catch (fulfillmentError) {
+        console.error('❌ Error checking need fulfillment:', fulfillmentError);
+        // Don't fail the main flow if fulfillment check fails
+      }
+
+        // Create notifications for leaders and need creator
+        console.log('🔔 Creating notifications...');
+        
+        try {
+          // Fetch the need details
+          const { data: needData, error: needError } = await supabase
+            .from('needs')
+            .select('id, title, description, church_code, created_by')
+            .eq('id', needId)
+            .single();
+
+          if (needError) {
+            console.error('❌ Error fetching need details:', needError);
+          } else if (needData) {
+            // Get user profile for volunteer name
+            const { data: userProfile } = await supabase
+              .from('profiles')
+              .select('full_name')
+              .eq('id', session.user.id)
+              .single();
+
+            const volunteerName = userProfile?.full_name || 'A volunteer';
+
+            // Track who we've notified to prevent duplicates
+            const notifiedUsers = new Set<string>();
+
+            // Notify leaders in the same church
+            const { data: leaders } = await supabase
+              .from('profiles')
+              .select('id')
+              .eq('church_code', needData.church_code)
+              .eq('is_leader', true);
+
+            console.log('🔔 Found leaders to notify:', leaders?.length);
+
+            if (leaders && leaders.length > 0) {
+              for (const leader of leaders) {
+                if (!notifiedUsers.has(leader.id)) {
+                  console.log('🔔 Notifying leader:', leader.id);
+                  
+                  // Create DIY notification
+                  await createNotification({
+                    userId: leader.id,
+                    eventType: 'volunteer.signed_up',
+                    title: needData.title,
+                    description: `${volunteerName} signed up to help.`,
+                    path: '/leader/volunteer-responses',
+                    needId: needId,
+                    need_title: needData.title,
+                    volunteer_name: volunteerName,
+                    volunteer_id: session.user.id
+                  });
+                  
+                  // Trigger Knock workflow for push
+                  try {
+                    const knockResponse = await fetch('/api/knock/trigger', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({
+                        workflow: 'volunteer_signed_up',
+                        userId: leader.id,
+                        data: {
+                          need_title: needData.title,
+                          volunteer_name: volunteerName,
+                          volunteer_id: session.user.id
+                        }
+                      })
+                    });
+
+                    if (knockResponse.ok) {
+                      console.log('✅ Knock workflow triggered for leader:', leader.id);
+                    }
+                  } catch (knockError) {
+                    console.warn('Knock trigger failed:', knockError);
+                  }
+                  
+                  notifiedUsers.add(leader.id);
+                } else {
+                  console.log('🔔 Skipping duplicate notification for leader:', leader.id);
+                }
+              }
+            }
+
+            // Notify the need creator (if not already notified and not the volunteer)
+            if (needData.created_by && 
+                needData.created_by !== session.user.id && 
+                !notifiedUsers.has(needData.created_by)) {
+              console.log('🔔 Notifying need creator:', needData.created_by);
+              
+              // Create DIY notification
+              await createNotification({
+                userId: needData.created_by,
+                eventType: 'volunteer.signed_up',
+                title: needData.title,
+                description: `${volunteerName} signed up to help.`,
+                path: '/commitments',
+                needId: needId,
+                need_title: needData.title,
+                volunteer_name: volunteerName,
+                volunteer_id: session.user.id
+              });
+              
+              // Trigger Knock workflow for push
+              try {
+                const knockResponse = await fetch('/api/knock/trigger', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    workflow: 'volunteer_signed_up',
+                    userId: needData.created_by,
+                    data: {
+                      need_title: needData.title,
+                      volunteer_name: volunteerName,
+                      volunteer_id: session.user.id
+                    }
+                  })
+                });
+
+                if (knockResponse.ok) {
+                  console.log('✅ Knock workflow triggered for need creator:', needData.created_by);
+                }
+              } catch (knockError) {
+                console.warn('Knock trigger failed for need creator:', knockError);
+              }
+            }
+          }
+        } catch (notificationError) {
+          console.error('❌ Error creating notifications:', notificationError);
+          // Don't fail the main flow if notifications fail
+        }
     }
   };
 
@@ -497,13 +949,13 @@ export default function MemberDashboard() {
         display: 'flex', 
         alignItems: 'center', 
         justifyContent: 'center',
-        backgroundColor: '#f9fafb'
+        backgroundColor: BRAND.colors.background
       }}>
         <div style={{ textAlign: 'center' }}>
           <div style={{ 
             width: 32, 
             height: 32, 
-            border: '2px solid #10b981',
+            border: `2px solid ${BRAND.colors.primary}`,
             borderTopColor: 'transparent',
             borderRadius: '50%',
             animation: 'spin 1s linear infinite',
@@ -522,76 +974,32 @@ export default function MemberDashboard() {
 
   return (
     <div style={{ 
-      backgroundColor: '#f9fafb', 
+      backgroundColor: BRAND.colors.background, 
       minHeight: '100vh', 
       paddingBottom: '80px',
-      fontFamily: merriweatherFont // Default to body font
+      fontFamily: BRAND.fonts.body // Use brand body font
     }}>
       <Header />
 
       {/* Main Content */}
-      <main style={{ maxWidth: '1200px', margin: '0 auto', padding: '32px 24px' }}>
-        <div style={{ marginBottom: '30px' }}>
+      <main style={{ maxWidth: '1200px', margin: '0 auto', padding: '16px' }}
+      className="sm:px-6 lg:px-8"
+      >
+        <div style={{ marginBottom: '24px' }}>
           <h1 style={{ 
             fontSize: '28px', 
             fontWeight: '700',
             marginBottom: '8px',
-            color: '#1e293b',
-            fontFamily: quicksandFont // Quicksand for headings
+            color: BRAND.colors.text,
+            fontFamily: BRAND.fonts.heading
           }}>
             Ways to Serve
           </h1>
-          <p style={{ 
-            color: '#64748b',
-            fontSize: '16px',
-            fontFamily: merriweatherFont // Merriweather for body text
-          }}>Discover opportunities to use your gifts</p>
-        </div>
-
-        {/* Filter Buttons */}
-        <div style={{ 
-          display: 'flex', 
-          flexWrap: 'wrap', 
-          gap: '8px', 
-          marginBottom: '24px'
-        }}>
-          {categories.map((category) => (
-            <button
-              key={category}
-              onClick={() => setActiveFilter(category)}
-              style={{
-                padding: '8px 16px',
-                borderRadius: '20px',
-                fontSize: '14px',
-                fontWeight: '500',
-                fontFamily: 'Quicksand, sans-serif', // Add Quicksand font
-                border: activeFilter === category ? 'none' : '1px solid #d1d5db',
-                backgroundColor: activeFilter === category ? '#20c997' : 'white',
-                color: activeFilter === category ? 'white' : '#374151',
-                cursor: 'pointer',
-                transition: 'all 0.2s'
-              }}
-              onMouseOver={(e) => {
-                if (activeFilter !== category) {
-                  (e.target as HTMLButtonElement).style.backgroundColor = '#f3f4f6';
-                }
-              }}
-              onMouseOut={(e) => {
-                if (activeFilter !== category) {
-                  (e.target as HTMLButtonElement).style.backgroundColor = 'white';
-                }
-              }}
-            >
-              {category}
-            </button>
-          ))}
-        </div>
-
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
           <div style={{ 
-            color: '#64748b',
-            fontFamily: 'Merriweather, serif',
-            fontSize: '14px'
+            color: BRAND.colors.textLight,
+            fontFamily: BRAND.fonts.body,
+            fontSize: '16px',
+            marginBottom: '12px'
           }}>
             {sortedOpportunities.length} opportunities • {sortedOpportunities.filter(opp => 
               opp.tags.some(tag => {
@@ -603,7 +1011,9 @@ export default function MemberDashboard() {
               })
             ).length} match your gifts
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          
+          {/* Sort Dropdown - Left aligned */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '16px' }}>
             <span style={{ 
               fontSize: '14px', 
               color: '#64748b',
@@ -687,117 +1097,96 @@ export default function MemberDashboard() {
           </div>
         </div>
 
+        {/* Need Cards Grid */}
         <div style={{ 
           display: 'grid', 
-          gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))',
-          gap: '20px'
-        }}>
-          {sortedOpportunities.map((opportunity) => (
-            <div key={opportunity.id} style={{ 
-              backgroundColor: 'white',
-              borderRadius: '12px',
-              border: '1px solid #e2e8f0',
-              overflow: 'hidden',
-              display: 'flex',
-              flexDirection: 'column',
-              minHeight: '280px' // Consistent card height
-            }}>
+          gridTemplateColumns: '1fr',
+          gap: '16px'
+        }}
+        className="sm:grid-cols-2 lg:grid-cols-3"
+        >
+          {sortedOpportunities.map((opportunity) => {
+            const isHelping = opportunity.responses?.some(r => r.user_id === currentUserId && r.status === 'accepted') || 
+                             userCommitments.includes(opportunity.id);
+            
+            return (
+            <div 
+              key={opportunity.id} 
+              data-card-id={opportunity.id}
+              className="bg-white rounded-xl border mb-4"
+              style={{ 
+                borderColor: isHelping ? '#E0F2F1' : '#E0E0E0',
+                borderWidth: isHelping ? '2px' : '1px',
+                overflow: 'hidden',
+                display: 'flex',
+                flexDirection: 'column',
+                minHeight: '280px',
+                position: 'relative',
+                boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)'
+              }}
+              /* Disabled for MVP - modal functionality
+              onClick={() => handleNeedClick(opportunity.id)}
+              */
+            >
               {/* Card Header */}
               <div style={{ padding: '20px 20px 0 20px' }}>
-                <h3 style={{ 
-                  fontSize: '18px', 
-                  fontWeight: '700', // Changed from '600' to '700' for bold
-                  marginBottom: '16px',
-                  color: '#1e293b',
+                <h3 className="font-semibold text-lg mb-2" style={{ 
+                  color: '#424242',
                   lineHeight: '1.3',
-                  fontFamily: quicksandFont,
+                  fontFamily: BRAND.fonts.heading,
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '8px'
+                  justifyContent: 'center',
+                  gap: '8px',
+                  textAlign: 'center'
                 }}>
                   {opportunity.title}
                   {opportunity.urgency === 'asap' && (
-                    <AlertCircle size={20} color="#dc2626" />
+                    <AlertCircle size={20} color={BRAND.colors.danger} />
                   )}
                 </h3>
                 
-                {/* Metadata Row - 3 columns horizontal layout */}
+                {/* Metadata Row - Horizontal layout with icons */}
                 <div style={{ 
                   display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'flex-start',
-                  marginBottom: '16px',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '12px',
+                  marginBottom: '12px',
                   fontSize: '14px',
-                  color: '#64748b',
-                  borderBottom: '1px solid #f1f5f9',
-                  paddingBottom: '12px',
-                  minHeight: '44px'
+                  color: BRAND.colors.textLight,
+                  opacity: 0.7,
+                  flexWrap: 'wrap'
                 }}>
-                  {/* Column 1 - Date */}
-                  <div style={{ 
-                    display: 'flex', 
-                    flexDirection: 'column',
-                    alignItems: 'center', 
-                    flex: 1,
-                    minHeight: '44px'
-                  }}>
-                    <Calendar size={16} style={{ 
-                      marginBottom: '4px', 
-                      color: '#64748b',
-                      flexShrink: 0
-                    }} />
-                    <div style={{ fontSize: '12px', lineHeight: '1.2', textAlign: 'center' }}>
-                      <div>{opportunity.date}</div>
-                      {opportunity.time && (
-                        <div style={{ 
-                          color: '#9ca3af', 
-                          fontSize: '11px', 
-                          marginTop: '2px',
-                          fontWeight: '400'
-                        }}>
-                          {opportunity.time}
-                        </div>
-                      )}
-                    </div>
+                  {/* Date */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <Calendar size={20} style={{ color: BRAND.colors.primary, flexShrink: 0 }} />
+                    <span style={{ fontFamily: BRAND.fonts.body }}>{opportunity.date}</span>
                   </div>
                   
-                  {/* Column 2 - Location */}
-                  <div style={{ 
-                    display: 'flex', 
-                    flexDirection: 'column',
-                    alignItems: 'center', 
-                    flex: 1,
-                    minHeight: '44px'
-                  }}>
-                    <MapPin size={16} style={{ 
-                      marginBottom: '4px', 
-                      color: '#64748b',
-                      flexShrink: 0
-                    }} />
-                    <div style={{ fontSize: '12px', lineHeight: '1.2', textAlign: 'center' }}>
-                      {opportunity.location}
-                    </div>
+                  {/* Location - with truncation */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <MapPin size={20} style={{ color: BRAND.colors.primary, flexShrink: 0 }} />
+                    <span style={{ 
+                      fontFamily: BRAND.fonts.body
+                    }}>
+                      {(() => {
+                        const loc = getLocationLine1(opportunity.location);
+                        return loc.length > 20 ? loc.substring(0, 20) + '...' : loc;
+                      })()}
+                    </span>
                   </div>
                   
-                  {/* Column 3 - People */}
-                  <div style={{ 
-                    display: 'flex', 
-                    flexDirection: 'column',
-                    alignItems: 'center', 
-                    flex: 1,
-                    minHeight: '44px'
-                  }}>
-                    <Users size={16} style={{ 
-                      marginBottom: '4px', 
-                      color: '#64748b',
-                      flexShrink: 0
-                    }} />
-                    <div style={{ fontSize: '12px', lineHeight: '1.2', textAlign: 'center' }}>
-                      <div>{opportunity.committed} committed</div>
-                      <div style={{ color: '#9ca3af', fontSize: '11px', marginTop: '2px' }}>
-                        {opportunity.needed}+ needed
-                      </div>
-                    </div>
+                  {/* People */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap' }}>
+                    <Users size={20} style={{ color: BRAND.colors.primary, flexShrink: 0 }} />
+                    <span style={{ fontFamily: BRAND.fonts.body }}>
+                      {(() => {
+                        const peopleNeeded = opportunity.people_needed || 1;
+                        const needsText = String(peopleNeeded);
+                        return needsText.includes('+') ? `${needsText} needed` : `${needsText}+ needed`;
+                      })()} • {opportunity.volunteers_count || 0} committed
+                    </span>
                   </div>
                 </div>
               </div>
@@ -809,96 +1198,176 @@ export default function MemberDashboard() {
                 display: 'flex',
                 flexDirection: 'column'
               }}>
-                <p style={{ 
-                  color: '#475569',
-                  fontSize: '14px',
+                <p className="line-clamp-3" style={{ 
+                  color: '#424242',
+                  fontSize: '15px',
                   lineHeight: '1.5',
                   marginBottom: '16px',
-                  flex: 1,
-                  fontFamily: merriweatherFont
+                  fontFamily: BRAND.fonts.body
                 }}>
                   {opportunity.description}
                 </p>
 
 
-                {/* Tags - Dynamic color and checkmarks with Quicksand font */}
-                <div style={{ 
-                  display: 'flex', 
-                  gap: '8px', 
-                  marginBottom: '16px',
-                  flexWrap: 'wrap'
-                }}>
-                  {opportunity.tags.map((tag) => {
-                    const tagName = tag.replace(' ✓', ''); // Clean tag name
-                    const { isMatch, styles } = getTagColor(tag);
-                    
-                    return (
-                      <span
-                        key={tag}
-                        style={{
-                          padding: '6px 12px',
-                          borderRadius: '16px',
-                          fontSize: '12px',
-                          fontWeight: '500',
-                          fontFamily: 'Quicksand, sans-serif',
-                          ...styles
-                        }}
-                      >
-                        {tagName} {/* No checkmark, just clean tag name */}
-                      </span>
-                    );
-                  })}
-                </div>
+
+                {/* Tags - Dynamic color with Show More functionality */}
+                {opportunity.tags && opportunity.tags.length > 0 && (
+                  <div style={{ marginBottom: '16px' }}>
+                    <div style={{ 
+                      display: 'flex', 
+                      gap: '8px', 
+                      flexWrap: 'wrap'
+                    }}>
+                      {(() => {
+                        const sortedSkills = sortSkillsByMatch(opportunity.tags);
+                        const isExpanded = expandedSkills.has(opportunity.id);
+                        const visibleSkills = isExpanded ? sortedSkills : sortedSkills.slice(0, 6);
+                        const hasMoreSkills = sortedSkills.length > 6;
+                        
+                        return (
+                          <>
+                            {visibleSkills.map((tag) => {
+                              const tagName = tag.replace(' ✓', ''); // Clean tag name
+                              const { isMatch, styles } = getTagColor(tag);
+                              
+                              return (
+                                <span
+                                  key={tag}
+                                  style={{
+                                    padding: '6px 12px',
+                                    borderRadius: '16px',
+                                    fontSize: '12px',
+                                    fontWeight: '500',
+                                    fontFamily: BRAND.fonts.heading,
+                                    ...styles
+                                  }}
+                                >
+                                  {tagName}
+                                </span>
+                              );
+                            })}
+                            
+                            {/* Show More/Less Button */}
+                            {hasMoreSkills && (
+                              <button
+                                onClick={() => toggleSkillsExpansion(opportunity.id)}
+                                style={{
+                                  padding: '10px 16px',
+                                  borderRadius: '16px',
+                                  fontSize: '13px',
+                                  fontWeight: '500',
+                                  fontFamily: BRAND.fonts.heading,
+                                  backgroundColor: '#f3f4f6',
+                                  color: BRAND.colors.text,
+                                  border: 'none',
+                                  cursor: 'pointer',
+                                  minHeight: '40px',
+                                  transition: 'all 0.2s ease'
+                                }}
+                                onTouchStart={(e) => {
+                                  e.currentTarget.style.backgroundColor = BRAND.colors.primary;
+                                  e.currentTarget.style.color = 'white';
+                                }}
+                                onTouchEnd={(e) => {
+                                  setTimeout(() => {
+                                    e.currentTarget.style.backgroundColor = '#f3f4f6';
+                                    e.currentTarget.style.color = BRAND.colors.text;
+                                  }, 150);
+                                }}
+                              >
+                                {isExpanded ? 'Show Less' : `+${sortedSkills.length - 6} more`}
+                              </button>
+                            )}
+                          </>
+                        );
+                      })()}
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Card Footer */}
               <div style={{ 
-                padding: '16px 20px',
+                padding: '20px',
                 borderTop: '1px solid #f1f5f9',
                 backgroundColor: '#fafbfc'
               }}>
                 {(() => {
-                  const isCommitted = userCommitments.includes(opportunity.id);
-                  return (
+                  return isHelping ? (
                     <button 
-                      onClick={() => !isCommitted && handleICanHelp(opportunity.id)}
-                      disabled={isCommitted}
+                      className="flex items-center gap-2 px-6 py-2 rounded-lg font-medium"
                       style={{ 
+                        backgroundColor: '#E0E0E0',
+                        color: '#616161',
+                        minHeight: '44px',
+                        cursor: 'not-allowed',
                         width: '100%',
-                        backgroundColor: isCommitted ? 'white' : '#20c997',
-                        color: isCommitted ? '#20c997' : 'white',
-                        padding: '12px 0',
-                        borderRadius: '8px',
-                        border: '2px solid #20c997',
-                        fontWeight: '600',
-                        cursor: isCommitted ? 'default' : 'pointer',
-                        fontSize: '15px',
-                        transition: 'all 0.2s',
-                        display: 'flex',
-                        alignItems: 'center',
                         justifyContent: 'center',
-                        gap: '8px'
+                        borderRadius: '8px',
+                        fontWeight: '600',
+                        fontFamily: BRAND.fonts.heading,
+                        fontSize: '15px',
+                        border: '2px solid #E0E0E0'
+                      }}
+                      disabled
+                    >
+                      Committed ✓
+                    </button>
+                  ) : (
+                    <button 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleICanHelp(opportunity.id);
+                      }}
+                      className="flex items-center gap-2 px-6 py-2 rounded-lg text-white font-medium transition-colors active:scale-95"
+                      style={{ 
+                        backgroundColor: BRAND.colors.primary,
+                        minHeight: '48px',
+                        width: '100%',
+                        justifyContent: 'center',
+                        borderRadius: '8px',
+                        fontWeight: '600',
+                        fontFamily: BRAND.fonts.heading,
+                        fontSize: '16px',
+                        border: `2px solid ${BRAND.colors.primary}`,
+                        cursor: 'pointer',
+                        transition: 'all 0.15s ease'
+                      }}
+                      onTouchStart={(e) => {
+                        e.currentTarget.style.backgroundColor = BRAND.colors.primaryHover;
+                        e.currentTarget.style.transform = 'scale(0.98)';
+                      }}
+                      onTouchEnd={(e) => {
+                        const target = e.currentTarget;
+                        setTimeout(() => {
+                          if (target && target.style) {
+                            target.style.backgroundColor = BRAND.colors.primary;
+                            target.style.transform = 'scale(1)';
+                          }
+                        }, 150);
                       }}
                     >
-                      {isCommitted ? (
-                        <>
-                          You're Helping
-                          <Check size={16} />
-                        </>
-                      ) : (
-                        'I Can Help'
-                      )}
+                      I'm Available
                     </button>
                   );
                 })()}
               </div>
             </div>
-          ))}
+            );
+          })}
         </div>
       </main>
 
       {/* Persistent Footer */}
       <Footer />
+
+      {/* Disabled for MVP - modal functionality
+      <NeedDetailModal 
+        needId={selectedNeedId}
+        onClose={handleModalClose}
+        userId={currentUserId || undefined}
+      />
+      */}
     </div>
   );
 }

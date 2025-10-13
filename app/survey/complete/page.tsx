@@ -5,6 +5,7 @@ import { supabase } from '../../../lib/supabaseClient';
 import { useRouter } from 'next/navigation';
 import { CheckCircle, ArrowRight, Heart, Users, Calendar } from 'lucide-react';
 import Image from 'next/image';
+import { BRAND } from '../../../lib/brandConfig';
 
 // Survey-wide design constants
 const SURVEY_GREEN = '#20c997';
@@ -34,10 +35,10 @@ export default function SurveyComplete() {
       }
       setUser(data.user);
 
-      // Get user's profile data including name and skills
+      // Get user's profile data including name, skills, and approval status
       const { data: profile } = await supabase
         .from('profiles')
-        .select('full_name, gift_selections')
+        .select('full_name, gift_selections, approval_status')
         .eq('id', data.user.id)
         .single();
 
@@ -51,7 +52,7 @@ export default function SurveyComplete() {
         // Set skills
         if (profile.gift_selections) {
           // Remove duplicates and ensure unique skills
-          const uniqueSkills = [...new Set(profile.gift_selections)];
+          const uniqueSkills = [...new Set(profile.gift_selections)] as string[];
           setUserSkills(uniqueSkills);
         }
       }
@@ -88,14 +89,15 @@ export default function SurveyComplete() {
   }, []);
 
   const handleGetStarted = () => {
-    router.push('/dashboard');
+    // Redirect to notification onboarding page
+    router.push('/onboarding/notifications');
   };
 
 
   if (!user) return <div>Loading...</div>;
 
   return (
-    <main className="min-h-screen bg-gray-50 py-12 px-4">
+    <main style={{ minHeight: '100vh', backgroundColor: BRAND.colors.background, padding: '48px 16px' }}>
       {/* Confetti Animation */}
       {showConfetti && (
         <div style={{
@@ -148,7 +150,7 @@ export default function SurveyComplete() {
           <div style={{
             width: 120,
             height: 120,
-            backgroundColor: SURVEY_GREEN,
+            backgroundColor: BRAND.colors.success,
             borderRadius: '50%',
             display: 'flex',
             alignItems: 'center',
@@ -170,56 +172,51 @@ export default function SurveyComplete() {
           transition: 'opacity 3s ease-in',
           pointerEvents: fadeInContent ? 'auto' : 'none'
         }}>
-          <div className={SURVEY_CARD}>
+          <div style={{ maxWidth: '672px', margin: '0 auto', backgroundColor: 'white', borderRadius: '12px', boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)', border: '1px solid #e5e7eb', padding: '32px 24px' }}>
             {/* giveU logo - centered with proper margin */}
-            <div className="flex justify-center mb-6">
-              <div style={{ 
-                width: 100, 
-                height: 100, 
-                backgroundColor: SURVEY_GREEN, 
-                borderRadius: 25, 
-                display: 'flex', 
-                alignItems: 'center', 
-                justifyContent: 'center',
-                boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)'
-              }}>
-                <Image 
-                  src="/logo.svg" 
-                  alt="giveU Logo" 
-                  width={100} 
-                  height={100}
-                  style={{ 
-                    borderRadius: 25,
-                    objectFit: 'cover',
-                    width: '100px',
-                    height: '100px'
-                  }}
-                />
-              </div>
+            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '24px' }}>
+              <Image 
+                src={BRAND.logo.path}
+                alt={BRAND.logo.alt}
+                width={100} 
+                height={100}
+                style={{ 
+                  borderRadius: '12px',
+                  objectFit: 'contain'
+                }}
+              />
             </div>
             
             {/* Title section with proper spacing */}
-            <div className="text-center mb-6">
-              <h1 className="text-2xl font-bold text-gray-900 mb-3">
+            <div style={{ textAlign: 'center', marginBottom: '24px' }}>
+              <h1 style={{ fontSize: '28px', fontWeight: '700', color: BRAND.colors.text, marginBottom: '12px', fontFamily: BRAND.fonts.heading }}>
                 Welcome to giveU{userFirstName ? `, ${userFirstName}` : ''}! 🎉
               </h1>
               
-              <p className="text-gray-600 mb-6">
+              <p style={{ color: BRAND.colors.textLight, marginBottom: '24px', fontSize: '16px', fontFamily: BRAND.fonts.body }}>
                 You're now ready to serve! Leadership has recognized your gifts and will help you put them into action.
               </p>
             </div>
 
             {/* User's Selected Skills */}
             {userSkills.length > 0 && (
-              <div className="mb-8">
-                <h3 className="text-sm text-gray-500 mb-4 text-center">
+              <div style={{ marginBottom: '32px' }}>
+                <h3 style={{ fontSize: '14px', color: BRAND.colors.textLight, marginBottom: '16px', textAlign: 'center', fontFamily: BRAND.fonts.body }}>
                   Your Gifts & Skills
                 </h3>
-                <div className="flex flex-wrap gap-3 justify-center">
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', justifyContent: 'center' }}>
                   {userSkills.map((skill, index) => (
                     <span
                       key={index}
-                      className="px-4 py-2 bg-[#20c997] text-white rounded-full text-sm font-medium"
+                      style={{ 
+                        padding: '8px 16px', 
+                        backgroundColor: BRAND.colors.primary, 
+                        color: 'white', 
+                        borderRadius: '9999px', 
+                        fontSize: '14px', 
+                        fontWeight: '500',
+                        fontFamily: BRAND.fonts.heading
+                      }}
                     >
                       {skill}
                     </span>
@@ -229,11 +226,11 @@ export default function SurveyComplete() {
             )}
 
             {/* What happens next section */}
-            <div className="bg-white border border-gray-200 rounded-lg p-6 mb-6">
-              <h3 className="text-lg font-semibold text-[#20c997] mb-3 text-center">
+            <div style={{ backgroundColor: 'white', border: '1px solid #e5e7eb', borderRadius: '8px', padding: '24px', marginBottom: '24px' }}>
+              <h3 style={{ fontSize: '18px', fontWeight: '600', color: BRAND.colors.primary, marginBottom: '12px', textAlign: 'center', fontFamily: BRAND.fonts.heading }}>
                 What happens next?
               </h3>
-              <ul className="space-y-2 text-gray-600 text-left">
+              <ul style={{ display: 'flex', flexDirection: 'column', gap: '8px', color: BRAND.colors.textLight, textAlign: 'left', fontSize: '14px', fontFamily: BRAND.fonts.body }}>
                 <li>• You'll see personalized ways to serve</li>
                 <li>• You can share needs in the community</li>
                 <li>• Journey together with your church family</li>
@@ -243,7 +240,30 @@ export default function SurveyComplete() {
             {/* Action button */}
             <button 
               onClick={handleGetStarted}
-              className={`${SURVEY_BUTTON} flex items-center justify-center gap-2`}
+              style={{
+                width: '100%',
+                padding: '12px 24px',
+                backgroundColor: BRAND.colors.primary,
+                color: 'white',
+                borderRadius: '8px',
+                fontSize: '16px',
+                fontWeight: '600',
+                fontFamily: BRAND.fonts.heading,
+                border: 'none',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '8px',
+                minHeight: '44px',
+                transition: 'all 0.2s'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = BRAND.colors.primaryHover;
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = BRAND.colors.primary;
+              }}
             >
               Explore Ways to Serve
               <ArrowRight size={18} strokeWidth={1.5} />

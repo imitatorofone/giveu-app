@@ -80,7 +80,7 @@ const getNeedGiftings = (need: any, isTestMode: boolean = false): string[] => {
       console.log('🔍 DEBUG: Processing array of length:', need.giftingsNeeded.length);
       console.log('🔍 DEBUG: First item:', need.giftingsNeeded[0], 'Type:', typeof need.giftingsNeeded[0]);
       
-      giftings = need.giftingsNeeded.map((item, index) => {
+      giftings = need.giftingsNeeded.map((item: any, index: number) => {
         // If it's already a string, return it
         if (typeof item === 'string') {
           console.log(`🔍 DEBUG: Item ${index} is string:`, item);
@@ -322,7 +322,7 @@ const NeedCard = ({ need, userGifts = [], onCanHelp, user, profile }: { need: Ne
         <div className="logistic-item" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
           <MapPin size={18} className="icon" />
           <div style={{ textAlign: 'center', lineHeight: '1.2' }}>
-            <div>{need.city || need.location || 'Location TBD'}</div>
+            <div>{(need as any).city || (need as any).location || 'Location TBD'}</div>
           </div>
         </div>
         <div className="logistic-item" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>

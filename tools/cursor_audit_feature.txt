@@ -1,0 +1,17 @@
+Act as a focused change auditor. Summarize changes related to THIS FEATURE ONLY: "<paste short feature title here, e.g., volunteer_signed_up notifications>".
+
+Output in this structure:
+
+1) TOUCHPOINTS
+- files and functions directly related
+
+2) DATA FLOW
+- where data enters, transforms, and triggers notifications (start → end)
+
+3) TEST POINTS
+- how to verify success (routes, DB rows, UI click path)
+
+4) GAPS
+- missing wiring, edge cases, or flaky spots
+
+Keep it tight and actionable.

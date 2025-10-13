@@ -1,24 +1,24 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
 import { supabase } from '../../lib/supabaseClient';
 import Footer from '../../components/Footer';
 import Header from '../../components/Header';
 import {
   ArrowBigUp,
-  MessageSquare,
-  Filter,
+  ArrowLeft,
   Lightbulb,
   Bug,
   Heart,
   HelpCircle,
-  ChevronLeft,
   Plus,
-  Send,
   X,
+  ChevronUp,
+  Camera,
 } from 'lucide-react';
+import { BRAND } from '../../lib/brandConfig';
 
 type Item = {
   id: string;
@@ -46,8 +46,16 @@ const CAT_ICONS: Record<string, any> = {
   question: HelpCircle,
 };
 
+const CAT_LABELS: Record<string, string> = {
+  idea: 'Idea',
+  bug: 'Bug',
+  praise: 'Praise',
+  question: 'Question',
+};
+
 export default function FeedbackListPage() {
-  console.log('FEEDBACK PAGE RENDER @', new Date().toLocaleTimeString());
+  const router = useRouter();
+  const [isLeader, setIsLeader] = useState(false);
   
   // Strip category prefixes like "Bug: " / "Idea: " from titles
   function cleanTitle(raw?: string | null) {
@@ -74,12 +82,36 @@ export default function FeedbackListPage() {
     const y = Math.floor(d / 365);
     return `${y}y ago`;
   }
+
+  function todayChicago() {
+    const now = new Date();
+    const chi = new Intl.DateTimeFormat('en-US', {
+      timeZone: 'America/Chicago',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    }).format(now);
+    const [m, d, y] = chi.split('/');
+    return `${y}-${m}-${d}`;
+  }
+
+  function msUntilChicagoMidnight() {
+    const now = new Date();
+    const chiNow = new Date(now.toLocaleString('en-US', { timeZone: 'America/Chicago' }));
+    const tomorrow = new Date(chiNow);
+    tomorrow.setDate(chiNow.getDate() + 1);
+    tomorrow.setHours(0, 0, 0, 0);
+    return tomorrow.getTime() - chiNow.getTime();
+  }
+
+  function randSuffix() {
+    return Math.random().toString(36).substring(2, 8);
+  }
   
   const [userId, setUserId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [items, setItems] = useState<Item[]>([]);
   const [myVotes, setMyVotes] = useState<Set<string>>(new Set());
-  // NEW: which item I've voted for today (null = not yet)
   const [votedTodayId, setVotedTodayId] = useState<string | null>(null);
   const [cat, setCat] = useState<(typeof CATS)[number]['id']>('all');
   const [sort, setSort] = useState<'top' | 'new'>('top');
@@ -92,102 +124,41 @@ export default function FeedbackListPage() {
     details: "",
     category: "idea" as "idea" | "bug" | "praise" | "question",
   });
-
-  // File upload state
   const [files, setFiles] = useState<File[]>([]);
-  const allowScreenshotUploads = true; // ✅ flip on
 
-  // File management helpers
-  function addFiles(newFiles: FileList | File[]) {
-    const asArray = Array.from(newFiles);
-    const filtered = asArray
-      .filter(f => f.type.startsWith('image/'))
-      .slice(0, 4); // cap to 4 images
-    setFiles(prev => {
-      const merged = [...prev, ...filtered].slice(0, 4);
-      // de-dupe by name+size
-      const map = new Map<string, File>();
-      merged.forEach(f => map.set(`${f.name}-${f.size}`, f));
-      return Array.from(map.values());
-    });
-  }
-
-  function removeFile(idx: number) {
-    setFiles(prev => prev.filter((_, i) => i !== idx));
-  }
-
-  function randSuffix(len = 6) {
-    return Math.random().toString(36).slice(2, 2 + len);
-  }
-
-  // Helper to get Chicago "today" date (YYYY-MM-DD)
-  function todayChicago() {
-    const fmt = new Intl.DateTimeFormat('en-CA', { // en-CA gives YYYY-MM-DD
-      timeZone: 'America/Chicago',
-      year: 'numeric', month: '2-digit', day: '2-digit'
-    });
-    return fmt.format(new Date());
-  }
-
-  // ms until next midnight in America/Chicago
-  function msUntilChicagoMidnight() {
-    const d = new Date();
-    const parts = new Intl.DateTimeFormat('en-US', {
-      timeZone: 'America/Chicago',
-      hour12: false,
-      hour: '2-digit', minute: '2-digit', second: '2-digit'
-    }).formatToParts(d);
-
-    const get = (t:string) => Number(parts.find(p => p.type === t)?.value ?? '0');
-    const h = get('hour'), m = get('minute'), s = get('second');
-    const secsLeft = (24*60*60) - (h*60*60 + m*60 + s);
-    return (secsLeft + 1) * 1000; // +1s buffer
-  }
-
-  const FORM_CATS = [
-    { id: "idea", icon: Lightbulb, label: "Idea" },
-    { id: "bug", icon: Bug, label: "Bug" },
-    { id: "praise", icon: Heart, label: "Praise" },
-    { id: "question", icon: HelpCircle, label: "Question" },
-  ] as const;
-
-  // auth + initial fetch
   useEffect(() => {
     (async () => {
-      const { data: u } = await supabase.auth.getUser();
-      const uid = u.user?.id ?? null;
-      setUserId(uid);
-
-      await Promise.all([fetchItems('all'), fetchMyVoteToday(uid)]);
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user) {
+        setUserId(session.user.id);
+        await fetchMyVotes(session.user.id);
+        await fetchMyVoteToday(session.user.id);
+        
+        // Check if leader
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('is_leader')
+          .eq('id', session.user.id)
+          .single();
+        setIsLeader(profile?.is_leader || false);
+      }
       setLoading(false);
     })();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // refetch on filter change
   useEffect(() => {
     fetchItems(cat);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [cat]);
+  }, [cat, sort]);
 
-  // refetch when sort changes
-  useEffect(() => {
-    fetchItems(cat);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sort]);
-
-  // refresh votes at Chicago midnight
   useEffect(() => {
     if (!userId) return;
-    
-    // schedule a refresh at Chicago midnight
     const t = setTimeout(async () => {
+      setVotedTodayId(null);
       await fetchMyVoteToday(userId);
-      // schedule the next day again
     }, msUntilChicagoMidnight());
 
     return () => clearTimeout(t);
-  }, [userId]); // re-schedule if user changes
+  }, [userId]);
 
   async function fetchItems(category: (typeof CATS)[number]['id']) {
     try {
@@ -222,7 +193,6 @@ export default function FeedbackListPage() {
     setMyVotes(new Set((data ?? []).map((r: any) => r.feedback_id as string)));
   }
 
-  // Fetch the single vote (if any) I cast today
   async function fetchMyVoteToday(uid: string | null) {
     if (!uid) return setVotedTodayId(null);
     const { data, error } = await supabase
@@ -246,7 +216,6 @@ export default function FeedbackListPage() {
       return;
     }
 
-    // If you already used today's vote, don't call the RPC again
     if (votedTodayId) {
       const votedTitle = items.find(x => x.id === votedTodayId)?.title ?? 'another item';
       toast("You have already used today's vote on \"" + cleanTitle(votedTitle) + "\". Try again tomorrow.", { icon: '🔁' });
@@ -262,7 +231,6 @@ export default function FeedbackListPage() {
       const votedId = data?.[0]?.voted_feedback_id ?? null;
 
       if (didUpvote) {
-        // lock the day and reflect server count
         setVotedTodayId(id);
         if (serverCount !== null) {
           setItems(prev => prev.map(it => (it.id === id ? { ...it, votes_count: serverCount } : it)));
@@ -271,7 +239,6 @@ export default function FeedbackListPage() {
         }
         toast.success('Thanks for voting!');
       } else {
-        // backend says you already used today's vote (edge cases)
         setVotedTodayId(votedId);
         const votedTitle = items.find(x => x.id === votedId)?.title ?? 'another item';
         if (serverCount !== null) {
@@ -304,7 +271,6 @@ export default function FeedbackListPage() {
     const t = toast.loading("Submitting…");
 
     try {
-      // fetch email for convenience
       const { data: u } = await supabase.auth.getUser();
       const email = u.user?.email ?? null;
 
@@ -350,7 +316,6 @@ export default function FeedbackListPage() {
         }
       }
 
-      // drop new item into list (respect current filter)
       const newItem = {
         ...(data as Item),
         votes_count: 0,
@@ -375,347 +340,404 @@ export default function FeedbackListPage() {
     }
   }
 
-  const filteredCount = useMemo(() => items.length, [items]);
+  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const selected = Array.from(e.target.files || []).slice(0, 4);
+    setFiles(selected);
+  }
+
+  function removeFile(idx: number) {
+    setFiles(prev => prev.filter((_, i) => i !== idx));
+  }
 
   return (
     <>
+      {/* Standard Header */}
       <Header />
-      <div className="min-h-screen bg-gray-50 pb-24">
-
-      <div className="max-w-4xl mx-auto px-4 py-6 space-y-6">
-
-        {/* Sticky toolbar — light, compact, always reachable */}
-        <div className="sticky top-16 z-20 mb-4">
-          <div className="bg-white/85 backdrop-blur rounded-full px-3 py-2 shadow-sm ring-1 ring-gray-900/10 flex items-center gap-2">
-            {/* Pills row */}
-            <div className="px-0 py-0">
-              <div className="flex flex-wrap items-center gap-2">
-                {CATS.map((c) => (
-                  <button
-                    key={c.id}
-                    onClick={() => setCat(c.id)}
-                    className={`px-3 py-2 rounded-full border text-sm font-medium transition
-                      ${cat === c.id
-                        ? 'bg-[#20c997] text-white border-[#20c997] hover:opacity-90'
-                        : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'}`}
-                  >
-                    {c.label}
-                  </button>
-                ))}
-
-                {/* Show only when a specific category is selected */}
-                {cat !== 'all' && (
-                  <button
-                    onClick={() => setCat('all')}
-                    className="inline-flex items-center gap-2 px-3 py-2 rounded-full border border-gray-300 text-sm text-gray-700 hover:bg-gray-50"
-                    aria-label="Clear category filter"
-                    title="Clear filter"
-                  >
-                    <svg width="12" height="12" viewBox="0 0 20 20" className="text-gray-500">
-                      <path fill="currentColor" d="M11.414 10l4.95-4.95a1 1 0 10-1.414-1.414L10 8.586 5.05 3.636A1 1 0 103.636 5.05L8.586 10l-4.95 4.95a1 1 0 101.414 1.414L10 11.414l4.95 4.95a1 1 0 001.414-1.414L11.414 10z"/>
-                    </svg>
-                    Clear
-                  </button>
-                )}
-              </div>
-            </div>
-
-            {/* Right cluster: sort + add */}
-            <div className="ml-auto inline-flex items-center gap-2">
+      
+      {/* Page Title Bar */}
+      <div className="sticky top-16 z-40 bg-white border-b border-gray-200 shadow-sm">
+        <div className="flex items-center justify-between px-4 py-3">
+          {/* Left - Back to Tools button for leaders */}
+          <div style={{ width: '44px', display: 'flex', alignItems: 'center' }}>
+            {isLeader && (
               <button
-                onClick={() => setSort('top')}
-                className={`px-3 py-2 rounded-full border text-sm font-medium transition
-                  ${sort === 'top'
-                    ? 'bg-[#20c997] text-white border-[#20c997] hover:opacity-90'
-                    : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'}`}
+                onClick={() => router.push('/leader/tools')}
+                className="p-2 active:bg-gray-100 rounded-full transition-colors"
+                style={{ minWidth: '44px', minHeight: '44px' }}
+                aria-label="Back to tools"
               >
-                Top
+                <ArrowLeft size={22} style={{ color: BRAND.colors.primary }} />
               </button>
-              <button
-                onClick={() => setSort('new')}
-                className={`px-3 py-2 rounded-full border text-sm font-medium transition
-                  ${sort === 'new'
-                    ? 'bg-[#20c997] text-white border-[#20c997] hover:opacity-90'
-                    : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'}`}
-              >
-                New
-              </button>
+            )}
+          </div>
+          
+          {/* Centered title */}
+          <h1 className="text-xl font-bold text-gray-900" style={{ fontFamily: BRAND.fonts.heading }}>
+            Feedback
+          </h1>
+          
+          {/* Right - Add feedback button */}
+          <button 
+            onClick={() => setIsAddOpen(true)}
+            className="p-2 active:bg-gray-100 rounded-full transition-colors"
+            style={{ minWidth: '44px', minHeight: '44px' }}
+            aria-label="Add feedback"
+          >
+            <Plus size={22} style={{ color: BRAND.colors.primary }} />
+          </button>
+        </div>
+      </div>
 
-              {/* Add opens modal */}
+      <div className="min-h-screen pb-24" style={{ backgroundColor: BRAND.colors.background }}>
+        {/* Filter Pills - Centered */}
+        <div className="bg-white px-4 py-2 border-b border-gray-200">
+          <div className="flex gap-2 justify-center">
+            {CATS.map((c) => (
               <button
-                onClick={() => setIsAddOpen(true)}
-                className="ml-1 inline-flex items-center gap-2 px-3 py-2 rounded-full bg-[#20c997] text-white hover:opacity-90"
-                aria-label="Give feedback"
+                key={c.id}
+                onClick={() => setCat(c.id)}
+                className="px-3 py-1 rounded-full whitespace-nowrap font-medium transition-colors active:scale-95"
+                style={{
+                  backgroundColor: cat === c.id ? BRAND.colors.primary : '#f3f4f6',
+                  color: cat === c.id ? 'white' : '#374151',
+                  fontFamily: BRAND.fonts.heading,
+                  minHeight: '32px',
+                  fontSize: '13px',
+                }}
               >
-                <Plus size={16} />
-                Give feedback
+                {c.label}
               </button>
-            </div>
+            ))}
           </div>
         </div>
 
-
-        {/* Card list — product-hunt vibe */}
-        {loading ? (
-          <div className="bg-white rounded-xl shadow-sm border p-6 text-gray-500">Loading…</div>
-        ) : items.length === 0 ? (
-          <div className="bg-white rounded-xl shadow-sm border p-6 text-gray-500">
-            No feedback yet. Be the first to share an idea!
+        {/* Sort Options - Below Filters */}
+        <div className="bg-white px-4 py-2 border-b border-gray-200">
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-gray-600" style={{ fontFamily: BRAND.fonts.body }}>Sort:</span>
+            <button
+              onClick={() => setSort('top')}
+              className="px-2.5 py-1 rounded-full text-xs font-medium transition-colors active:scale-95"
+              style={{
+                backgroundColor: sort === 'top' ? BRAND.colors.primary : '#f3f4f6',
+                color: sort === 'top' ? 'white' : '#374151',
+                fontFamily: BRAND.fonts.heading,
+                minHeight: '28px',
+              }}
+            >
+              Top
+            </button>
+            <button
+              onClick={() => setSort('new')}
+              className="px-2.5 py-1 rounded-full text-xs font-medium transition-colors active:scale-95"
+              style={{
+                backgroundColor: sort === 'new' ? BRAND.colors.primary : '#f3f4f6',
+                color: sort === 'new' ? 'white' : '#374151',
+                fontFamily: BRAND.fonts.heading,
+                minHeight: '28px',
+              }}
+            >
+              New
+            </button>
           </div>
-        ) : (
-          <div className="grid gap-4">
-            {items.map((it) => {
-              const voted = votedTodayId === it.id;
-              const dailyLocked = !!votedTodayId && !voted;
-              const Icon = CAT_ICONS[it.category] ?? Lightbulb;
+        </div>
 
-              return (
-                <article
-                  key={it.id}
-                  className="bg-white border border-gray-200 rounded-2xl shadow-sm hover:shadow-md transition-shadow p-5 md:p-6 flex items-start gap-5"
-                >
-                  {/* Vote column (Product Hunt style) */}
-                  <button
-                    onClick={() => toggleVote(it.id)}
-                    disabled={dailyLocked}
-                    aria-pressed={voted}
-                    aria-label={
-                      voted
-                        ? "You already voted today"
-                        : dailyLocked
-                          ? "You have used your daily vote"
-                          : "Upvote"
-                    }
-                    title={
-                      voted
-                        ? "You can vote again tomorrow"
-                        : dailyLocked
-                          ? "You have used your daily vote"
-                          : "Upvote"
-                    }
-                    className={`group flex flex-col items-center justify-center w-12 md:w-14 h-14 md:h-16
-                                rounded-xl border text-sm font-semibold leading-none gap-1
-                                transition-colors transition-transform duration-150
-                                focus:outline-none focus-visible:ring-2 focus-visible:ring-[#20c997]/50
-                                ${voted
-                                  ? 'bg-[#20c997]/15 border-[#20c997]/40 text-[#20c997]'
-                                  : dailyLocked
-                                    ? 'bg-white border-gray-200 text-gray-300 cursor-not-allowed'
-                                    : 'bg-white border-gray-300 text-gray-600 hover:bg-gray-50 hover:shadow-sm hover:scale-[1.02]'}`}
+        {/* Feedback Cards - Mobile-Optimized */}
+        <div className="px-4 pt-4">
+          {loading ? (
+            <div className="bg-white rounded-xl border border-gray-200 p-6 text-gray-500 text-center" style={{ fontFamily: BRAND.fonts.body }}>
+              Loading…
+            </div>
+          ) : items.length === 0 ? (
+            <div className="bg-white rounded-xl border border-gray-200 p-6 text-gray-500 text-center" style={{ fontFamily: BRAND.fonts.body }}>
+              No feedback yet. Be the first to share an idea!
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {items.map((it) => {
+                const voted = votedTodayId === it.id;
+                const dailyLocked = !!votedTodayId && !voted;
+                const Icon = CAT_ICONS[it.category] ?? Lightbulb;
+
+                return (
+                  <div 
+                    key={it.id}
+                    className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm"
                   >
-                    <ArrowBigUp
-                      size={18}
-                      className={`${voted ? 'fill-[#20c997]' : !dailyLocked ? 'group-hover:translate-y-[-1px]' : ''} transition-transform`}
-                    />
-                    <span>{it.votes_count}</span>
-                    {voted && (
-                      <span className="mt-0.5 inline-flex items-center gap-1 text-[10px] text-[#20c997]">
-                        • today
-                      </span>
-                    )}
-                  </button>
-
-                  {/* Main content */}
-                  <div className="flex-1 min-w-0">
-                    {/* Header row — bigger title + icon-only category bubble */}
-                    <div className="flex items-center gap-2 md:gap-3">
-                      <h2 className="font-heading text-base md:text-lg font-bold tracking-tight text-gray-900 truncate">
-                        {cleanTitle(it.title)}
-                      </h2>
-                      <span
-                        className="ml-auto inline-flex items-center justify-center w-8 h-8 rounded-full 
-                                   bg-[#20c997] text-white shadow-md ring-2 ring-[#20c997]/35"
-                        title={it.category}
-                        aria-label={`Category: ${it.category}`}
-                      >
-                        <Icon size={16} />
-                      </span>
-                    </div>
-
-                    <p className="mt-2 text-[13.5px] md:text-sm text-gray-700 clamp-3 font-heading">
-                      {it.details}
-                    </p>
-
-                    <div className="mt-3 text-[11px] text-gray-400 font-heading">
-                      <time dateTime={it.created_at} title={new Date(it.created_at).toLocaleString()}>
-                        {timeAgo(it.created_at)}
-                      </time>
+                    <div className="flex gap-3">
+                      {/* Upvote section - left side */}
+                      <div className="flex flex-col items-center gap-1 pt-1">
+                        <button 
+                          onClick={() => toggleVote(it.id)}
+                          disabled={dailyLocked}
+                          className="p-1 active:bg-gray-100 rounded transition-colors"
+                          style={{
+                            minWidth: '44px',
+                            minHeight: '44px',
+                            opacity: dailyLocked ? 0.4 : 1,
+                            cursor: dailyLocked ? 'not-allowed' : 'pointer',
+                          }}
+                          aria-label="Upvote"
+                        >
+                          <ChevronUp 
+                            size={20} 
+                            style={{ 
+                              color: voted ? BRAND.colors.primary : '#6b7280',
+                              fill: voted ? BRAND.colors.primary : 'none'
+                            }} 
+                          />
+                        </button>
+                        <span 
+                          className="text-sm font-semibold"
+                          style={{ 
+                            color: voted ? BRAND.colors.primary : '#111827',
+                            fontFamily: BRAND.fonts.heading 
+                          }}
+                        >
+                          {it.votes_count}
+                        </span>
+                      </div>
+                      
+                      {/* Content - right side */}
+                      <div className="flex-1 min-w-0">
+                        <h3 className="text-base font-semibold text-gray-900 mb-1" style={{ fontFamily: BRAND.fonts.heading }}>
+                          {cleanTitle(it.title)}
+                        </h3>
+                        <p 
+                          className="text-sm text-gray-600 mb-2" 
+                          style={{ 
+                            fontFamily: BRAND.fonts.body,
+                            display: '-webkit-box',
+                            WebkitLineClamp: 2,
+                            WebkitBoxOrient: 'vertical',
+                            overflow: 'hidden'
+                          }}
+                        >
+                          {it.details}
+                        </p>
+                        <div className="flex items-center gap-2 text-xs text-gray-500" style={{ fontFamily: BRAND.fonts.body }}>
+                          <span className="px-2 py-1 rounded-full bg-gray-100 flex items-center gap-1">
+                            <Icon size={12} />
+                            {CAT_LABELS[it.category]}
+                          </span>
+                          <span>{timeAgo(it.created_at)}</span>
+                        </div>
+                      </div>
                     </div>
                   </div>
-                </article>
-              );
-            })}
-          </div>
-        )}
+                );
+              })}
+            </div>
+          )}
+        </div>
       </div>
 
-        {/* Add feedback — modal */}
-        {isAddOpen && (
-          <div className="fixed inset-0 z-40">
-            {/* Backdrop */}
-            <div className="absolute inset-0 bg-black/40" onClick={() => setIsAddOpen(false)} />
+      {/* Add Feedback Modal */}
+      {isAddOpen && (
+        <div className="fixed inset-0 z-50">
+          {/* Backdrop */}
+          <div className="absolute inset-0 bg-black/40" onClick={() => setIsAddOpen(false)} />
 
-            {/* Dialog */}
-            <div className="absolute inset-0 flex items-start justify-center pt-24 px-4">
-              <div className="w-full max-w-xl bg-white rounded-2xl shadow-xl">
-                {/* Modal header */}
-                <div className="flex items-center justify-between px-5 py-4 border-b">
-                  <div className="flex items-center gap-2">
-                    <Plus className="text-[#20c997]" size={18} />
-                    <h3 className="font-heading text-lg font-bold tracking-tight text-gray-900">
-                      Add feedback
-                    </h3>
-                  </div>
-                  <button
-                    onClick={() => setIsAddOpen(false)}
-                    className="p-2 rounded-full hover:bg-gray-100"
-                    aria-label="Close"
-                  >
-                    <X size={18} />
-                  </button>
-                </div>
+          {/* Dialog */}
+          <div className="absolute inset-0 flex items-start justify-center pt-12 px-4 overflow-y-auto">
+            <div className="w-full max-w-xl bg-white rounded-xl shadow-xl border border-gray-200 my-8">
+              {/* Modal header */}
+              <div className="flex items-center justify-between px-5 py-4 border-b">
+                <h2 className="text-lg font-bold text-gray-900" style={{ fontFamily: BRAND.fonts.heading }}>
+                  Give Feedback
+                </h2>
+                <button
+                  onClick={() => setIsAddOpen(false)}
+                  className="p-2 active:bg-gray-100 rounded-full transition-colors"
+                  aria-label="Close"
+                >
+                  <X size={20} />
+                </button>
+              </div>
 
-                {/* Modal body (same fields/validation as before) */}
-                <form onSubmit={handleCreate} className="p-5 space-y-4">
-                  {/* Title */}
-                  <div>
-                    <label className="block text-sm text-gray-700 mb-1">Title</label>
-                    <input
-                      type="text"
-                      value={form.title}
-                      onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
-                      placeholder="Short, clear summary"
-                      className="w-full px-3 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-[#20c997] focus:border-[#20c997]"
-                    />
-                  </div>
-
-                  {/* Category (icon + label pills) */}
-                  <div>
-                    <label className="block text-sm text-gray-700 mb-1">Category</label>
-                    <div className="flex flex-wrap gap-2">
-                      {FORM_CATS.map(({ id, icon: Ico, label }) => {
-                        const active = form.category === id;
-                        return (
-                          <button
-                            key={id}
-                            type="button"
-                            onClick={() => setForm((f) => ({ ...f, category: id }))}
-                            className={`inline-flex items-center gap-2 px-3 py-2 rounded-full border text-sm font-medium transition
-                              ${active
-                                ? 'bg-[#20c997] border-[#20c997] text-white hover:opacity-90'
-                                : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'}`}
-                            aria-pressed={active}
-                            aria-label={label}
-                            title={label}
-                          >
-                            <Ico size={16} />
-                            <span>{label}</span>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-
-                  {/* Details */}
-                  <div>
-                    <label className="block text-sm text-gray-700 mb-1">Details</label>
-                    <textarea
-                      rows={4}
-                      value={form.details}
-                      onChange={(e) => setForm((f) => ({ ...f, details: e.target.value }))}
-                      placeholder="What's the problem or idea? Any context helps."
-                      className="w-full px-3 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-[#20c997] focus:border-[#20c997] font-heading"
-                    />
-                    {allowScreenshotUploads ? (
-                      <div className="mt-1 text-xs text-gray-400 font-heading">
-                        Please be specific. Screenshots welcome.
-                      </div>
-                    ) : (
-                      <div className="mt-1 text-xs text-gray-400 font-heading">
-                        Please be specific.
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Screenshots section */}
-                  {allowScreenshotUploads && (
-                    <div>
-                      <label className="block text-sm text-gray-700 mb-1">Screenshots (optional)</label>
-
-                      {/* Dropzone */}
-                      <div
-                        onDragOver={(e) => { e.preventDefault(); }}
-                        onDrop={(e) => { e.preventDefault(); addFiles(e.dataTransfer.files); }}
-                        className="rounded-lg border border-dashed border-gray-300 p-4 text-sm text-gray-600
-                                   hover:bg-gray-50 transition"
-                      >
-                        <div className="flex items-center justify-between gap-3">
-                          <span>Drag & drop images here, or select files</span>
-                          <label className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-300
-                                            text-gray-700 hover:bg-gray-50 cursor-pointer">
-                            <input
-                              type="file"
-                              accept="image/*"
-                              multiple
-                              className="hidden"
-                              onChange={(e) => e.target.files && addFiles(e.target.files)}
-                            />
-                            Choose files
-                          </label>
-                        </div>
-                        <div className="mt-3 grid grid-cols-3 gap-2">
-                          {files.map((f, i) => (
-                            <div key={i} className="relative group">
-                              <img
-                                src={URL.createObjectURL(f)}
-                                alt={f.name}
-                                className="w-full h-24 object-cover rounded-md border"
-                              />
-                              <button
-                                type="button"
-                                onClick={() => removeFile(i)}
-                                className="absolute top-1 right-1 px-1.5 py-0.5 text-xs rounded-md bg-black/60 text-white opacity-0 group-hover:opacity-100"
-                                title="Remove"
-                              >
-                                ×
-                              </button>
-                            </div>
-                          ))}
-                        </div>
-                        <div className="mt-2 text-xs text-gray-400 font-heading">
-                          Max 4 images. Large files may take longer to upload.
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Submit */}
-                  <div className="pt-1 flex items-center justify-end gap-2">
+              {/* Form */}
+              <form onSubmit={handleCreate} className="p-5 space-y-4">
+                {/* Category Buttons */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-900 mb-2" style={{ fontFamily: BRAND.fonts.heading }}>
+                    Category
+                  </label>
+                  <div className="grid grid-cols-2 gap-2">
                     <button
                       type="button"
-                      onClick={() => setIsAddOpen(false)}
-                      className="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50"
+                      onClick={() => setForm(prev => ({ ...prev, category: 'idea' }))}
+                      className="h-12 flex items-center justify-center gap-2 rounded-lg border-2 font-medium transition-all active:scale-95"
+                      style={{
+                        borderColor: form.category === 'idea' ? BRAND.colors.primary : '#e5e7eb',
+                        backgroundColor: form.category === 'idea' ? `${BRAND.colors.primary}0D` : 'white',
+                        color: form.category === 'idea' ? BRAND.colors.primary : '#374151',
+                        fontFamily: BRAND.fonts.heading,
+                      }}
                     >
-                      Cancel
+                      <Lightbulb size={20} />
+                      <span>Idea</span>
                     </button>
+                    
                     <button
-                      type="submit"
-                      disabled={submitting}
-                      className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-[#20c997] text-white hover:opacity-90 disabled:opacity-60"
+                      type="button"
+                      onClick={() => setForm(prev => ({ ...prev, category: 'bug' }))}
+                      className="h-12 flex items-center justify-center gap-2 rounded-lg border-2 font-medium transition-all active:scale-95"
+                      style={{
+                        borderColor: form.category === 'bug' ? BRAND.colors.primary : '#e5e7eb',
+                        backgroundColor: form.category === 'bug' ? `${BRAND.colors.primary}0D` : 'white',
+                        color: form.category === 'bug' ? BRAND.colors.primary : '#374151',
+                        fontFamily: BRAND.fonts.heading,
+                      }}
                     >
-                      <Send size={16} />
-                      {submitting ? 'Submitting…' : 'Submit'}
+                      <Bug size={20} />
+                      <span>Bug</span>
+                    </button>
+                    
+                    <button
+                      type="button"
+                      onClick={() => setForm(prev => ({ ...prev, category: 'praise' }))}
+                      className="h-12 flex items-center justify-center gap-2 rounded-lg border-2 font-medium transition-all active:scale-95"
+                      style={{
+                        borderColor: form.category === 'praise' ? BRAND.colors.primary : '#e5e7eb',
+                        backgroundColor: form.category === 'praise' ? `${BRAND.colors.primary}0D` : 'white',
+                        color: form.category === 'praise' ? BRAND.colors.primary : '#374151',
+                        fontFamily: BRAND.fonts.heading,
+                      }}
+                    >
+                      <Heart size={20} />
+                      <span>Praise</span>
+                    </button>
+                    
+                    <button
+                      type="button"
+                      onClick={() => setForm(prev => ({ ...prev, category: 'question' }))}
+                      className="h-12 flex items-center justify-center gap-2 rounded-lg border-2 font-medium transition-all active:scale-95"
+                      style={{
+                        borderColor: form.category === 'question' ? BRAND.colors.primary : '#e5e7eb',
+                        backgroundColor: form.category === 'question' ? `${BRAND.colors.primary}0D` : 'white',
+                        color: form.category === 'question' ? BRAND.colors.primary : '#374151',
+                        fontFamily: BRAND.fonts.heading,
+                      }}
+                    >
+                      <HelpCircle size={20} />
+                      <span>Question</span>
                     </button>
                   </div>
-                </form>
-              </div>
+                </div>
+
+                {/* Title */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-900 mb-2" style={{ fontFamily: BRAND.fonts.heading }}>
+                    Title
+                  </label>
+                  <input
+                    type="text"
+                    value={form.title}
+                    onChange={(e) => setForm(prev => ({ ...prev, title: e.target.value }))}
+                    placeholder="Short, clear title"
+                    className="w-full border border-gray-300 rounded-lg px-4 py-3"
+                    style={{
+                      fontSize: '16px',
+                      fontFamily: BRAND.fonts.body,
+                      minHeight: '48px',
+                    }}
+                  />
+                </div>
+
+                {/* Details */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-900 mb-2" style={{ fontFamily: BRAND.fonts.heading }}>
+                    Details
+                  </label>
+                  <textarea
+                    value={form.details}
+                    onChange={(e) => setForm(prev => ({ ...prev, details: e.target.value }))}
+                    placeholder="Tell us more..."
+                    rows={4}
+                    className="w-full border border-gray-300 rounded-lg px-4 py-3"
+                    style={{
+                      fontSize: '16px',
+                      fontFamily: BRAND.fonts.body,
+                      resize: 'vertical',
+                    }}
+                  />
+                </div>
+
+                {/* Screenshots */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-900 mb-2" style={{ fontFamily: BRAND.fonts.heading }}>
+                    Screenshots (optional)
+                  </label>
+                  
+                  <input
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    onChange={handleFileChange}
+                    className="hidden"
+                    id="screenshot-upload"
+                  />
+                  
+                  <label
+                    htmlFor="screenshot-upload"
+                    className="flex flex-col items-center justify-center h-24 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer active:border-gray-400 transition-colors"
+                  >
+                    <Camera size={32} className="text-gray-400 mb-1" />
+                    <span className="text-sm text-gray-600" style={{ fontFamily: BRAND.fonts.body }}>Tap to add images</span>
+                    <span className="text-xs text-gray-400" style={{ fontFamily: BRAND.fonts.body }}>Max 4 images</span>
+                  </label>
+                  
+                  {/* Show selected images */}
+                  {files.length > 0 && (
+                    <div className="flex gap-2 mt-2 overflow-x-auto">
+                      {files.map((file, idx) => (
+                        <div key={idx} className="relative">
+                          <div className="w-16 h-16 bg-gray-100 rounded flex items-center justify-center">
+                            <Camera size={24} className="text-gray-400" />
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => removeFile(idx)}
+                            className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full flex items-center justify-center"
+                          >
+                            <X size={12} className="text-white" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Modal Buttons */}
+                <div className="flex gap-3 mt-6">
+                  <button
+                    type="button"
+                    onClick={() => setIsAddOpen(false)}
+                    className="flex-1 h-12 border border-gray-300 text-gray-700 rounded-lg font-medium active:bg-gray-50 transition-colors"
+                    style={{ fontFamily: BRAND.fonts.heading }}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={!form.title || !form.category || submitting}
+                    className="flex-1 h-12 text-white rounded-lg font-medium active:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
+                    style={{ 
+                      backgroundColor: BRAND.colors.primary,
+                      fontFamily: BRAND.fonts.heading 
+                    }}
+                  >
+                    {submitting ? 'Submitting...' : 'Submit'}
+                  </button>
+                </div>
+              </form>
             </div>
           </div>
-        )}
+        </div>
+      )}
 
-        {/* Persistent Footer */}
-        <Footer />
-      </div>
+      {/* Bottom Nav */}
+      <Footer />
     </>
   );
 }

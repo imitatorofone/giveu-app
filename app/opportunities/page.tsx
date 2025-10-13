@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabaseClient';
 import { useRouter } from 'next/navigation';
+import { BRAND } from '../../lib/brandConfig';
 import ServiceBoard from '../components/ServiceBoard';
 import NotificationBell from '../components/NotificationBell';
 import { ArrowLeft, Plus, Heart, Gift, Bell, LogOut } from 'lucide-react';
@@ -42,6 +43,7 @@ export default function CommunityBoard() {
 
     loadData();
   }, [router]);
+
 
   const handleHelp = (opportunity: any) => {
     setSelectedOpportunity(opportunity);
@@ -103,8 +105,8 @@ export default function CommunityBoard() {
         {/* Left - Logo */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <img 
-            src="/logo.svg" 
-            alt="ENGAGE" 
+            src={BRAND.logo.path} 
+            alt={BRAND.logo.alt} 
             style={{ width: 32, height: 32 }}
           />
           <span style={{ 
@@ -113,7 +115,7 @@ export default function CommunityBoard() {
             fontFamily: 'var(--font-quicksand)',
             color: '#1f2937'
           }}>
-            ENGAGE
+            giveU
           </span>
         </div>
 
