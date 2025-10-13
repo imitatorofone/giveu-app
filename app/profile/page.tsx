@@ -68,11 +68,44 @@ export default function ProfilePage() {
   const [avatarUrl, setAvatarUrl] = useState('');
   const router = useRouter();
 
+  // Test Supabase connection and permissions
+  const testSupabaseConnection = async () => {
+    try {
+      console.log('🔧 Testing Supabase connection...');
+      
+      // Test basic connection
+      const { data: { session } } = await supabase.auth.getSession();
+      console.log('🔐 Current session:', session);
+      
+      if (session?.user) {
+        // Test simple select query
+        const { data: testData, error: testError } = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('id', session.user.id)
+          .limit(1);
+        
+        console.log('🧪 Test query result:', { testData, testError });
+        
+        if (testError) {
+          console.error('❌ Test query failed:', testError);
+        } else {
+          console.log('✅ Test query successful');
+        }
+      }
+    } catch (error) {
+      console.error('❌ Connection test failed:', error);
+    }
+  };
+
   // Load user data on component mount
   useEffect(() => {
     async function loadProfile() {
       try {
         console.log('🔍 Starting profile load...');
+        
+        // Test connection first
+        await testSupabaseConnection();
         
         // Quick auth sanity check
         const s = await supabase.auth.getSession();
@@ -280,9 +313,22 @@ export default function ProfilePage() {
     const t = toast.loading("Saving profile…");
 
     try {
-      const { data: { session } } = await supabase.auth.getSession();
+      console.log('🔍 Starting profile save...');
+      
+      // Enhanced session debugging
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      console.log('🔐 Session debug:', { 
+        session, 
+        sessionError, 
+        hasUser: !!session?.user,
+        userId: session?.user?.id,
+        userEmail: session?.user?.email,
+        accessToken: session?.access_token ? 'present' : 'missing',
+        tokenExpiry: session?.expires_at
+      });
       
       if (!session?.user?.id) {
+        console.error('❌ No valid session found');
         toast.error('Please sign in to save', { id: t });
         return;
       }
@@ -290,7 +336,19 @@ export default function ProfilePage() {
       // Format phone number to E.164 format for Twilio compatibility
       const formattedPhone = formatPhoneToE164(profile.phone);
 
-      const { error } = await supabase
+      console.log('💾 Attempting to save profile data:', {
+        userId: session.user.id,
+        fullName: profile.full_name,
+        email: profile.email || session.user.email,
+        phone: formattedPhone,
+        city: profile.city,
+        age: profile.age,
+        availability: profile.availability,
+        giftSelections: profile.gift_selections,
+        notificationPrefs: profile.notification_preferences
+      });
+
+      const { data, error } = await supabase
         .from('profiles')
         .upsert({
           id: session.user.id,
@@ -303,17 +361,31 @@ export default function ProfilePage() {
           gift_selections: profile.gift_selections,
           notification_preferences: profile.notification_preferences,
           updated_at: new Date().toISOString()
-        });
+        })
+        .select();
+
+      console.log('💾 Save result:', { data, error });
 
       if (error) {
-        console.error('Save error:', error);
-        toast.error('Failed to save profile', { id: t });
+        console.error('❌ Save error details:', {
+          message: error.message,
+          details: error.details,
+          hint: error.hint,
+          code: error.code
+        });
+        toast.error(`Failed to save profile: ${error.message}`, { id: t });
       } else {
+        console.log('✅ Profile saved successfully:', data);
         toast.success('Profile saved!', { id: t });
         setIsEditing(false);
       }
     } catch (error: any) {
-      console.error('Error saving profile:', error);
+      console.error('❌ Unexpected error saving profile:', {
+        message: error.message,
+        stack: error.stack,
+        name: error.name,
+        cause: error.cause
+      });
       toast.error(error?.message ? `Save failed: ${error.message}` : "Save failed", { id: t });
     } finally {
       setSaving(false);
