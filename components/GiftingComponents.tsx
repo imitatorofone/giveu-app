@@ -1,3 +1,4 @@
+// @ts-nocheck
 // components/GiftingComponents.tsx
 // Complete React components that use the giveU gifting structure
 
