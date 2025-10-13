@@ -68,44 +68,13 @@ export default function ProfilePage() {
   const [avatarUrl, setAvatarUrl] = useState('');
   const router = useRouter();
 
-  // Test Supabase connection and permissions
-  const testSupabaseConnection = async () => {
-    try {
-      console.log('🔧 Testing Supabase connection...');
-      
-      // Test basic connection
-      const { data: { session } } = await supabase.auth.getSession();
-      console.log('🔐 Current session:', session);
-      
-      if (session?.user) {
-        // Test simple select query
-        const { data: testData, error: testError } = await supabase
-          .from('profiles')
-          .select('id')
-          .eq('id', session.user.id)
-          .limit(1);
-        
-        console.log('🧪 Test query result:', { testData, testError });
-        
-        if (testError) {
-          console.error('❌ Test query failed:', testError);
-        } else {
-          console.log('✅ Test query successful');
-        }
-      }
-    } catch (error) {
-      console.error('❌ Connection test failed:', error);
-    }
-  };
+  // Test connection removed due to RLS recursion issue
 
   // Load user data on component mount
   useEffect(() => {
     async function loadProfile() {
       try {
         console.log('🔍 Starting profile load...');
-        
-        // Test connection first
-        await testSupabaseConnection();
         
         // Quick auth sanity check
         const s = await supabase.auth.getSession();
