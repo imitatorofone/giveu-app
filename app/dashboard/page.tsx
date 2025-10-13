@@ -1,6 +1,8 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+export const dynamic = 'force-dynamic';
+
+import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { 
   Calendar, Clock, MapPin, Users, User, Bell, 
@@ -10,11 +12,11 @@ import { supabaseBrowser as supabase } from '../../lib/supabaseBrowser'; // Use 
 import { GIFT_CATEGORIES } from '../../constants/giftCategories.js';
 import Footer from '../../components/Footer';
 import Header from '../../components/Header';
-import dynamic from 'next/dynamic';
+import dynamicImport from 'next/dynamic';
 import { createNotification } from '@/lib/notificationHelper';
 import { BRAND } from '../../lib/brandConfig';
 
-const NeedDetailModal = dynamic(
+const NeedDetailModal = dynamicImport(
   () => import('../../components/NeedDetailModal'),
   { ssr: false }
 );
@@ -147,7 +149,7 @@ const getLocationLine2 = (address: string | null | undefined) => {
   return '';
 };
 
-export default function MemberDashboard() {
+function DashboardContent() {
   const [opportunities, setOpportunities] = useState<Opportunity[]>([]);
   const [loading, setLoading] = useState(true);
   const [sortOpen, setSortOpen] = useState(false);
@@ -1369,5 +1371,13 @@ export default function MemberDashboard() {
       />
       */}
     </div>
+  );
+}
+
+export default function MemberDashboard() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <DashboardContent />
+    </Suspense>
   );
 }
