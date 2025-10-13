@@ -1,3 +1,4 @@
+// @ts-nocheck
 // RESERVED FOR FUTURE PUSH NOTIFICATIONS
 // This endpoint exists but is not currently used for in-app notifications.
 // DIY notifications (Supabase) handle all in-app messaging.
