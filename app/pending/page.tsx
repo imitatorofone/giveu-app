@@ -20,56 +20,72 @@ export default function PendingApproval() {
       }
       setUser(authData.user);
 
-      // Check membership status
-      const { data: membershipData, error: membershipError } = await supabase
-        .from('org_members')
-        .select(`
-          *,
-          orgs (name, city, state)
-        `)
-        .eq('user_id', authData.user.id)
+      // Check profile status
+      const { data: profileData, error: profileError } = await supabase
+        .from('profiles')
+        .select('church_code, role, approval_status, gift_selections')
+        .eq('id', authData.user.id)
         .single();
 
-      console.log('Membership query result:', { membershipData, membershipError });
+      console.log('Profile query result:', { profileData, profileError });
 
-      if (!membershipData) {
-        // No membership found, redirect to setup
-        router.push('/setup');
+      if (!profileData) {
+        // No profile found, redirect to survey
+        router.push('/survey');
         return;
       }
 
-      if (membershipData.status === 'approved') {
+      // Check if user has completed the survey
+      const hasChurchCode = profileData.church_code && profileData.church_code.trim() !== '';
+      const hasGiftSelections = profileData.gift_selections && profileData.gift_selections.length > 0;
+
+      if (!hasChurchCode || !hasGiftSelections) {
+        // User hasn't completed survey, redirect to survey
+        router.push('/survey');
+        return;
+      }
+
+      if (profileData.approval_status === 'approved') {
         // Already approved, redirect to dashboard
         router.push('/dashboard');
         return;
       }
 
-      if (membershipData.status === 'denied') {
-        // Membership was denied
-        setMembership(membershipData);
+      if (profileData.approval_status === 'denied') {
+        // Profile was denied
+        setMembership(profileData);
         setLoading(false);
         return;
       }
 
       // Status is pending
-      setMembership(membershipData);
-      setChurch(membershipData.orgs);
+      setMembership(profileData);
+      // Map church_code to church info for display
+      let churchInfo = null;
+      if (profileData.church_code === '123harmony') {
+        churchInfo = { name: 'Harmony Church', city: 'Harmony', state: 'IA' };
+      } else if (profileData.church_code === '456brighton') {
+        churchInfo = { name: 'Brighton Bible Church', city: 'Brighton', state: 'IA' };
+      } else if (profileData.church_code === '789newlondon') {
+        churchInfo = { name: 'New London Christian Church', city: 'New London', state: 'IA' };
+      }
+      setChurch(churchInfo);
       setLoading(false);
 
       // Poll every 30 seconds to check for approval
       const interval = setInterval(async () => {
-        const { data: updatedMembership } = await supabase
-          .from('org_members')
-          .select('status')
-          .eq('user_id', authData.user.id)
+        const { data: updatedProfile } = await supabase
+          .from('profiles')
+          .select('approval_status')
+          .eq('id', authData.user.id)
           .single();
 
-        if (updatedMembership?.status === 'approved') {
+        if (updatedProfile?.approval_status === 'approved') {
           clearInterval(interval);
           router.push('/dashboard');
-        } else if (updatedMembership?.status === 'denied') {
+        } else if (updatedProfile?.approval_status === 'denied') {
           clearInterval(interval);
-          setMembership((prev: any) => ({ ...prev, status: 'denied' }));
+          setMembership((prev: any) => ({ ...prev, approval_status: 'denied' }));
         }
       }, 30000);
 

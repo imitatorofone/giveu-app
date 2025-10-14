@@ -39,22 +39,29 @@ export default function NotificationOnboarding() {
 
       const { data: profile } = await supabase
         .from('profiles')
-        .select('approval_status')
+        .select('approval_status, church_code, role, gift_selections')
         .eq('id', user.id)
         .single();
 
-      // Redirect based on approval status
-      if (profile?.approval_status === 'approved') {
-        console.log('[NotificationOnboarding] User approved, redirecting to dashboard');
+      console.log('[NotificationOnboarding] Profile data:', profile);
+
+      // Check if user has completed the survey (has church_code and gift_selections)
+      const hasChurchCode = profile?.church_code && profile.church_code.trim() !== '';
+      const hasGiftSelections = profile?.gift_selections && profile.gift_selections.length > 0;
+
+      if (hasChurchCode && hasGiftSelections) {
+        // User has completed survey, redirect to dashboard regardless of approval status
+        console.log('[NotificationOnboarding] User completed survey, redirecting to dashboard');
         router.push('/dashboard');
       } else {
-        console.log('[NotificationOnboarding] User pending/other status, redirecting to pending');
-        router.push('/pending');
+        // User hasn't completed survey, redirect back to survey
+        console.log('[NotificationOnboarding] User incomplete survey, redirecting to survey');
+        router.push('/survey');
       }
     } catch (error) {
-      console.error('[NotificationOnboarding] Error checking approval status:', error);
-      // Fallback to pending page if check fails
-      router.push('/pending');
+      console.error('[NotificationOnboarding] Error checking profile status:', error);
+      // Fallback to dashboard if check fails
+      router.push('/dashboard');
     }
   };
 
