@@ -33,17 +33,18 @@ export async function createNotification({
     console.log('🔔 Creating notification:', { userId, eventType, event_data });
     
     // Check if notification already exists (for volunteer signups)
-    if (eventType === 'volunteer.signed_up' && needId) {
+    if (eventType === 'volunteer.signed_up' && needId && volunteer_id) {
       const { data: existing } = await supabase
         .from('notifications')
         .select('id')
         .eq('user_id', userId)
         .eq('event_type', 'volunteer.signed_up')
-        .contains('event_data', { need_id: needId })
+        .contains('event_data', { need_id: needId, volunteer_id: volunteer_id })
+        .is('read_at', null) // Only check unread notifications
         .maybeSingle();
 
       if (existing) {
-        console.log('🔔 Notification already exists, skipping');
+        console.log('🔔 Notification already exists for this volunteer/need combo, skipping');
         return;
       }
     }
@@ -62,31 +63,7 @@ export async function createNotification({
       console.log('🔔 Notification created successfully');
     }
 
-    // Also trigger Knock workflow for push notifications
-    try {
-      const knockResponse = await fetch('/api/knock/trigger', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          workflow: 'volunteer_signed_up',
-          userId: userId,
-          data: {
-            need_title: need_title,
-            volunteer_name: volunteer_name,
-            volunteer_id: volunteer_id
-          }
-        })
-      });
-
-      if (!knockResponse.ok) {
-        console.warn('Knock trigger failed:', await knockResponse.text());
-      } else {
-        console.log('✅ Knock workflow triggered for push notification');
-      }
-    } catch (knockError) {
-      console.warn('Knock trigger error:', knockError);
-      // Don't fail if Knock doesn't work
-    }
+    // Note: Knock workflow triggers are handled by the calling code to avoid duplicates
   } catch (error) {
     console.error('Error creating notification:', error);
   }
