@@ -16,6 +16,11 @@ const SELECTED_STYLE = 'bg-[#20c997] text-white border-[#20c997]';
 const UNSELECTED_STYLE = 'bg-white border-gray-300 text-gray-700 hover:border-[#20c997]';
 
 export default function SurveyStep1() {
+  // Church and role selection (new)
+  const [selectedChurch, setSelectedChurch] = useState('');
+  const [role, setRole] = useState('member');
+  
+  // Existing profile fields
   const [fullName, setFullName] = useState('');
   const [age, setAge] = useState('');
   const [city, setCity] = useState('');
@@ -67,6 +72,29 @@ export default function SurveyStep1() {
     // Clear any previous errors
     setError('');
 
+    // Validate required fields
+    if (!selectedChurch) {
+      setError('Please select your church');
+      return;
+    }
+    if (!role) {
+      setError('Please select your role');
+      return;
+    }
+
+    // Map church selection to church_code
+    let churchCode;
+    if (selectedChurch === 'harmony') {
+      churchCode = '123harmony';
+    } else if (selectedChurch === 'brighton') {
+      churchCode = '456brighton';
+    } else if (selectedChurch === 'newlondon') {
+      churchCode = '789newlondon';
+    } else {
+      setError('Invalid church selection');
+      return;
+    }
+
     // Extract last 4 digits of phone number
     const phoneLastFour = phone.replace(/\D/g, '').slice(-4);
 
@@ -78,7 +106,10 @@ export default function SurveyStep1() {
       phone: phone,
       phone_last_four: phoneLastFour,
       email: user.email,
-      availability: availability
+      availability: availability,
+      church_code: churchCode,
+      role: role,
+      is_leader: role === 'leader'
     });
 
     // Format phone number to E.164 format for Twilio compatibility
@@ -94,7 +125,11 @@ export default function SurveyStep1() {
         phone: formattedPhone,
         phone_last_four: phoneLastFour,
         email: user.email,
-        availability: availability
+        availability: availability,
+        church_code: churchCode,
+        role: role,
+        is_leader: role === 'leader',
+        approval_status: 'pending'
       })
       .select();
 
@@ -133,6 +168,61 @@ export default function SurveyStep1() {
           </div>
         )}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+          {/* Church Selection */}
+          <div>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px', fontWeight: '500', color: BRAND.colors.textLight, marginBottom: '8px', fontFamily: BRAND.fonts.body }}>
+              <MapPin size={16} />
+              Your Church *
+            </label>
+            <select
+              value={selectedChurch}
+              onChange={(e) => setSelectedChurch(e.target.value)}
+              style={{ width: '100%', padding: '14px 16px', border: '1px solid #e5e7eb', borderRadius: '8px', fontSize: '16px', fontFamily: BRAND.fonts.body, minHeight: '52px', backgroundColor: 'white' }}
+            >
+              <option value="">Choose your church...</option>
+              <option value="harmony">Harmony Church - Harmony, IA</option>
+              <option value="brighton">Brighton Bible Church - Brighton, IA</option>
+              <option value="newlondon">New London Christian Church - New London, IA</option>
+            </select>
+          </div>
+
+          {/* Role Selection */}
+          <div>
+            <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: BRAND.colors.textLight, marginBottom: '12px', fontFamily: BRAND.fonts.body }}>
+              Your Role *
+            </label>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '16px', border: `2px solid ${role === 'member' ? BRAND.colors.primary : '#e5e7eb'}`, borderRadius: '8px', cursor: 'pointer', backgroundColor: role === 'member' ? `${BRAND.colors.primary}10` : 'white', transition: 'all 0.2s' }}>
+                <input
+                  type="radio"
+                  name="role"
+                  value="member"
+                  checked={role === 'member'}
+                  onChange={(e) => setRole(e.target.value)}
+                  style={{ width: '18px', height: '18px', accentColor: BRAND.colors.primary }}
+                />
+                <div>
+                  <div style={{ fontSize: '16px', fontWeight: '600', color: BRAND.colors.text, fontFamily: BRAND.fonts.heading }}>Member</div>
+                  <div style={{ fontSize: '14px', color: BRAND.colors.textLight, fontFamily: BRAND.fonts.body }}>I want to discover my gifts and serve in my community</div>
+                </div>
+              </label>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '16px', border: `2px solid ${role === 'leader' ? BRAND.colors.primary : '#e5e7eb'}`, borderRadius: '8px', cursor: 'pointer', backgroundColor: role === 'leader' ? `${BRAND.colors.primary}10` : 'white', transition: 'all 0.2s' }}>
+                <input
+                  type="radio"
+                  name="role"
+                  value="leader"
+                  checked={role === 'leader'}
+                  onChange={(e) => setRole(e.target.value)}
+                  style={{ width: '18px', height: '18px', accentColor: BRAND.colors.primary }}
+                />
+                <div>
+                  <div style={{ fontSize: '16px', fontWeight: '600', color: BRAND.colors.text, fontFamily: BRAND.fonts.heading }}>Leader</div>
+                  <div style={{ fontSize: '14px', color: BRAND.colors.textLight, fontFamily: BRAND.fonts.body }}>I help coordinate ministry opportunities and manage community needs</div>
+                </div>
+              </label>
+            </div>
+          </div>
+
           <div>
             <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px', fontWeight: '500', color: BRAND.colors.textLight, marginBottom: '8px', fontFamily: BRAND.fonts.body }}>
               <User size={16} />
