@@ -66,7 +66,7 @@ export async function GET(req: Request) {
           email: user.email,
           full_name: (user.email || '').split('@')[0],
           role: user.email === 'imitatorofone@gmail.com' ? 'leader' : 'member', 
-          approval_status: 'pending', // Set to pending to require approval
+          approval_status: 'approved', // Beta testing: auto-approve all users
           is_leader: user.email === 'imitatorofone@gmail.com',
           // church_code: null, // 🚨 FIXED: Don't auto-set church_code - let user complete onboarding
           updated_at: new Date().toISOString(),

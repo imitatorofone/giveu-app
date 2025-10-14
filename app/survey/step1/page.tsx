@@ -129,7 +129,7 @@ export default function SurveyStep1() {
         church_code: churchCode,
         role: role,
         is_leader: role === 'leader',
-        approval_status: 'pending'
+        approval_status: 'approved' // Beta testing: auto-approve all users
       })
       .select();
 
