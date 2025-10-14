@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { supabaseBrowser as supabase } from '@/lib/supabaseBrowser';
 import Footer from '../../../components/Footer';
 import NotificationDropdown from '../../../components/NotificationDropdown';
-import { CheckCircle, ArrowLeft } from 'lucide-react';
+import { CheckCircle, ArrowLeft, Calendar, MapPin, Users } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { BRAND } from '../../../lib/brandConfig';
 import { createNotification } from '@/lib/notificationHelper';
@@ -30,6 +30,19 @@ export default function PendingNeedsPage() {
   const [loading, setLoading] = useState(true);
   const [actingId, setActingId] = useState<string | null>(null);
   const [userChurchCode, setUserChurchCode] = useState<string | null>(null);
+
+  // Helper function for tag coloring (matching dashboard style)
+  const getTagColor = (tag: string) => {
+    // For pending needs, we'll use a neutral style since we don't have user gifts to match against
+    return {
+      isMatch: false,
+      styles: {
+        backgroundColor: '#F5F5F5',   // Light gray background
+        color: '#757575',             // Medium gray text
+        border: '1px solid #F5F5F5'   // Same color border
+      }
+    };
+  };
 
   useEffect(() => {
     checkAuthAndLoadData();
@@ -323,68 +336,205 @@ export default function PendingNeedsPage() {
         <div className="px-4 pt-4">
           <div className="space-y-4">
             {pendingNeeds.map((need) => (
-              <div key={need.id} className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
-                <h3 className="text-lg font-semibold text-gray-900 mb-2" style={{ fontFamily: BRAND.fonts.heading }}>
-                  {need.title}
-                </h3>
-                
-                <p className="text-gray-700 mb-3" style={{ fontFamily: BRAND.fonts.body, fontSize: '15px' }}>
-                  {need.description}
-                </p>
-                
-                <div className="flex items-center gap-2 text-sm text-gray-600 mb-4" style={{ fontFamily: BRAND.fonts.body }}>
-                  <span>By {need.created_by_email}</span>
-                  <span>•</span>
-                  <span>{new Date(need.created_at).toLocaleDateString()}</span>
-                </div>
-                
-                {need.giftings_needed && need.giftings_needed.length > 0 && (
-                  <div className="flex flex-wrap gap-2 mb-4">
-                    {need.giftings_needed.slice(0, 5).map((skill, idx) => (
-                      <span 
-                        key={idx}
-                        className="px-3 py-1 text-sm font-medium rounded-full"
-                        style={{
-                          backgroundColor: `${BRAND.colors.primary}20`,
-                          color: BRAND.colors.primary,
-                          fontFamily: BRAND.fonts.heading
-                        }}
-                      >
-                        {skill}
+              <div 
+                key={need.id} 
+                className="bg-white rounded-xl border mb-4"
+                style={{ 
+                  borderColor: '#E0E0E0',
+                  borderWidth: '1px',
+                  overflow: 'hidden',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  minHeight: '280px',
+                  position: 'relative',
+                  boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)'
+                }}
+              >
+                {/* Card Header */}
+                <div style={{ padding: '20px 20px 0 20px' }}>
+                  <h3 className="font-semibold text-lg mb-2" style={{ 
+                    color: '#424242',
+                    lineHeight: '1.3',
+                    fontFamily: BRAND.fonts.heading,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '8px',
+                    textAlign: 'center'
+                  }}>
+                    {need.title}
+                  </h3>
+                  
+                  {/* Metadata Row - Horizontal layout with icons */}
+                  <div style={{ 
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '12px',
+                    marginBottom: '12px',
+                    fontSize: '14px',
+                    color: BRAND.colors.textLight,
+                    opacity: 0.7,
+                    flexWrap: 'wrap'
+                  }}>
+                    {/* Date */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <Calendar size={20} style={{ color: BRAND.colors.primary, flexShrink: 0 }} />
+                      <span style={{ fontFamily: BRAND.fonts.body }}>
+                        {new Date(need.created_at).toLocaleDateString()}
                       </span>
-                    ))}
-                    {need.giftings_needed.length > 5 && (
-                      <span className="px-3 py-1 bg-gray-100 text-gray-600 text-sm rounded-full">
-                        +{need.giftings_needed.length - 5}
+                    </div>
+                    
+                    {/* Location */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <MapPin size={20} style={{ color: BRAND.colors.primary, flexShrink: 0 }} />
+                      <span style={{ 
+                        fontFamily: BRAND.fonts.body,
+                        maxWidth: '120px',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap'
+                      }}>
+                        {need.location || 'Location TBD'}
                       </span>
-                    )}
+                    </div>
+                    
+                    {/* People */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap' }}>
+                      <Users size={20} style={{ color: BRAND.colors.primary, flexShrink: 0 }} />
+                      <span style={{ fontFamily: BRAND.fonts.body }}>
+                        {need.people_needed || 1}+ needed
+                      </span>
+                    </div>
                   </div>
-                )}
-                
-                <div className="flex flex-col gap-3 sm:flex-row">
-                  <button
-                    onClick={() => approveNeed(need.id)}
-                    disabled={actingId === need.id}
-                    className="flex-1 h-12 text-white rounded-lg font-medium transition-opacity disabled:opacity-50"
-                    style={{
-                      backgroundColor: BRAND.colors.primary,
-                      fontFamily: BRAND.fonts.heading,
-                      fontSize: '16px'
-                    }}
-                  >
-                    {actingId === need.id ? 'Approving...' : 'Approve & Publish'}
-                  </button>
-                  <button
-                    onClick={() => rejectNeed(need.id)}
-                    disabled={actingId === need.id}
-                    className="flex-1 h-12 border-2 border-red-500 text-red-500 rounded-lg font-medium transition-colors hover:bg-red-50 disabled:opacity-50"
-                    style={{
-                      fontFamily: BRAND.fonts.heading,
-                      fontSize: '15px'
-                    }}
-                  >
-                    Decline
-                  </button>
+                </div>
+
+                {/* Card Body */}
+                <div style={{ 
+                  padding: '0 20px',
+                  flex: 1,
+                  display: 'flex',
+                  flexDirection: 'column'
+                }}>
+                  <p className="line-clamp-3" style={{ 
+                    color: '#424242',
+                    fontSize: '15px',
+                    lineHeight: '1.5',
+                    marginBottom: '16px',
+                    fontFamily: BRAND.fonts.body
+                  }}>
+                    {need.description}
+                  </p>
+
+                  {/* Created by info */}
+                  <div style={{ 
+                    fontSize: '13px',
+                    color: BRAND.colors.textLight,
+                    marginBottom: '16px',
+                    fontFamily: BRAND.fonts.body
+                  }}>
+                    Submitted by {need.created_by_email}
+                  </div>
+
+                  {/* Tags - Matching dashboard style */}
+                  {need.giftings_needed && need.giftings_needed.length > 0 && (
+                    <div style={{ marginBottom: '16px' }}>
+                      <div style={{ 
+                        display: 'flex', 
+                        gap: '8px', 
+                        flexWrap: 'wrap'
+                      }}>
+                        {need.giftings_needed.slice(0, 6).map((tag, idx) => {
+                          const { styles } = getTagColor(tag);
+                          
+                          return (
+                            <span
+                              key={idx}
+                              style={{
+                                padding: '6px 12px',
+                                borderRadius: '16px',
+                                fontSize: '12px',
+                                fontWeight: '500',
+                                fontFamily: BRAND.fonts.heading,
+                                ...styles
+                              }}
+                            >
+                              {tag}
+                            </span>
+                          );
+                        })}
+                        
+                        {need.giftings_needed.length > 6 && (
+                          <span style={{
+                            padding: '6px 12px',
+                            borderRadius: '16px',
+                            fontSize: '12px',
+                            fontWeight: '500',
+                            fontFamily: BRAND.fonts.heading,
+                            backgroundColor: '#F5F5F5',
+                            color: '#757575',
+                            border: '1px solid #F5F5F5'
+                          }}>
+                            +{need.giftings_needed.length - 6} more
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Card Footer - Action Buttons */}
+                <div style={{ 
+                  padding: '20px',
+                  borderTop: '1px solid #f1f5f9',
+                  backgroundColor: '#fafbfc'
+                }}>
+                  <div className="flex flex-col gap-3 sm:flex-row">
+                    <button
+                      onClick={() => approveNeed(need.id)}
+                      disabled={actingId === need.id}
+                      className="flex items-center gap-2 px-6 py-2 rounded-lg text-white font-medium transition-colors active:scale-95"
+                      style={{ 
+                        backgroundColor: BRAND.colors.primary,
+                        minHeight: '48px',
+                        flex: 1,
+                        justifyContent: 'center',
+                        borderRadius: '8px',
+                        fontWeight: '600',
+                        fontFamily: BRAND.fonts.heading,
+                        fontSize: '16px',
+                        border: `2px solid ${BRAND.colors.primary}`,
+                        cursor: actingId === need.id ? 'not-allowed' : 'pointer',
+                        transition: 'all 0.15s ease',
+                        opacity: actingId === need.id ? 0.6 : 1
+                      }}
+                    >
+                      {actingId === need.id ? 'Approving...' : 'Approve & Publish'}
+                    </button>
+                    
+                    <button
+                      onClick={() => rejectNeed(need.id)}
+                      disabled={actingId === need.id}
+                      className="flex items-center gap-2 px-6 py-2 rounded-lg font-medium transition-colors active:scale-95"
+                      style={{ 
+                        backgroundColor: 'white',
+                        minHeight: '48px',
+                        flex: 1,
+                        justifyContent: 'center',
+                        borderRadius: '8px',
+                        fontWeight: '600',
+                        fontFamily: BRAND.fonts.heading,
+                        fontSize: '15px',
+                        border: '2px solid #ef4444',
+                        color: '#ef4444',
+                        cursor: actingId === need.id ? 'not-allowed' : 'pointer',
+                        transition: 'all 0.15s ease',
+                        opacity: actingId === need.id ? 0.6 : 1
+                      }}
+                    >
+                      Decline
+                    </button>
+                  </div>
                 </div>
               </div>
             ))}
