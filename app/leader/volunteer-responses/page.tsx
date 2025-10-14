@@ -44,6 +44,15 @@ export default function VolunteerResponsesPage() {
     checkAuthAndLoadData();
   }, []);
 
+  // 🔥 CRITICAL FIX: Watch userChurchCode and fetch responses when it's available
+  useEffect(() => {
+    console.log('🔄 userChurchCode changed:', userChurchCode);
+    if (userChurchCode) {
+      console.log('📡 Fetching volunteer responses for church:', userChurchCode);
+      loadVolunteerResponses();
+    }
+  }, [userChurchCode]);
+
   const checkAuthAndLoadData = async () => {
     try {
       // 🚀 PERFORMANCE: Check cache first
@@ -51,6 +60,7 @@ export default function VolunteerResponsesPage() {
       const cachedIsLeader = sessionStorage.getItem('user_is_leader');
       
       if (cachedChurchCode && cachedIsLeader === 'true') {
+        console.log('🚀 Using cached church code:', cachedChurchCode);
         setUserChurchCode(cachedChurchCode);
         setLoading(false);
         return; // ✅ Skip profile query!
@@ -94,6 +104,7 @@ export default function VolunteerResponsesPage() {
       sessionStorage.setItem('user_is_leader', 'true');
 
       // Store church code for filtering
+      console.log('📝 Setting userChurchCode from profile:', profileData.church_code);
       setUserChurchCode(profileData.church_code);
 
     } catch (error) {
@@ -106,10 +117,16 @@ export default function VolunteerResponsesPage() {
 
   const loadVolunteerResponses = async () => {
     try {
+      console.log('🔍 loadVolunteerResponses called with userChurchCode:', userChurchCode);
+      
       // Don't fetch if we don't have church_code yet
       if (!userChurchCode) {
+        console.log('❌ No userChurchCode, skipping fetch');
         return;
       }
+
+      console.log('📊 Querying opportunity_responses table with filters:');
+      console.log('  - church_code (via needs relationship):', userChurchCode);
 
       // Try to load from opportunity_responses table
       // Filter by needs that belong to this church
@@ -123,15 +140,32 @@ export default function VolunteerResponsesPage() {
         .eq('need.church_code', userChurchCode) // 🔥 CRITICAL: Filter by church through needs relationship
         .order('created_at', { ascending: false });
 
+      console.log('📊 Query result:', { data, error });
+      console.log('📊 Number of volunteer responses found:', data?.length || 0);
+      
+      if (data && data.length > 0) {
+        console.log('📋 Volunteer responses details:', data.map(response => ({
+          id: response.id,
+          need_id: response.need_id,
+          user_id: response.user_id,
+          status: response.status,
+          created_at: response.created_at,
+          need: response.need,
+          volunteer: response.volunteer
+        })));
+      }
+
       if (error) {
+        console.error('❌ Query error:', error);
         console.warn('Table might not exist or query failed:', error);
         setTableError(true);
         return;
       }
 
+      console.log('✅ Setting responses state with', data?.length || 0, 'items');
       setResponses((data || []) as any);
     } catch (error) {
-      console.error('Error loading responses:', error);
+      console.error('❌ Error loading responses:', error);
       setTableError(true);
     }
   };
@@ -247,7 +281,15 @@ export default function VolunteerResponsesPage() {
 
       {/* Responses List */}
       <div className="px-4 pt-4">
-        {tableError ? (
+        {(() => {
+          console.log('🎨 Rendering responses - filteredResponses.length:', filteredResponses.length);
+          console.log('🎨 responses data:', responses);
+          console.log('🎨 userChurchCode:', userChurchCode);
+          console.log('🎨 loading:', loading);
+          console.log('🎨 tableError:', tableError);
+          console.log('🎨 filter:', filter);
+          return tableError;
+        })() ? (
           <div className="bg-white rounded-xl border border-gray-200 p-6 text-center">
             <p style={{ 
               color: BRAND.colors.textLight, 
