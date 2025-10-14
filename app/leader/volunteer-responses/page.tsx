@@ -128,42 +128,84 @@ export default function VolunteerResponsesPage() {
       console.log('📊 Querying opportunity_responses table with filters:');
       console.log('  - church_code (via needs relationship):', userChurchCode);
 
-      // Try to load from opportunity_responses table
-      // Filter by needs that belong to this church
-      const { data, error } = await supabase
+      // First, get all opportunity_responses with basic need info
+      const { data: responsesData, error: responsesError } = await supabase
         .from('opportunity_responses')
-        .select(`
-          *,
-          need:needs!inner(id, title, description, church_code),
-          volunteer:profiles(id, full_name, email, phone, gift_selections)
-        `)
-        .eq('need.church_code', userChurchCode) // 🔥 CRITICAL: Filter by church through needs relationship
+        .select('*')
         .order('created_at', { ascending: false });
 
-      console.log('📊 Query result:', { data, error });
-      console.log('📊 Number of volunteer responses found:', data?.length || 0);
-      
-      if (data && data.length > 0) {
-        console.log('📋 Volunteer responses details:', data.map(response => ({
-          id: response.id,
-          need_id: response.need_id,
-          user_id: response.user_id,
-          status: response.status,
-          created_at: response.created_at,
-          need: response.need,
-          volunteer: response.volunteer
-        })));
+      if (responsesError) {
+        console.error('❌ Error fetching opportunity_responses:', responsesError);
+        throw responsesError;
       }
 
-      if (error) {
-        console.error('❌ Query error:', error);
-        console.warn('Table might not exist or query failed:', error);
-        setTableError(true);
+      console.log('📊 Raw opportunity_responses found:', responsesData?.length || 0);
+
+      if (!responsesData || responsesData.length === 0) {
+        console.log('✅ No opportunity responses found');
+        setResponses([]);
         return;
       }
 
-      console.log('✅ Setting responses state with', data?.length || 0, 'items');
-      setResponses((data || []) as any);
+      // Filter responses by needs that belong to this church
+      const needIds = responsesData.map(r => r.need_id);
+      console.log('🔍 Fetching needs for IDs:', needIds);
+
+      const { data: needsData, error: needsError } = await supabase
+        .from('needs')
+        .select('id, title, description, church_code')
+        .in('id', needIds)
+        .eq('church_code', userChurchCode);
+
+      if (needsError) {
+        console.error('❌ Error fetching needs:', needsError);
+        throw needsError;
+      }
+
+      console.log('📊 Needs found for church:', needsData?.length || 0);
+
+      // Filter responses to only include those for needs in this church
+      const churchNeedIds = new Set(needsData?.map(n => n.id) || []);
+      const filteredResponses = responsesData.filter(r => churchNeedIds.has(r.need_id));
+      
+      console.log('📊 Filtered responses for church:', filteredResponses.length);
+
+      if (filteredResponses.length === 0) {
+        console.log('✅ No responses found for this church');
+        setResponses([]);
+        return;
+      }
+
+      // Now fetch volunteer details for each response
+      const userIds = [...new Set(filteredResponses.map(r => r.user_id))];
+      console.log('👥 Fetching volunteer profiles for IDs:', userIds);
+
+      const { data: volunteersData, error: volunteersError } = await supabase
+        .from('profiles')
+        .select('id, full_name, email, phone, gift_selections')
+        .in('id', userIds);
+
+      if (volunteersError) {
+        console.error('❌ Error fetching volunteers:', volunteersError);
+        throw volunteersError;
+      }
+
+      console.log('👥 Volunteers found:', volunteersData?.length || 0);
+
+      // Combine the data
+      const enrichedResponses = filteredResponses.map(response => {
+        const need = needsData?.find(n => n.id === response.need_id);
+        const volunteer = volunteersData?.find(v => v.id === response.user_id);
+        
+        return {
+          ...response,
+          need: need || { id: response.need_id, title: 'Unknown Need', description: '', church_code: userChurchCode },
+          volunteer: volunteer || { id: response.user_id, full_name: 'Unknown User', email: '', phone: '', gift_selections: [] }
+        };
+      });
+
+      console.log('✅ Final enriched responses:', enrichedResponses.length);
+      setResponses(enrichedResponses as any);
     } catch (error) {
       console.error('❌ Error loading responses:', error);
       setTableError(true);
