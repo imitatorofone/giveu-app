@@ -249,6 +249,74 @@ export default function PendingNeedsPage() {
           needId: need.id,
           need_title: need.title
         });
+
+        // Now that the need is approved, send gift-match notifications to members
+        console.log('[PendingNeeds] Need approved, checking for gift matches...');
+        
+        if (need.giftings_needed && need.giftings_needed.length > 0) {
+          // Get all members in the church
+          const { data: members } = await supabase
+            .from('profiles')
+            .select('id, full_name, gift_selections, phone, email')
+            .eq('church_code', userChurchCode)
+            .not('gift_selections', 'is', null);
+
+          if (members && members.length > 0) {
+            const needGiftings = need.giftings_needed;
+            
+            for (const member of members) {
+              // Skip the person who created the need
+              if (member.id === need.created_by) continue;
+              
+              // Check if member's gifts match any needed giftings
+              const matchingGifts = member.gift_selections.filter((gift: string) =>
+                needGiftings.some((neededGift: string) =>
+                  gift.toLowerCase().includes(neededGift.toLowerCase()) ||
+                  neededGift.toLowerCase().includes(gift.toLowerCase())
+                )
+              );
+              
+              if (matchingGifts.length > 0) {
+                console.log(`[PendingNeeds] Gift match found for member ${member.id}:`, matchingGifts);
+                
+                // Create DIY in-app notification
+                await createNotification({
+                  userId: member.id,
+                  eventType: 'need.matches_gifting',
+                  title: 'New Opportunity Matches Your Gifts!',
+                  description: `${need.title} needs your ${matchingGifts.join(', ')}`,
+                  path: '/dashboard',
+                  needId: need.id,
+                  need_title: need.title
+                });
+                
+                // Trigger Knock workflow for gift match
+                try {
+                  await fetch('/api/knock/trigger', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                      workflow: 'need_matches_gifting',
+                      userId: member.id,
+                      data: {
+                        need_title: need.title,
+                        need_id: need.id,
+                        matching_gifts: matchingGifts.join(', ')
+                      },
+                      recipient: {
+                        phone_number: member.phone,
+                        email: member.email
+                      }
+                    })
+                  });
+                  console.log('✅ Knock workflow triggered for need_matches_gifting:', member.id);
+                } catch (error) {
+                  console.warn('Knock trigger failed for gift match:', error);
+                }
+              }
+            }
+          }
+        }
       }
 
       // Remove from list
