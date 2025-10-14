@@ -22,6 +22,10 @@ interface PendingNeed {
   giftings_needed: string[];
   created_by: string;
   created_by_email: string;
+  creator?: {
+    full_name: string;
+    email: string;
+  };
 }
 
 export default function PendingNeedsPage() {
@@ -149,7 +153,8 @@ export default function PendingNeedsPage() {
           title: need.title,
           status: need.status,
           church_code: need.church_code,
-          created_at: need.created_at
+          created_at: need.created_at,
+          creator: need.creator
         })));
       }
 
@@ -158,8 +163,56 @@ export default function PendingNeedsPage() {
         throw error;
       }
       
-      console.log('✅ Setting pendingNeeds state with', data?.length || 0, 'items');
-      setPendingNeeds(data || []);
+      // Fetch creator names for each need
+      if (data && data.length > 0) {
+        console.log('👥 Fetching creator names for', data.length, 'needs');
+        
+        const needsWithCreators = await Promise.all(
+          data.map(async (need) => {
+            try {
+              const { data: creatorData, error: creatorError } = await supabase
+                .from('profiles')
+                .select('full_name, email')
+                .eq('id', need.created_by)
+                .single();
+              
+              if (creatorError) {
+                console.warn('⚠️ Could not fetch creator for need', need.id, creatorError);
+                return {
+                  ...need,
+                  creator: {
+                    full_name: need.created_by_email?.split('@')[0] || 'Unknown User',
+                    email: need.created_by_email
+                  }
+                };
+              }
+              
+              return {
+                ...need,
+                creator: {
+                  full_name: creatorData.full_name || creatorData.email?.split('@')[0] || 'Unknown User',
+                  email: creatorData.email || need.created_by_email
+                }
+              };
+            } catch (error) {
+              console.warn('⚠️ Error fetching creator for need', need.id, error);
+              return {
+                ...need,
+                creator: {
+                  full_name: need.created_by_email?.split('@')[0] || 'Unknown User',
+                  email: need.created_by_email
+                }
+              };
+            }
+          })
+        );
+        
+        console.log('✅ Setting pendingNeeds state with', needsWithCreators.length, 'items');
+        setPendingNeeds(needsWithCreators);
+      } else {
+        console.log('✅ Setting pendingNeeds state with 0 items');
+        setPendingNeeds([]);
+      }
     } catch (error) {
       console.error('❌ Error fetching pending needs:', error);
     }
@@ -433,7 +486,7 @@ export default function PendingNeedsPage() {
                     marginBottom: '16px',
                     fontFamily: BRAND.fonts.body
                   }}>
-                    Submitted by {need.created_by_email}
+                    Submitted by {need.creator?.full_name || need.created_by_email}
                   </div>
 
                   {/* Tags - Matching dashboard style */}
