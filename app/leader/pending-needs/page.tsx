@@ -35,6 +35,15 @@ export default function PendingNeedsPage() {
     checkAuthAndLoadData();
   }, []);
 
+  // 🔥 CRITICAL FIX: Watch userChurchCode and fetch needs when it's available
+  useEffect(() => {
+    console.log('🔄 userChurchCode changed:', userChurchCode);
+    if (userChurchCode) {
+      console.log('📡 Fetching pending needs for church:', userChurchCode);
+      fetchPendingNeeds();
+    }
+  }, [userChurchCode]);
+
   const checkAuthAndLoadData = async () => {
     try {
       // 🚀 PERFORMANCE: Check cache first
@@ -42,6 +51,7 @@ export default function PendingNeedsPage() {
       const cachedIsLeader = sessionStorage.getItem('user_is_leader');
       
       if (cachedChurchCode && cachedIsLeader === 'true') {
+        console.log('🚀 Using cached church code:', cachedChurchCode);
         setUserChurchCode(cachedChurchCode);
         setLoading(false);
         return; // ✅ Skip profile query!
@@ -85,6 +95,7 @@ export default function PendingNeedsPage() {
       sessionStorage.setItem('user_is_leader', 'true');
 
       // Store church code for filtering
+      console.log('📝 Setting userChurchCode from profile:', profileData.church_code);
       setUserChurchCode(profileData.church_code);
 
     } catch (error) {
@@ -97,10 +108,17 @@ export default function PendingNeedsPage() {
 
   const fetchPendingNeeds = async () => {
     try {
+      console.log('🔍 fetchPendingNeeds called with userChurchCode:', userChurchCode);
+      
       // Don't fetch if we don't have church_code yet
       if (!userChurchCode) {
+        console.log('❌ No userChurchCode, skipping fetch');
         return;
       }
+
+      console.log('📊 Querying needs table with filters:');
+      console.log('  - church_code:', userChurchCode);
+      console.log('  - status: pending');
 
       const { data, error } = await supabase
         .from('needs')
@@ -109,10 +127,28 @@ export default function PendingNeedsPage() {
         .eq('status', 'pending')
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
+      console.log('📊 Query result:', { data, error });
+      console.log('📊 Number of pending needs found:', data?.length || 0);
+      
+      if (data && data.length > 0) {
+        console.log('📋 Pending needs details:', data.map(need => ({
+          id: need.id,
+          title: need.title,
+          status: need.status,
+          church_code: need.church_code,
+          created_at: need.created_at
+        })));
+      }
+
+      if (error) {
+        console.error('❌ Query error:', error);
+        throw error;
+      }
+      
+      console.log('✅ Setting pendingNeeds state with', data?.length || 0, 'items');
       setPendingNeeds(data || []);
     } catch (error) {
-      console.error('Error fetching pending needs:', error);
+      console.error('❌ Error fetching pending needs:', error);
     }
   };
 
@@ -261,7 +297,13 @@ export default function PendingNeedsPage() {
       </div>
 
       {/* Content */}
-      {pendingNeeds.length === 0 ? (
+      {(() => {
+        console.log('🎨 Rendering content - pendingNeeds.length:', pendingNeeds.length);
+        console.log('🎨 pendingNeeds data:', pendingNeeds);
+        console.log('🎨 userChurchCode:', userChurchCode);
+        console.log('🎨 loading:', loading);
+        return pendingNeeds.length === 0;
+      })() ? (
         <div className="flex flex-col items-center justify-center px-4 pt-20">
           <div className="w-24 h-24 rounded-full flex items-center justify-center mb-6"
             style={{ backgroundColor: `${BRAND.colors.primary}1A` }}
