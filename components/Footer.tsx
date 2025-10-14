@@ -10,22 +10,27 @@ export default function Footer() {
   const pathname = usePathname();
   const router = useRouter();
   const [loading, setLoading] = useState(true);
-  const [isLeader, setIsLeader] = useState(false);
+  
+  // Initialize isLeader state from cache immediately to prevent flashing
+  const [isLeader, setIsLeader] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const cachedRole = sessionStorage.getItem('user_role');
+      return cachedRole === 'leader' || cachedRole === 'admin';
+    }
+    return false;
+  });
 
   useEffect(() => {
-    console.log('🔧 Footer: useEffect triggered, pathname:', pathname);
     const run = async () => {
       try {
         // 🚀 PERFORMANCE: Check cache first
         const cachedRole = sessionStorage.getItem('user_role');
         const cachedChurchCode = sessionStorage.getItem('user_church_code');
         
-        console.log('🔧 Footer: Checking cache:', { cachedRole, cachedChurchCode });
-        
         if (cachedRole) {
           const leaderStatus = cachedRole === 'leader' || cachedRole === 'admin';
-          console.log('🔧 Footer: Using cached role:', { cachedRole, leaderStatus });
-          setIsLeader(leaderStatus);
+          // Only update state if it's different to prevent unnecessary re-renders
+          setIsLeader(prev => prev !== leaderStatus ? leaderStatus : prev);
           setLoading(false);
           return; // ✅ Skip Supabase query!
         }
@@ -33,7 +38,7 @@ export default function Footer() {
         // Only query if not cached
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) {
-          setIsLeader(false);
+          setIsLeader(prev => prev !== false ? false : prev);
           sessionStorage.setItem('user_role', 'member');
           return;
         }
@@ -48,8 +53,6 @@ export default function Footer() {
         const role = norm(prof?.role);
         const isLeaderResult = prof?.is_leader || role === 'leader' || role === 'admin';
         
-        console.log('🔧 Footer: Fresh profile data:', { role, isLeaderResult, profile: prof });
-        
         // 🚀 PERFORMANCE: Cache the results
         sessionStorage.setItem('user_role', role || 'member');
         sessionStorage.setItem('user_is_leader', String(isLeaderResult));
@@ -57,11 +60,10 @@ export default function Footer() {
           sessionStorage.setItem('user_church_code', prof.church_code);
         }
         
-        console.log('🔧 Footer: Setting isLeader to:', isLeaderResult);
-        setIsLeader(isLeaderResult);
+        setIsLeader(prev => prev !== isLeaderResult ? isLeaderResult : prev);
       } catch (error) {
         console.error('Error checking user role:', error);
-        setIsLeader(false);
+        setIsLeader(prev => prev !== false ? false : prev);
       } finally {
         setLoading(false);
       }
@@ -92,8 +94,6 @@ export default function Footer() {
     }
   ];
 
-  console.log('🔧 Footer: Rendering with isLeader:', isLeader, 'regularTabs:', regularTabs);
-
   const RegularTab = ({ tab }: { tab: typeof regularTabs[0] }) => {
     const Icon = tab.icon;
     const isActive = pathname === tab.path || 
@@ -103,10 +103,7 @@ export default function Footer() {
     
     return (
       <button
-        onClick={() => {
-          console.log('🔧 Footer: Tab clicked:', { name: tab.name, path: tab.path, isLeader });
-          router.push(tab.path);
-        }}
+        onClick={() => router.push(tab.path)}
         className="flex flex-col items-center gap-1 active:opacity-70 transition-opacity min-w-[60px]"
       >
         <Icon 
