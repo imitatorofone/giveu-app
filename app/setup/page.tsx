@@ -40,7 +40,8 @@ export default function ChurchSetup() {
       const betaChurches = [
         { id: 'harmony', name: 'Harmony Church', city: 'Harmony', state: 'IA' },
         { id: 'brighton', name: 'Brighton Bible Church', city: 'Brighton', state: 'IA' },
-        { id: 'newlondon', name: 'New London Christian Church', city: 'New London', state: 'IA' }
+        { id: 'newlondon', name: 'New London Christian Church', city: 'New London', state: 'IA' },
+        { id: 'reallife', name: 'Real Life Christian Communities', city: 'San Pedro', state: 'PH' }
       ];
 
       console.log('Beta churches loaded:', betaChurches);
@@ -72,6 +73,8 @@ export default function ChurchSetup() {
         churchCode = "456brighton";
       } else if (selectedChurchData.name === "New London Christian Church") {
         churchCode = "789newlondon";
+      } else if (selectedChurchData.name === "Real Life Christian Communities") {
+        churchCode = "321reallife";
       } else {
         alert('Invalid church selection. Please try again.');
         return;

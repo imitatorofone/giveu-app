@@ -181,7 +181,14 @@ export async function GET(req: Request) {
         church_name = church.name;
       } else {
         // If church not found, create it with a default name
-        const defaultName = me.church_code === '123harmony' ? 'Harmony Church' : `${me.church_code} Church`;                                                    
+        let defaultName;
+        if (me.church_code === '123harmony') {
+          defaultName = 'Harmony Church';
+        } else if (me.church_code === '321reallife') {
+          defaultName = 'Real Life Christian Communities';
+        } else {
+          defaultName = `${me.church_code} Church`;
+        }                                                    
 
         const { data: newChurch, error: createErr } = await svc
           .from('churches')
