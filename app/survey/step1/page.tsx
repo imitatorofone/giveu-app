@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../../../lib/supabaseClient';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, ArrowRight, User, Calendar, MapPin, Phone, Clock, Church } from 'lucide-react';
+import { ArrowLeft, ArrowRight, User, Calendar, MapPin, Phone, Clock, Building2 } from 'lucide-react';
 import { formatPhoneToE164 } from '../../../lib/phoneFormatter';
 import { BRAND } from '../../../lib/brandConfig';
 
@@ -218,7 +218,7 @@ export default function SurveyStep1() {
 
           <div>
             <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px', fontWeight: '500', color: BRAND.colors.textLight, marginBottom: '8px', fontFamily: BRAND.fonts.body }}>
-              <Church size={16} />
+              <Building2 size={16} />
               Select Your Church *
             </label>
             <select
