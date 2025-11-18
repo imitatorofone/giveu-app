@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../../../lib/supabaseClient';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, ArrowRight, User, Calendar, MapPin, Phone, Clock } from 'lucide-react';
+import { ArrowLeft, ArrowRight, User, Calendar, MapPin, Phone, Clock, Church } from 'lucide-react';
 import { formatPhoneToE164 } from '../../../lib/phoneFormatter';
 import { BRAND } from '../../../lib/brandConfig';
 
@@ -21,6 +21,8 @@ export default function SurveyStep1() {
   const [city, setCity] = useState('');
   const [phone, setPhone] = useState('');
   const [availability, setAvailability] = useState<string[]>([]);
+  const [churches, setChurches] = useState<any[]>([]);
+  const [selectedChurch, setSelectedChurch] = useState('');
   const [error, setError] = useState('');
   const [user, setUser] = useState<any>(null);
   const router = useRouter();
@@ -57,6 +59,15 @@ export default function SurveyStep1() {
         return;
       }
       setUser(session.user);
+
+      // Load beta churches (hard-coded for consistency)
+      const betaChurches = [
+        { id: 'harmony', name: 'Harmony Church', city: 'Harmony', state: 'IA' },
+        { id: 'brighton', name: 'Brighton Bible Church', city: 'Brighton', state: 'IA' },
+        { id: 'newlondon', name: 'New London Christian Church', city: 'New London', state: 'IA' },
+        { id: 'reallife', name: 'Real Life Christian Communities', city: 'San Pedro', state: 'PH' }
+      ];
+      setChurches(betaChurches);
     };
     getUser();
   }, []);
@@ -66,6 +77,34 @@ export default function SurveyStep1() {
 
     // Clear any previous errors
     setError('');
+
+    // Validate church selection
+    if (!selectedChurch) {
+      setError('Please select your church');
+      return;
+    }
+
+    // Find the selected church to get its name
+    const selectedChurchData = churches.find(church => church.id === selectedChurch);
+    if (!selectedChurchData) {
+      setError('Selected church not found. Please try again.');
+      return;
+    }
+
+    // Map church name to correct church_code
+    let churchCode;
+    if (selectedChurchData.name === "Harmony Church") {
+      churchCode = "123harmony";
+    } else if (selectedChurchData.name === "Brighton Bible Church") {
+      churchCode = "456brighton";
+    } else if (selectedChurchData.name === "New London Christian Church") {
+      churchCode = "789newlondon";
+    } else if (selectedChurchData.name === "Real Life Christian Communities") {
+      churchCode = "321reallife";
+    } else {
+      setError('Invalid church selection. Please try again.');
+      return;
+    }
 
     // Extract last 4 digits of phone number
     const phoneLastFour = phone.replace(/\D/g, '').slice(-4);
@@ -78,7 +117,8 @@ export default function SurveyStep1() {
       phone: phone,
       phone_last_four: phoneLastFour,
       email: user.email,
-      availability: availability
+      availability: availability,
+      church_code: churchCode
     });
 
     // Format phone number to E.164 format for Twilio compatibility
@@ -94,7 +134,8 @@ export default function SurveyStep1() {
         phone: formattedPhone,
         phone_last_four: phoneLastFour,
         email: user.email,
-        availability: availability
+        availability: availability,
+        church_code: churchCode
       })
       .select();
 
@@ -177,6 +218,34 @@ export default function SurveyStep1() {
 
           <div>
             <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px', fontWeight: '500', color: BRAND.colors.textLight, marginBottom: '8px', fontFamily: BRAND.fonts.body }}>
+              <Church size={16} />
+              Select Your Church *
+            </label>
+            <select
+              value={selectedChurch}
+              onChange={(e) => setSelectedChurch(e.target.value)}
+              style={{ 
+                width: '100%', 
+                padding: '14px 16px', 
+                border: '1px solid #e5e7eb',
+                borderRadius: '8px',
+                fontSize: '16px', 
+                fontFamily: BRAND.fonts.body,
+                minHeight: '52px',
+                backgroundColor: 'white'
+              }}
+            >
+              <option value="">Choose your church...</option>
+              {churches.map(church => (
+                <option key={church.id} value={church.id}>
+                  {church.name} - {church.city}, {church.state}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px', fontWeight: '500', color: BRAND.colors.textLight, marginBottom: '8px', fontFamily: BRAND.fonts.body }}>
               <Phone size={16} />
               Phone Number *
             </label>
@@ -224,11 +293,11 @@ export default function SurveyStep1() {
 
           <button
             onClick={handleNext}
-            disabled={!fullName || !age || !city || !phone}
-            className={(fullName && age && city && phone) ? 'active:scale-95' : ''}
+            disabled={!fullName || !age || !city || !phone || !selectedChurch}
+            className={(fullName && age && city && phone && selectedChurch) ? 'active:scale-95' : ''}
             style={{
               width: '100%',
-              backgroundColor: (fullName && age && city && phone) ? BRAND.colors.primary : '#9ca3af',
+              backgroundColor: (fullName && age && city && phone && selectedChurch) ? BRAND.colors.primary : '#9ca3af',
               color: 'white',
               padding: '16px 24px',
               borderRadius: '8px',
@@ -236,22 +305,22 @@ export default function SurveyStep1() {
               fontSize: '16px',
               fontWeight: '600',
               fontFamily: BRAND.fonts.heading,
-              cursor: (fullName && age && city && phone) ? 'pointer' : 'not-allowed',
+              cursor: (fullName && age && city && phone && selectedChurch) ? 'pointer' : 'not-allowed',
               minHeight: '56px',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               gap: '8px',
               transition: 'all 0.15s ease',
-              opacity: (fullName && age && city && phone) ? 1 : 0.5
+              opacity: (fullName && age && city && phone && selectedChurch) ? 1 : 0.5
             }}
             onTouchStart={(e) => {
-              if (fullName && age && city && phone) {
+              if (fullName && age && city && phone && selectedChurch) {
                 e.currentTarget.style.backgroundColor = BRAND.colors.primaryHover;
               }
             }}
             onTouchEnd={(e) => {
-              if (fullName && age && city && phone) {
+              if (fullName && age && city && phone && selectedChurch) {
                 const target = e.currentTarget;
                 setTimeout(() => {
                   if (target && target.style) {
