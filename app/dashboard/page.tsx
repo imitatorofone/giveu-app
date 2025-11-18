@@ -356,7 +356,7 @@ function DashboardContent() {
         const hasGifts = profile?.gift_selections && profile.gift_selections.length > 0;
 
         if (!hasChurchCode) {
-          router.push('/setup');
+          router.push('/survey');
           return;
         }
 

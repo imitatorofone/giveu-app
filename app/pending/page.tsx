@@ -33,8 +33,8 @@ export default function PendingApproval() {
       console.log('Membership query result:', { membershipData, membershipError });
 
       if (!membershipData) {
-        // No membership found, redirect to setup
-        router.push('/setup');
+        // No membership found, redirect to survey
+        router.push('/survey');
         return;
       }
 
@@ -84,14 +84,14 @@ export default function PendingApproval() {
   };
 
   const handleTryAnotherChurch = async () => {
-    // Remove current membership and go back to setup
+    // Remove current membership and go back to survey
     if (membership) {
       await supabase
         .from('org_members')
         .delete()
         .eq('id', membership.id);
     }
-    router.push('/setup');
+    router.push('/survey');
   };
 
   if (loading) {

@@ -107,7 +107,7 @@ export default function AuthPage() {
           console.log('[auth] Profile completeness check:', { hasChurchCode, church_code: profile?.church_code });
 
           // short, non-cancelable countdown → appropriate destination
-          const redirectPath = hasChurchCode ? '/dashboard' : '/setup';
+          const redirectPath = hasChurchCode ? '/dashboard' : '/survey';
           console.log(`[auth] Starting 3-second countdown to ${redirectPath}`);
           
           let n = 3;
@@ -320,7 +320,7 @@ export default function AuthPage() {
                   // Get current user and profile to determine redirect
                   const { data: { user } } = await supabase.auth.getUser();
                   if (!user) {
-                    router.replace('/setup');
+                    router.replace('/survey');
                     return;
                   }
                   
@@ -332,12 +332,12 @@ export default function AuthPage() {
                       .maybeSingle();
                     
                     const hasChurchCode = profile?.church_code && profile.church_code.trim() !== '';
-                    const redirectPath = hasChurchCode ? '/dashboard' : '/setup';
+                    const redirectPath = hasChurchCode ? '/dashboard' : '/survey';
                     router.replace(redirectPath);
                   } catch (error) {
                     console.error('Profile check failed:', error);
-                    // Fallback to setup if profile check fails
-                    router.replace('/setup');
+                    // Fallback to survey if profile check fails
+                    router.replace('/survey');
                   }
                 }}
                 className="active:scale-95"
