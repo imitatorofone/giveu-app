@@ -109,6 +109,18 @@ export default function SurveyStep1() {
     // Extract last 4 digits of phone number
     const phoneLastFour = phone.replace(/\D/g, '').slice(-4);
 
+    // Check existing profile to preserve role and is_leader if already set
+    const { data: existingProfile } = await supabase
+      .from('profiles')
+      .select('role, is_leader, approval_status')
+      .eq('id', user.id)
+      .maybeSingle();
+
+    // Only set defaults if values don't already exist
+    const role = existingProfile?.role || 'member';
+    const isLeader = existingProfile?.is_leader !== undefined ? existingProfile.is_leader : false;
+    const approvalStatus = existingProfile?.approval_status || 'pending';
+
     console.log('Saving profile data:', {
       id: user.id,
       full_name: fullName,
@@ -118,7 +130,10 @@ export default function SurveyStep1() {
       phone_last_four: phoneLastFour,
       email: user.email,
       availability: availability,
-      church_code: churchCode
+      church_code: churchCode,
+      role: role,
+      is_leader: isLeader,
+      approval_status: approvalStatus
     });
 
     // Format phone number to E.164 format for Twilio compatibility
@@ -136,9 +151,9 @@ export default function SurveyStep1() {
         email: user.email,
         availability: availability,
         church_code: churchCode,
-        role: 'member',
-        is_leader: false,
-        approval_status: 'pending',
+        role: role,
+        is_leader: isLeader,
+        approval_status: approvalStatus,
         updated_at: new Date().toISOString()
       })
       .select();
