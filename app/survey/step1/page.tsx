@@ -23,6 +23,7 @@ export default function SurveyStep1() {
   const [availability, setAvailability] = useState<string[]>([]);
   const [churches, setChurches] = useState<any[]>([]);
   const [selectedChurch, setSelectedChurch] = useState('');
+  const [role, setRole] = useState('member');
   const [error, setError] = useState('');
   const [user, setUser] = useState<any>(null);
   const router = useRouter();
@@ -68,6 +69,17 @@ export default function SurveyStep1() {
         { id: 'reallife', name: 'Real Life Christian Communities', city: 'San Pedro', state: 'PH' }
       ];
       setChurches(betaChurches);
+
+      // Load existing profile to initialize role if already set
+      const { data: existingProfile } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', session.user.id)
+        .maybeSingle();
+      
+      if (existingProfile?.role) {
+        setRole(existingProfile.role);
+      }
     };
     getUser();
   }, []);
@@ -109,16 +121,16 @@ export default function SurveyStep1() {
     // Extract last 4 digits of phone number
     const phoneLastFour = phone.replace(/\D/g, '').slice(-4);
 
-    // Check existing profile to preserve role and is_leader if already set
+    // Check existing profile to preserve approval_status if already set
     const { data: existingProfile } = await supabase
       .from('profiles')
-      .select('role, is_leader, approval_status')
+      .select('approval_status')
       .eq('id', user.id)
       .maybeSingle();
 
-    // Only set defaults if values don't already exist
-    const role = existingProfile?.role || 'member';
-    const isLeader = existingProfile?.is_leader !== undefined ? existingProfile.is_leader : false;
+    // Use selected role from UI, or preserve existing if already set (but user selected a new one, so use selected)
+    const finalRole = role;
+    const isLeader = role === 'leader';
     const approvalStatus = existingProfile?.approval_status || 'pending';
 
     console.log('Saving profile data:', {
@@ -131,7 +143,7 @@ export default function SurveyStep1() {
       email: user.email,
       availability: availability,
       church_code: churchCode,
-      role: role,
+      role: finalRole,
       is_leader: isLeader,
       approval_status: approvalStatus
     });
@@ -151,7 +163,7 @@ export default function SurveyStep1() {
         email: user.email,
         availability: availability,
         church_code: churchCode,
-        role: role,
+        role: finalRole,
         is_leader: isLeader,
         approval_status: approvalStatus,
         updated_at: new Date().toISOString()
@@ -195,6 +207,57 @@ export default function SurveyStep1() {
         <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
           <div>
             <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px', fontWeight: '500', color: BRAND.colors.textLight, marginBottom: '8px', fontFamily: BRAND.fonts.body }}>
+              <Building2 size={16} />
+              Select Your Church *
+            </label>
+            <select
+              value={selectedChurch}
+              onChange={(e) => setSelectedChurch(e.target.value)}
+              style={{ 
+                width: '100%', 
+                padding: '14px 16px', 
+                border: '1px solid #e5e7eb',
+                borderRadius: '8px',
+                fontSize: '16px', 
+                fontFamily: BRAND.fonts.body,
+                minHeight: '52px',
+                backgroundColor: 'white'
+              }}
+            >
+              <option value="">Choose your church...</option>
+              {churches.map(church => (
+                <option key={church.id} value={church.id}>
+                  {church.name} - {church.city}, {church.state}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label style={{ display: 'block', fontWeight: 500, marginBottom: 8, fontSize: '14px', color: BRAND.colors.textLight, fontFamily: BRAND.fonts.body }}>
+              Your Role:
+            </label>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {[
+                { value: 'member', label: 'Member - I want to discover my gifts and serve' },
+                { value: 'leader', label: 'Leader - I help coordinate ministry opportunities and manage church settings' }
+              ].map(option => (
+                <label key={option.value} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <input
+                    type="radio"
+                    name="role"
+                    value={option.value}
+                    checked={role === option.value}
+                    onChange={(e) => setRole(e.target.value)}
+                  />
+                  <span style={{ fontSize: 15, fontFamily: BRAND.fonts.body }}>{option.label}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px', fontWeight: '500', color: BRAND.colors.textLight, marginBottom: '8px', fontFamily: BRAND.fonts.body }}>
               <User size={16} />
               Full Name *
             </label>
@@ -233,34 +296,6 @@ export default function SurveyStep1() {
               placeholder="Austin"
               style={{ width: '100%', padding: '14px 16px', border: '1px solid #e5e7eb', borderRadius: '8px', fontSize: '16px', fontFamily: BRAND.fonts.body, minHeight: '52px' }}
             />
-          </div>
-
-          <div>
-            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px', fontWeight: '500', color: BRAND.colors.textLight, marginBottom: '8px', fontFamily: BRAND.fonts.body }}>
-              <Building2 size={16} />
-              Select Your Church *
-            </label>
-            <select
-              value={selectedChurch}
-              onChange={(e) => setSelectedChurch(e.target.value)}
-              style={{ 
-                width: '100%', 
-                padding: '14px 16px', 
-                border: '1px solid #e5e7eb',
-                borderRadius: '8px',
-                fontSize: '16px', 
-                fontFamily: BRAND.fonts.body,
-                minHeight: '52px',
-                backgroundColor: 'white'
-              }}
-            >
-              <option value="">Choose your church...</option>
-              {churches.map(church => (
-                <option key={church.id} value={church.id}>
-                  {church.name} - {church.city}, {church.state}
-                </option>
-              ))}
-            </select>
           </div>
 
           <div>
