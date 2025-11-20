@@ -135,7 +135,11 @@ export default function SurveyStep1() {
         phone_last_four: phoneLastFour,
         email: user.email,
         availability: availability,
-        church_code: churchCode
+        church_code: churchCode,
+        role: 'member',
+        is_leader: false,
+        approval_status: 'pending',
+        updated_at: new Date().toISOString()
       })
       .select();
 
