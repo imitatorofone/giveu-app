@@ -66,7 +66,7 @@ export async function GET(req: Request) {
           email: user.email,
           full_name: (user.email || '').split('@')[0],
           role: user.email === 'imitatorofone@gmail.com' ? 'leader' : 'member', 
-          approval_status: 'approved', // Beta testing: auto-approve all users
+          approval_status: 'pending', // Set to pending to require approval
           is_leader: user.email === 'imitatorofone@gmail.com',
           // church_code: null, // 🚨 FIXED: Don't auto-set church_code - let user complete onboarding
           updated_at: new Date().toISOString(),
@@ -181,7 +181,14 @@ export async function GET(req: Request) {
         church_name = church.name;
       } else {
         // If church not found, create it with a default name
-        const defaultName = me.church_code === '123harmony' ? 'Harmony Church' : `${me.church_code} Church`;                                                    
+        let defaultName;
+        if (me.church_code === '123harmony') {
+          defaultName = 'Harmony Church';
+        } else if (me.church_code === '321reallife') {
+          defaultName = 'Real Life Christian Communities';
+        } else {
+          defaultName = `${me.church_code} Church`;
+        }                                                    
 
         const { data: newChurch, error: createErr } = await svc
           .from('churches')

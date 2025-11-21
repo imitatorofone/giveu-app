@@ -1,20 +1,235 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useState, useEffect } from 'react';
+import { supabase } from '../../lib/supabaseClient';
 import { useRouter } from 'next/navigation';
+import { Gift } from 'lucide-react';
 
 export default function ChurchSetup() {
+  const [user, setUser] = useState<any>(null);
+  const [churches, setChurches] = useState<any[]>([]);
+  const [selectedChurch, setSelectedChurch] = useState('');
+  const [role, setRole] = useState('member');
+  const [loading, setLoading] = useState(true);
   const router = useRouter();
 
   useEffect(() => {
-    // Redirect immediately to survey - this page is obsolete
-    console.log('[Setup] Redirecting to survey - setup page is obsolete');
-    router.replace('/survey');
+    const loadData = async () => {
+      const { data: authData } = await supabase.auth.getUser();
+      if (!authData.user) {
+        router.push('/');
+        return;
+      }
+      setUser(authData.user);
+
+      // Check if user already has a church_code in their profile
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('church_code')
+        .eq('id', authData.user.id)
+        .single();
+
+      if (profile?.church_code && profile.church_code.trim() !== '') {
+        // User already has a church, redirect to dashboard
+        console.log('User already has church_code:', profile.church_code);
+        router.push('/dashboard');
+        return;
+      }
+
+      // Load beta churches (hard-coded for consistency)
+      const betaChurches = [
+        { id: 'harmony', name: 'Harmony Church', city: 'Harmony', state: 'IA' },
+        { id: 'brighton', name: 'Brighton Bible Church', city: 'Brighton', state: 'IA' },
+        { id: 'newlondon', name: 'New London Christian Church', city: 'New London', state: 'IA' },
+        { id: 'reallife', name: 'Real Life Christian Communities', city: 'San Pedro', state: 'PH' }
+      ];
+
+      console.log('Beta churches loaded:', betaChurches);
+      setChurches(betaChurches);
+      setLoading(false);
+    };
+
+    loadData();
   }, [router]);
 
+  const handleJoinChurch = async () => {
+    if (!selectedChurch || !user) return;
+
+    try {
+      console.log('Attempting to join church:', { selectedChurch, userId: user.id, role });
+
+      // Find the selected church to get its name
+      const selectedChurchData = churches.find(church => church.id === selectedChurch);
+      if (!selectedChurchData) {
+        alert('Selected church not found. Please try again.');
+        return;
+      }
+
+      // Map church name to correct church_code
+      let churchCode;
+      if (selectedChurchData.name === "Harmony Church") {
+        churchCode = "123harmony";
+      } else if (selectedChurchData.name === "Brighton Bible Church") {
+        churchCode = "456brighton";
+      } else if (selectedChurchData.name === "New London Christian Church") {
+        churchCode = "789newlondon";
+      } else if (selectedChurchData.name === "Real Life Christian Communities") {
+        churchCode = "321reallife";
+      } else {
+        alert('Invalid church selection. Please try again.');
+        return;
+      }
+
+      console.log('Church mapping:', { selectedChurch: selectedChurchData.name, churchCode });
+
+      // Update profile with church_code and role information
+      const { data: profileData, error: profileError } = await supabase
+        .from('profiles')
+        .upsert({
+          id: user.id,
+          email: user.email,
+          church_code: churchCode,
+          role: role,
+          is_leader: role === 'leader',
+          approval_status: 'pending',
+          updated_at: new Date().toISOString()
+        })
+        .select();
+
+      console.log('Profile update result:', { profileData, profileError });
+      if (profileError) throw profileError;
+
+      // Redirect to gift survey to complete profile
+      router.push('/survey');
+      
+    } catch (error) {
+      console.error('Error joining church:', error);
+      console.error('Error details:', {
+        message: (error as any).message,
+        details: (error as any).details,
+        hint: (error as any).hint,
+        code: (error as any).code
+      });
+      alert(`Error requesting to join church: ${(error as any).message}. Please try again.`);
+    }
+  };
+
+  if (loading) return <div style={{ padding: 40, textAlign: 'center' }}>Loading...</div>;
+
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-      <div className="text-lg">Redirecting to survey...</div>
+    <div style={{ 
+      minHeight: '100vh', 
+      background: 'linear-gradient(135deg, #f0fdf4 0%, #dbeafe 50%, #faf5ff 100%)',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      fontFamily: 'sans-serif'
+    }}>
+      <div style={{ 
+        backgroundColor: 'white', 
+        padding: '24px', 
+        borderRadius: 12, 
+        border: '1px solid #e5e7eb',
+        boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
+        maxWidth: 500,
+        width: '100%'
+      }}
+      className="sm:p-12"
+      >
+        <div style={{ textAlign: 'center', marginBottom: 32 }}>
+          <div style={{ 
+            width: 80, 
+            height: 80, 
+            backgroundColor: '#4ECDC4', 
+            borderRadius: 20, 
+            display: 'flex', 
+            alignItems: 'center', 
+            justifyContent: 'center', 
+            margin: '0 auto 16px',
+            fontSize: 40 
+          }}>
+            <Gift size={40} />
+          </div>
+          <h1 style={{ fontSize: 28, fontWeight: 'bold', margin: '0 0 8px' }}>Welcome to giveU</h1>
+          <p style={{ color: '#6b7280' }}>Let's connect you with your church community</p>
+        </div>
+
+        <div style={{ marginBottom: 24 }}>
+          <label style={{ display: 'block', fontWeight: 500, marginBottom: 8 }}>
+            Select Your Church:
+          </label>
+          <select
+            value={selectedChurch}
+            onChange={(e) => setSelectedChurch(e.target.value)}
+            style={{ 
+              width: '100%', 
+              padding: '14px 16px', 
+              border: '1px solid #d1d5db',
+              borderRadius: 8,
+              fontSize: 16,
+              minHeight: '52px'
+            }}
+          >
+            <option value="">Choose your church...</option>
+            {churches.map(church => (
+              <option key={church.id} value={church.id}>
+                {church.name} - {church.city}, {church.state}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div style={{ marginBottom: 32 }}>
+          <label style={{ display: 'block', fontWeight: 500, marginBottom: 8 }}>
+            Your Role:
+          </label>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {[
+              { value: 'member', label: 'Member - I want to discover my gifts and serve' },
+              { value: 'leader', label: 'Leader - I help coordinate ministry opportunities and manage church settings' }
+            ].map(option => (
+              <label key={option.value} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <input
+                  type="radio"
+                  name="role"
+                  value={option.value}
+                  checked={role === option.value}
+                  onChange={(e) => setRole(e.target.value)}
+                />
+                <span style={{ fontSize: 15 }}>{option.label}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+
+        <button 
+          onClick={handleJoinChurch}
+          disabled={!selectedChurch}
+          className={selectedChurch ? 'active:scale-95' : ''}
+          style={{
+            width: '100%',
+            backgroundColor: selectedChurch ? '#4ECDC4' : '#e5e7eb',
+            color: selectedChurch ? 'white' : '#9ca3af',
+            border: 'none',
+            padding: '16px 24px',
+            borderRadius: 8,
+            fontSize: 16,
+            fontWeight: 600,
+            minHeight: '56px',
+            cursor: selectedChurch ? 'pointer' : 'not-allowed',
+            transition: 'all 0.15s ease'
+          }}
+        >
+          Join Church & Continue
+        </button>
+
+        <div style={{ marginTop: 24, padding: 16, backgroundColor: '#f9fafb', borderRadius: 8 }}>
+          <p style={{ fontSize: 13, color: '#6b7280', margin: 0, lineHeight: 1.5 }}>
+            Don't see your church? This is currently in beta testing with select churches. 
+            Contact your church leadership about joining the giveU beta program.
+          </p>
+        </div>
+      </div>
     </div>
   );
 }

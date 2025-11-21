@@ -71,7 +71,7 @@ export default function AuthPage() {
           console.log('[auth] Fetching profile for user:', session.user.id);
           const { data: profile, error: profileError } = await supabase
             .from('profiles')
-            .select('full_name, church_code, role, gift_selections')
+            .select('full_name, church_code')
             .eq('id', session.user.id)
             .maybeSingle();
           
@@ -104,28 +104,10 @@ export default function AuthPage() {
 
           // Determine redirect based on profile completeness
           const hasChurchCode = profile?.church_code && profile.church_code.trim() !== '';
-          const hasRole = profile?.role && profile.role.trim() !== '';
-          const hasGiftSelections = profile?.gift_selections && profile.gift_selections.length > 0;
-          
-          console.log('[auth] Profile completeness check:', { 
-            hasChurchCode, 
-            hasRole,
-            hasGiftSelections,
-            church_code: profile?.church_code,
-            role: profile?.role,
-            gift_selections: profile?.gift_selections
-          });
+          console.log('[auth] Profile completeness check:', { hasChurchCode, church_code: profile?.church_code });
 
-          // Determine redirect based on profile completeness
-          let redirectPath;
-          if (!hasChurchCode || !hasRole) {
-            redirectPath = '/survey'; // Start from Step 1 (church + role selection)
-          } else if (!hasGiftSelections) {
-            redirectPath = '/survey?step=2'; // Skip to gift selection
-          } else {
-            redirectPath = '/dashboard'; // Complete profile
-          }
-          
+          // short, non-cancelable countdown → appropriate destination
+          const redirectPath = hasChurchCode ? '/dashboard' : '/survey';
           console.log(`[auth] Starting 3-second countdown to ${redirectPath}`);
           
           let n = 3;
@@ -148,15 +130,15 @@ export default function AuthPage() {
             setAuthState('authed');
           }
           
-          console.log('[auth] Starting 3-second countdown to survey (fallback)');
+          console.log('[auth] Starting 3-second countdown to setup (fallback)');
           let n = 3;
           const id = setInterval(() => {
             n--;
             console.log('[auth] Countdown:', n);
             if (n <= 0) {
               clearInterval(id);
-              console.log('[auth] Redirecting to survey (fallback)');
-              router.replace('/survey');
+              console.log('[auth] Redirecting to setup (fallback)');
+              router.replace('/setup');
             }
           }, 1000);
         }
@@ -345,23 +327,12 @@ export default function AuthPage() {
                   try {
                     const { data: profile } = await supabase
                       .from('profiles')
-                      .select('church_code, role, gift_selections')
+                      .select('church_code')
                       .eq('id', user.id)
                       .maybeSingle();
                     
                     const hasChurchCode = profile?.church_code && profile.church_code.trim() !== '';
-                    const hasRole = profile?.role && profile.role.trim() !== '';
-                    const hasGiftSelections = profile?.gift_selections && profile.gift_selections.length > 0;
-                    
-                    let redirectPath;
-                    if (!hasChurchCode || !hasRole) {
-                      redirectPath = '/survey'; // Start from Step 1 (church + role selection)
-                    } else if (!hasGiftSelections) {
-                      redirectPath = '/survey?step=2'; // Skip to gift selection
-                    } else {
-                      redirectPath = '/dashboard'; // Complete profile
-                    }
-                    
+                    const redirectPath = hasChurchCode ? '/dashboard' : '/survey';
                     router.replace(redirectPath);
                   } catch (error) {
                     console.error('Profile check failed:', error);

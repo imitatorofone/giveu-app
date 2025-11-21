@@ -248,24 +248,6 @@ function DashboardContent() {
 
   const fetchNeeds = async () => {
     try {
-      // Get user's church_code first
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('church_code')
-        .eq('id', user.id)
-        .single();
-
-      console.log('🏛️ User church_code:', profile?.church_code);
-      
-      if (!profile?.church_code) {
-        console.log('❌ No church_code found for user');
-        setOpportunities([]);
-        return;
-      }
-
       const { data, error } = await supabase
         .from('needs')
         .select(`
@@ -273,12 +255,8 @@ function DashboardContent() {
           commitments(count),
           responses:opportunity_responses(user_id, status)
         `)
-        .eq('church_code', profile.church_code)
         .in('status', ['active', 'approved'])
         .order('created_at', { ascending: false });
-
-      console.log('📋 Needs query result:', { data, error });
-      console.log('🔍 Total needs found:', data?.length);
       
       if (error) {
         setOpportunities([]);
@@ -378,7 +356,7 @@ function DashboardContent() {
         const hasGifts = profile?.gift_selections && profile.gift_selections.length > 0;
 
         if (!hasChurchCode) {
-          router.push('/setup');
+          router.push('/survey');
           return;
         }
 
