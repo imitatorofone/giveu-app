@@ -44,6 +44,15 @@ export default function VolunteerResponsesPage() {
     checkAuthAndLoadData();
   }, []);
 
+  // 🔥 CRITICAL FIX: Watch userChurchCode and fetch responses when it's available
+  useEffect(() => {
+    console.log('🔄 userChurchCode changed:', userChurchCode);
+    if (userChurchCode) {
+      console.log('📡 Fetching volunteer responses for church:', userChurchCode);
+      loadVolunteerResponses();
+    }
+  }, [userChurchCode]);
+
   const checkAuthAndLoadData = async () => {
     try {
       // 🚀 PERFORMANCE: Check cache first
@@ -51,6 +60,7 @@ export default function VolunteerResponsesPage() {
       const cachedIsLeader = sessionStorage.getItem('user_is_leader');
       
       if (cachedChurchCode && cachedIsLeader === 'true') {
+        console.log('🚀 Using cached church code:', cachedChurchCode);
         setUserChurchCode(cachedChurchCode);
         setLoading(false);
         return; // ✅ Skip profile query!
@@ -94,6 +104,7 @@ export default function VolunteerResponsesPage() {
       sessionStorage.setItem('user_is_leader', 'true');
 
       // Store church code for filtering
+      console.log('📝 Setting userChurchCode from profile:', profileData.church_code);
       setUserChurchCode(profileData.church_code);
 
     } catch (error) {
@@ -106,32 +117,97 @@ export default function VolunteerResponsesPage() {
 
   const loadVolunteerResponses = async () => {
     try {
+      console.log('🔍 loadVolunteerResponses called with userChurchCode:', userChurchCode);
+      
       // Don't fetch if we don't have church_code yet
       if (!userChurchCode) {
+        console.log('❌ No userChurchCode, skipping fetch');
         return;
       }
 
-      // Try to load from opportunity_responses table
-      // Filter by needs that belong to this church
-      const { data, error } = await supabase
+      console.log('📊 Querying opportunity_responses table with filters:');
+      console.log('  - church_code (via needs relationship):', userChurchCode);
+
+      // First, get all opportunity_responses with basic need info
+      const { data: responsesData, error: responsesError } = await supabase
         .from('opportunity_responses')
-        .select(`
-          *,
-          need:needs!inner(id, title, description, church_code),
-          volunteer:profiles(id, full_name, email, phone, gift_selections)
-        `)
-        .eq('need.church_code', userChurchCode) // 🔥 CRITICAL: Filter by church through needs relationship
+        .select('*')
         .order('created_at', { ascending: false });
 
-      if (error) {
-        console.warn('Table might not exist or query failed:', error);
-        setTableError(true);
+      if (responsesError) {
+        console.error('❌ Error fetching opportunity_responses:', responsesError);
+        throw responsesError;
+      }
+
+      console.log('📊 Raw opportunity_responses found:', responsesData?.length || 0);
+
+      if (!responsesData || responsesData.length === 0) {
+        console.log('✅ No opportunity responses found');
+        setResponses([]);
         return;
       }
 
-      setResponses((data || []) as any);
+      // Filter responses by needs that belong to this church
+      const needIds = responsesData.map(r => r.need_id);
+      console.log('🔍 Fetching needs for IDs:', needIds);
+
+      const { data: needsData, error: needsError } = await supabase
+        .from('needs')
+        .select('id, title, description, church_code')
+        .in('id', needIds)
+        .eq('church_code', userChurchCode);
+
+      if (needsError) {
+        console.error('❌ Error fetching needs:', needsError);
+        throw needsError;
+      }
+
+      console.log('📊 Needs found for church:', needsData?.length || 0);
+
+      // Filter responses to only include those for needs in this church
+      const churchNeedIds = new Set(needsData?.map(n => n.id) || []);
+      const filteredResponses = responsesData.filter(r => churchNeedIds.has(r.need_id));
+      
+      console.log('📊 Filtered responses for church:', filteredResponses.length);
+
+      if (filteredResponses.length === 0) {
+        console.log('✅ No responses found for this church');
+        setResponses([]);
+        return;
+      }
+
+      // Now fetch volunteer details for each response
+      const userIds = [...new Set(filteredResponses.map(r => r.user_id))];
+      console.log('👥 Fetching volunteer profiles for IDs:', userIds);
+
+      const { data: volunteersData, error: volunteersError } = await supabase
+        .from('profiles')
+        .select('id, full_name, email, phone, gift_selections')
+        .in('id', userIds);
+
+      if (volunteersError) {
+        console.error('❌ Error fetching volunteers:', volunteersError);
+        throw volunteersError;
+      }
+
+      console.log('👥 Volunteers found:', volunteersData?.length || 0);
+
+      // Combine the data
+      const enrichedResponses = filteredResponses.map(response => {
+        const need = needsData?.find(n => n.id === response.need_id);
+        const volunteer = volunteersData?.find(v => v.id === response.user_id);
+        
+        return {
+          ...response,
+          need: need || { id: response.need_id, title: 'Unknown Need', description: '', church_code: userChurchCode },
+          volunteer: volunteer || { id: response.user_id, full_name: 'Unknown User', email: '', phone: '', gift_selections: [] }
+        };
+      });
+
+      console.log('✅ Final enriched responses:', enrichedResponses.length);
+      setResponses(enrichedResponses as any);
     } catch (error) {
-      console.error('Error loading responses:', error);
+      console.error('❌ Error loading responses:', error);
       setTableError(true);
     }
   };
@@ -247,7 +323,15 @@ export default function VolunteerResponsesPage() {
 
       {/* Responses List */}
       <div className="px-4 pt-4">
-        {tableError ? (
+        {(() => {
+          console.log('🎨 Rendering responses - filteredResponses.length:', filteredResponses.length);
+          console.log('🎨 responses data:', responses);
+          console.log('🎨 userChurchCode:', userChurchCode);
+          console.log('🎨 loading:', loading);
+          console.log('🎨 tableError:', tableError);
+          console.log('🎨 filter:', filter);
+          return tableError;
+        })() ? (
           <div className="bg-white rounded-xl border border-gray-200 p-6 text-center">
             <p style={{ 
               color: BRAND.colors.textLight, 

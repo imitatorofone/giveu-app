@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { supabaseBrowser as supabase } from '@/lib/supabaseBrowser';
 import Footer from '../../../components/Footer';
 import NotificationDropdown from '../../../components/NotificationDropdown';
-import { CheckCircle, ArrowLeft } from 'lucide-react';
+import { CheckCircle, ArrowLeft, Calendar, MapPin, Users } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { BRAND } from '../../../lib/brandConfig';
 import { createNotification } from '@/lib/notificationHelper';
@@ -22,6 +22,10 @@ interface PendingNeed {
   giftings_needed: string[];
   created_by: string;
   created_by_email: string;
+  creator?: {
+    full_name: string;
+    email: string;
+  };
 }
 
 export default function PendingNeedsPage() {
@@ -31,9 +35,31 @@ export default function PendingNeedsPage() {
   const [actingId, setActingId] = useState<string | null>(null);
   const [userChurchCode, setUserChurchCode] = useState<string | null>(null);
 
+  // Helper function for tag coloring (matching dashboard style)
+  const getTagColor = (tag: string) => {
+    // For pending needs, we'll use a neutral style since we don't have user gifts to match against
+    return {
+      isMatch: false,
+      styles: {
+        backgroundColor: '#F5F5F5',   // Light gray background
+        color: '#757575',             // Medium gray text
+        border: '1px solid #F5F5F5'   // Same color border
+      }
+    };
+  };
+
   useEffect(() => {
     checkAuthAndLoadData();
   }, []);
+
+  // 🔥 CRITICAL FIX: Watch userChurchCode and fetch needs when it's available
+  useEffect(() => {
+    console.log('🔄 userChurchCode changed:', userChurchCode);
+    if (userChurchCode) {
+      console.log('📡 Fetching pending needs for church:', userChurchCode);
+      fetchPendingNeeds();
+    }
+  }, [userChurchCode]);
 
   const checkAuthAndLoadData = async () => {
     try {
@@ -42,6 +68,7 @@ export default function PendingNeedsPage() {
       const cachedIsLeader = sessionStorage.getItem('user_is_leader');
       
       if (cachedChurchCode && cachedIsLeader === 'true') {
+        console.log('🚀 Using cached church code:', cachedChurchCode);
         setUserChurchCode(cachedChurchCode);
         setLoading(false);
         return; // ✅ Skip profile query!
@@ -85,6 +112,7 @@ export default function PendingNeedsPage() {
       sessionStorage.setItem('user_is_leader', 'true');
 
       // Store church code for filtering
+      console.log('📝 Setting userChurchCode from profile:', profileData.church_code);
       setUserChurchCode(profileData.church_code);
 
     } catch (error) {
@@ -97,10 +125,17 @@ export default function PendingNeedsPage() {
 
   const fetchPendingNeeds = async () => {
     try {
+      console.log('🔍 fetchPendingNeeds called with userChurchCode:', userChurchCode);
+      
       // Don't fetch if we don't have church_code yet
       if (!userChurchCode) {
+        console.log('❌ No userChurchCode, skipping fetch');
         return;
       }
+
+      console.log('📊 Querying needs table with filters:');
+      console.log('  - church_code:', userChurchCode);
+      console.log('  - status: pending');
 
       const { data, error } = await supabase
         .from('needs')
@@ -109,10 +144,77 @@ export default function PendingNeedsPage() {
         .eq('status', 'pending')
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
-      setPendingNeeds(data || []);
+      console.log('📊 Query result:', { data, error });
+      console.log('📊 Number of pending needs found:', data?.length || 0);
+      
+      if (data && data.length > 0) {
+        console.log('📋 Pending needs details:', data.map(need => ({
+          id: need.id,
+          title: need.title,
+          status: need.status,
+          church_code: need.church_code,
+          created_at: need.created_at,
+          creator: need.creator
+        })));
+      }
+
+      if (error) {
+        console.error('❌ Query error:', error);
+        throw error;
+      }
+      
+      // Fetch creator names for each need
+      if (data && data.length > 0) {
+        console.log('👥 Fetching creator names for', data.length, 'needs');
+        
+        const needsWithCreators = await Promise.all(
+          data.map(async (need) => {
+            try {
+              const { data: creatorData, error: creatorError } = await supabase
+                .from('profiles')
+                .select('full_name, email')
+                .eq('id', need.created_by)
+                .single();
+              
+              if (creatorError) {
+                console.warn('⚠️ Could not fetch creator for need', need.id, creatorError);
+                return {
+                  ...need,
+                  creator: {
+                    full_name: need.created_by_email?.split('@')[0] || 'Unknown User',
+                    email: need.created_by_email
+                  }
+                };
+              }
+              
+              return {
+                ...need,
+                creator: {
+                  full_name: creatorData.full_name || creatorData.email?.split('@')[0] || 'Unknown User',
+                  email: creatorData.email || need.created_by_email
+                }
+              };
+            } catch (error) {
+              console.warn('⚠️ Error fetching creator for need', need.id, error);
+              return {
+                ...need,
+                creator: {
+                  full_name: need.created_by_email?.split('@')[0] || 'Unknown User',
+                  email: need.created_by_email
+                }
+              };
+            }
+          })
+        );
+        
+        console.log('✅ Setting pendingNeeds state with', needsWithCreators.length, 'items');
+        setPendingNeeds(needsWithCreators);
+      } else {
+        console.log('✅ Setting pendingNeeds state with 0 items');
+        setPendingNeeds([]);
+      }
     } catch (error) {
-      console.error('Error fetching pending needs:', error);
+      console.error('❌ Error fetching pending needs:', error);
     }
   };
 
@@ -147,6 +249,74 @@ export default function PendingNeedsPage() {
           needId: need.id,
           need_title: need.title
         });
+
+        // Now that the need is approved, send gift-match notifications to members
+        console.log('[PendingNeeds] Need approved, checking for gift matches...');
+        
+        if (need.giftings_needed && need.giftings_needed.length > 0) {
+          // Get all members in the church
+          const { data: members } = await supabase
+            .from('profiles')
+            .select('id, full_name, gift_selections, phone, email')
+            .eq('church_code', userChurchCode)
+            .not('gift_selections', 'is', null);
+
+          if (members && members.length > 0) {
+            const needGiftings = need.giftings_needed;
+            
+            for (const member of members) {
+              // Skip the person who created the need
+              if (member.id === need.created_by) continue;
+              
+              // Check if member's gifts match any needed giftings
+              const matchingGifts = member.gift_selections.filter((gift: string) =>
+                needGiftings.some((neededGift: string) =>
+                  gift.toLowerCase().includes(neededGift.toLowerCase()) ||
+                  neededGift.toLowerCase().includes(gift.toLowerCase())
+                )
+              );
+              
+              if (matchingGifts.length > 0) {
+                console.log(`[PendingNeeds] Gift match found for member ${member.id}:`, matchingGifts);
+                
+                // Create DIY in-app notification
+                await createNotification({
+                  userId: member.id,
+                  eventType: 'need.matches_gifting',
+                  title: 'New Opportunity Matches Your Gifts!',
+                  description: `${need.title} needs your ${matchingGifts.join(', ')}`,
+                  path: '/dashboard',
+                  needId: need.id,
+                  need_title: need.title
+                });
+                
+                // Trigger Knock workflow for gift match
+                try {
+                  await fetch('/api/knock/trigger', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                      workflow: 'need_matches_gifting',
+                      userId: member.id,
+                      data: {
+                        need_title: need.title,
+                        need_id: need.id,
+                        matching_gifts: matchingGifts.join(', ')
+                      },
+                      recipient: {
+                        phone_number: member.phone,
+                        email: member.email
+                      }
+                    })
+                  });
+                  console.log('✅ Knock workflow triggered for need_matches_gifting:', member.id);
+                } catch (error) {
+                  console.warn('Knock trigger failed for gift match:', error);
+                }
+              }
+            }
+          }
+        }
       }
 
       // Remove from list
@@ -261,7 +431,13 @@ export default function PendingNeedsPage() {
       </div>
 
       {/* Content */}
-      {pendingNeeds.length === 0 ? (
+      {(() => {
+        console.log('🎨 Rendering content - pendingNeeds.length:', pendingNeeds.length);
+        console.log('🎨 pendingNeeds data:', pendingNeeds);
+        console.log('🎨 userChurchCode:', userChurchCode);
+        console.log('🎨 loading:', loading);
+        return pendingNeeds.length === 0;
+      })() ? (
         <div className="flex flex-col items-center justify-center px-4 pt-20">
           <div className="w-24 h-24 rounded-full flex items-center justify-center mb-6"
             style={{ backgroundColor: `${BRAND.colors.primary}1A` }}
@@ -281,68 +457,205 @@ export default function PendingNeedsPage() {
         <div className="px-4 pt-4">
           <div className="space-y-4">
             {pendingNeeds.map((need) => (
-              <div key={need.id} className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
-                <h3 className="text-lg font-semibold text-gray-900 mb-2" style={{ fontFamily: BRAND.fonts.heading }}>
-                  {need.title}
-                </h3>
-                
-                <p className="text-gray-700 mb-3" style={{ fontFamily: BRAND.fonts.body, fontSize: '15px' }}>
-                  {need.description}
-                </p>
-                
-                <div className="flex items-center gap-2 text-sm text-gray-600 mb-4" style={{ fontFamily: BRAND.fonts.body }}>
-                  <span>By {need.created_by_email}</span>
-                  <span>•</span>
-                  <span>{new Date(need.created_at).toLocaleDateString()}</span>
-                </div>
-                
-                {need.giftings_needed && need.giftings_needed.length > 0 && (
-                  <div className="flex flex-wrap gap-2 mb-4">
-                    {need.giftings_needed.slice(0, 5).map((skill, idx) => (
-                      <span 
-                        key={idx}
-                        className="px-3 py-1 text-sm font-medium rounded-full"
-                        style={{
-                          backgroundColor: `${BRAND.colors.primary}20`,
-                          color: BRAND.colors.primary,
-                          fontFamily: BRAND.fonts.heading
-                        }}
-                      >
-                        {skill}
+              <div 
+                key={need.id} 
+                className="bg-white rounded-xl border mb-4"
+                style={{ 
+                  borderColor: '#E0E0E0',
+                  borderWidth: '1px',
+                  overflow: 'hidden',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  minHeight: '280px',
+                  position: 'relative',
+                  boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)'
+                }}
+              >
+                {/* Card Header */}
+                <div style={{ padding: '20px 20px 0 20px' }}>
+                  <h3 className="font-semibold text-lg mb-2" style={{ 
+                    color: '#424242',
+                    lineHeight: '1.3',
+                    fontFamily: BRAND.fonts.heading,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '8px',
+                    textAlign: 'center'
+                  }}>
+                    {need.title}
+                  </h3>
+                  
+                  {/* Metadata Row - Horizontal layout with icons */}
+                  <div style={{ 
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '12px',
+                    marginBottom: '12px',
+                    fontSize: '14px',
+                    color: BRAND.colors.textLight,
+                    opacity: 0.7,
+                    flexWrap: 'wrap'
+                  }}>
+                    {/* Date */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <Calendar size={20} style={{ color: BRAND.colors.primary, flexShrink: 0 }} />
+                      <span style={{ fontFamily: BRAND.fonts.body }}>
+                        {new Date(need.created_at).toLocaleDateString()}
                       </span>
-                    ))}
-                    {need.giftings_needed.length > 5 && (
-                      <span className="px-3 py-1 bg-gray-100 text-gray-600 text-sm rounded-full">
-                        +{need.giftings_needed.length - 5}
+                    </div>
+                    
+                    {/* Location */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <MapPin size={20} style={{ color: BRAND.colors.primary, flexShrink: 0 }} />
+                      <span style={{ 
+                        fontFamily: BRAND.fonts.body,
+                        maxWidth: '120px',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap'
+                      }}>
+                        {need.location || 'Location TBD'}
                       </span>
-                    )}
+                    </div>
+                    
+                    {/* People */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap' }}>
+                      <Users size={20} style={{ color: BRAND.colors.primary, flexShrink: 0 }} />
+                      <span style={{ fontFamily: BRAND.fonts.body }}>
+                        {need.people_needed || 1}+ needed
+                      </span>
+                    </div>
                   </div>
-                )}
-                
-                <div className="flex flex-col gap-3 sm:flex-row">
-                  <button
-                    onClick={() => approveNeed(need.id)}
-                    disabled={actingId === need.id}
-                    className="flex-1 h-12 text-white rounded-lg font-medium transition-opacity disabled:opacity-50"
-                    style={{
-                      backgroundColor: BRAND.colors.primary,
-                      fontFamily: BRAND.fonts.heading,
-                      fontSize: '16px'
-                    }}
-                  >
-                    {actingId === need.id ? 'Approving...' : 'Approve & Publish'}
-                  </button>
-                  <button
-                    onClick={() => rejectNeed(need.id)}
-                    disabled={actingId === need.id}
-                    className="flex-1 h-12 border-2 border-red-500 text-red-500 rounded-lg font-medium transition-colors hover:bg-red-50 disabled:opacity-50"
-                    style={{
-                      fontFamily: BRAND.fonts.heading,
-                      fontSize: '15px'
-                    }}
-                  >
-                    Decline
-                  </button>
+                </div>
+
+                {/* Card Body */}
+                <div style={{ 
+                  padding: '0 20px',
+                  flex: 1,
+                  display: 'flex',
+                  flexDirection: 'column'
+                }}>
+                  <p className="line-clamp-3" style={{ 
+                    color: '#424242',
+                    fontSize: '15px',
+                    lineHeight: '1.5',
+                    marginBottom: '16px',
+                    fontFamily: BRAND.fonts.body
+                  }}>
+                    {need.description}
+                  </p>
+
+                  {/* Created by info */}
+                  <div style={{ 
+                    fontSize: '13px',
+                    color: BRAND.colors.textLight,
+                    marginBottom: '16px',
+                    fontFamily: BRAND.fonts.body
+                  }}>
+                    Submitted by {need.creator?.full_name || need.created_by_email}
+                  </div>
+
+                  {/* Tags - Matching dashboard style */}
+                  {need.giftings_needed && need.giftings_needed.length > 0 && (
+                    <div style={{ marginBottom: '16px' }}>
+                      <div style={{ 
+                        display: 'flex', 
+                        gap: '8px', 
+                        flexWrap: 'wrap'
+                      }}>
+                        {need.giftings_needed.slice(0, 6).map((tag, idx) => {
+                          const { styles } = getTagColor(tag);
+                          
+                          return (
+                            <span
+                              key={idx}
+                              style={{
+                                padding: '6px 12px',
+                                borderRadius: '16px',
+                                fontSize: '12px',
+                                fontWeight: '500',
+                                fontFamily: BRAND.fonts.heading,
+                                ...styles
+                              }}
+                            >
+                              {tag}
+                            </span>
+                          );
+                        })}
+                        
+                        {need.giftings_needed.length > 6 && (
+                          <span style={{
+                            padding: '6px 12px',
+                            borderRadius: '16px',
+                            fontSize: '12px',
+                            fontWeight: '500',
+                            fontFamily: BRAND.fonts.heading,
+                            backgroundColor: '#F5F5F5',
+                            color: '#757575',
+                            border: '1px solid #F5F5F5'
+                          }}>
+                            +{need.giftings_needed.length - 6} more
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Card Footer - Action Buttons */}
+                <div style={{ 
+                  padding: '20px',
+                  borderTop: '1px solid #f1f5f9',
+                  backgroundColor: '#fafbfc'
+                }}>
+                  <div className="flex flex-col gap-3 sm:flex-row">
+                    <button
+                      onClick={() => approveNeed(need.id)}
+                      disabled={actingId === need.id}
+                      className="flex items-center gap-2 px-6 py-2 rounded-lg text-white font-medium transition-colors active:scale-95"
+                      style={{ 
+                        backgroundColor: BRAND.colors.primary,
+                        minHeight: '48px',
+                        flex: 1,
+                        justifyContent: 'center',
+                        borderRadius: '8px',
+                        fontWeight: '600',
+                        fontFamily: BRAND.fonts.heading,
+                        fontSize: '16px',
+                        border: `2px solid ${BRAND.colors.primary}`,
+                        cursor: actingId === need.id ? 'not-allowed' : 'pointer',
+                        transition: 'all 0.15s ease',
+                        opacity: actingId === need.id ? 0.6 : 1
+                      }}
+                    >
+                      {actingId === need.id ? 'Approving...' : 'Approve & Publish'}
+                    </button>
+                    
+                    <button
+                      onClick={() => rejectNeed(need.id)}
+                      disabled={actingId === need.id}
+                      className="flex items-center gap-2 px-6 py-2 rounded-lg font-medium transition-colors active:scale-95"
+                      style={{ 
+                        backgroundColor: 'white',
+                        minHeight: '48px',
+                        flex: 1,
+                        justifyContent: 'center',
+                        borderRadius: '8px',
+                        fontWeight: '600',
+                        fontFamily: BRAND.fonts.heading,
+                        fontSize: '15px',
+                        border: '2px solid #ef4444',
+                        color: '#ef4444',
+                        cursor: actingId === need.id ? 'not-allowed' : 'pointer',
+                        transition: 'all 0.15s ease',
+                        opacity: actingId === need.id ? 0.6 : 1
+                      }}
+                    >
+                      Decline
+                    </button>
+                  </div>
                 </div>
               </div>
             ))}

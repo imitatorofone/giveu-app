@@ -10,9 +10,26 @@ export default function Footer() {
   const pathname = usePathname();
   const router = useRouter();
   const [loading, setLoading] = useState(true);
-  const [isLeader, setIsLeader] = useState(false);
+  
+  // Initialize isLeader state from cache immediately to prevent flashing
+  const [isLeader, setIsLeader] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const cachedRole = sessionStorage.getItem('user_role');
+      return cachedRole === 'leader' || cachedRole === 'admin';
+    }
+    return false;
+  });
+
+  // 🔧 DEBUG: Log every render
+  console.log('🔧 Footer render - isLeader:', isLeader);
+  console.log('🔧 Footer render - pathname:', pathname);
+  console.log('🔧 Footer render - sessionStorage:', sessionStorage.getItem('user_role'));
 
   useEffect(() => {
+    console.log('🔧 Footer component mounted/updated');
+    console.log('🔧 isLeader value:', isLeader);
+    console.log('🔧 Current pathname:', pathname);
+    
     const run = async () => {
       try {
         // 🚀 PERFORMANCE: Check cache first
@@ -20,7 +37,16 @@ export default function Footer() {
         const cachedChurchCode = sessionStorage.getItem('user_church_code');
         
         if (cachedRole) {
-          setIsLeader(cachedRole === 'leader' || cachedRole === 'admin');
+          const leaderStatus = cachedRole === 'leader' || cachedRole === 'admin';
+          console.log('🔧 Footer useEffect: Using cached role:', { cachedRole, leaderStatus });
+          // Only update state if it's different to prevent unnecessary re-renders
+          setIsLeader(prev => {
+            if (prev !== leaderStatus) {
+              console.log('🔧 Footer useEffect: Updating isLeader from', prev, 'to', leaderStatus);
+              return leaderStatus;
+            }
+            return prev;
+          });
           setLoading(false);
           return; // ✅ Skip Supabase query!
         }
@@ -28,7 +54,7 @@ export default function Footer() {
         // Only query if not cached
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) {
-          setIsLeader(false);
+          setIsLeader(prev => prev !== false ? false : prev);
           sessionStorage.setItem('user_role', 'member');
           return;
         }
@@ -43,6 +69,8 @@ export default function Footer() {
         const role = norm(prof?.role);
         const isLeaderResult = prof?.is_leader || role === 'leader' || role === 'admin';
         
+        console.log('🔧 Footer useEffect: Fresh profile data:', { role, isLeaderResult, profile: prof });
+        
         // 🚀 PERFORMANCE: Cache the results
         sessionStorage.setItem('user_role', role || 'member');
         sessionStorage.setItem('user_is_leader', String(isLeaderResult));
@@ -50,16 +78,36 @@ export default function Footer() {
           sessionStorage.setItem('user_church_code', prof.church_code);
         }
         
-        setIsLeader(isLeaderResult);
+        setIsLeader(prev => {
+          if (prev !== isLeaderResult) {
+            console.log('🔧 Footer useEffect: Updating isLeader from', prev, 'to', isLeaderResult);
+            return isLeaderResult;
+          }
+          return prev;
+        });
       } catch (error) {
         console.error('Error checking user role:', error);
-        setIsLeader(false);
+        setIsLeader(prev => prev !== false ? false : prev);
       } finally {
         setLoading(false);
       }
     };
     run();
   }, []);
+
+  // 🔧 DEBUG: Log component unmounting
+  useEffect(() => {
+    console.log('🔧 Footer component UNMOUNTING');
+    return () => {
+      console.log('🔧 Footer cleanup running');
+    };
+  }, []);
+
+  // 🔧 DEBUG: Log route changes
+  useEffect(() => {
+    console.log('🔧 Route changed to:', pathname);
+    console.log('🔧 isLeader after route change:', isLeader);
+  }, [pathname]);
 
   const regularTabs = [
     {
@@ -84,6 +132,10 @@ export default function Footer() {
     }
   ];
 
+  // 🔧 DEBUG: Log tabs being rendered
+  console.log('🔧 Tabs being rendered:', regularTabs.map(t => t.name));
+  console.log('🔧 Tools/Feedback tab:', regularTabs.find(t => t.name === 'Tools' || t.name === 'Feedback'));
+
   const RegularTab = ({ tab }: { tab: typeof regularTabs[0] }) => {
     const Icon = tab.icon;
     const isActive = pathname === tab.path || 
@@ -93,7 +145,15 @@ export default function Footer() {
     
     return (
       <button
-        onClick={() => router.push(tab.path)}
+        onClick={() => {
+          console.log('🔧 TOOLS TAB CLICKED');
+          console.log('🔧 Current isLeader state:', isLeader);
+          console.log('🔧 SessionStorage role:', sessionStorage.getItem('user_role'));
+          console.log('🔧 About to navigate to:', tab.path);
+          console.log('🔧 Tab name:', tab.name);
+          router.push(tab.path);
+          console.log('🔧 After navigation triggered');
+        }}
         className="flex flex-col items-center gap-1 active:opacity-70 transition-opacity min-w-[60px]"
       >
         <Icon 
