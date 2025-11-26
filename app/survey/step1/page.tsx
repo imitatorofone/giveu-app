@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../../../lib/supabaseClient';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, ArrowRight, User, Calendar, MapPin, Phone, Clock, Building2 } from 'lucide-react';
+import { ArrowRight, User, Calendar, MapPin, Phone, Clock } from 'lucide-react';
 import { formatPhoneToE164 } from '../../../lib/phoneFormatter';
 import { BRAND } from '../../../lib/brandConfig';
 
@@ -66,7 +66,7 @@ export default function SurveyStep1() {
 
       // Load beta churches (hard-coded for consistency)
       const betaChurches = [
-        { id: 'harmony', name: 'Harmony Church', city: 'Harmony', state: 'IA' },
+        { id: 'harmony', name: 'Harmony Church', city: 'Danville', state: 'IA' },
         { id: 'brighton', name: 'Brighton Bible Church', city: 'Brighton', state: 'IA' },
         { id: 'newlondon', name: 'New London Christian Church', city: 'New London', state: 'IA' },
         { id: 'reallife', name: 'Real Life Christian Communities', city: 'San Pedro', state: 'PH' }
@@ -99,22 +99,22 @@ export default function SurveyStep1() {
       return;
     }
 
-    // Find the selected church to get its name
+    // Find the selected church to get its id
     const selectedChurchData = churches.find(church => church.id === selectedChurch);
     if (!selectedChurchData) {
       setError('Selected church not found. Please try again.');
       return;
     }
 
-    // Map church name to correct church_code
+    // Map church id to correct church_code
     let churchCode;
-    if (selectedChurchData.name === "Harmony Church") {
+    if (selectedChurch === 'harmony') {
       churchCode = "123harmony";
-    } else if (selectedChurchData.name === "Brighton Bible Church") {
+    } else if (selectedChurch === 'brighton') {
       churchCode = "456brighton";
-    } else if (selectedChurchData.name === "New London Christian Church") {
+    } else if (selectedChurch === 'newlondon') {
       churchCode = "789newlondon";
-    } else if (selectedChurchData.name === "Real Life Christian Communities") {
+    } else if (selectedChurch === 'reallife') {
       churchCode = "321reallife";
     } else {
       setError('Invalid church selection. Please try again.');
@@ -208,7 +208,7 @@ export default function SurveyStep1() {
           </div>
         )}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-          {/* Church Selection */}
+          {/* Church Selection - Using churches array */}
           <div>
             <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px', fontWeight: '500', color: BRAND.colors.textLight, marginBottom: '8px', fontFamily: BRAND.fonts.body }}>
               <MapPin size={16} />
@@ -217,12 +217,23 @@ export default function SurveyStep1() {
             <select
               value={selectedChurch}
               onChange={(e) => setSelectedChurch(e.target.value)}
-              style={{ width: '100%', padding: '14px 16px', border: '1px solid #e5e7eb', borderRadius: '8px', fontSize: '16px', fontFamily: BRAND.fonts.body, minHeight: '52px', backgroundColor: 'white' }}
+              style={{ 
+                width: '100%', 
+                padding: '14px 16px', 
+                border: '1px solid #e5e7eb',
+                borderRadius: '8px',
+                fontSize: '16px', 
+                fontFamily: BRAND.fonts.body,
+                minHeight: '52px',
+                backgroundColor: 'white'
+              }}
             >
               <option value="">Choose your church...</option>
-              <option value="harmony">Harmony Church - Harmony, IA</option>
-              <option value="brighton">Brighton Bible Church - Brighton, IA</option>
-              <option value="newlondon">New London Christian Church - New London, IA</option>
+              {churches.map(church => (
+                <option key={church.id} value={church.id}>
+                  {church.name} - {church.city}, {church.state}
+                </option>
+              ))}
             </select>
           </div>
 
@@ -260,57 +271,6 @@ export default function SurveyStep1() {
                   <div style={{ fontSize: '14px', color: BRAND.colors.textLight, fontFamily: BRAND.fonts.body }}>I help coordinate ministry opportunities and manage community needs</div>
                 </div>
               </label>
-            </div>
-          </div>
-
-          <div>
-            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px', fontWeight: '500', color: BRAND.colors.textLight, marginBottom: '8px', fontFamily: BRAND.fonts.body }}>
-              <Building2 size={16} />
-              Select Your Church *
-            </label>
-            <select
-              value={selectedChurch}
-              onChange={(e) => setSelectedChurch(e.target.value)}
-              style={{ 
-                width: '100%', 
-                padding: '14px 16px', 
-                border: '1px solid #e5e7eb',
-                borderRadius: '8px',
-                fontSize: '16px', 
-                fontFamily: BRAND.fonts.body,
-                minHeight: '52px',
-                backgroundColor: 'white'
-              }}
-            >
-              <option value="">Choose your church...</option>
-              {churches.map(church => (
-                <option key={church.id} value={church.id}>
-                  {church.name} - {church.city}, {church.state}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label style={{ display: 'block', fontWeight: 500, marginBottom: 8, fontSize: '14px', color: BRAND.colors.textLight, fontFamily: BRAND.fonts.body }}>
-              Your Role:
-            </label>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              {[
-                { value: 'member', label: 'Member - I want to discover my gifts and serve' },
-                { value: 'leader', label: 'Leader - I help coordinate ministry opportunities and manage church settings' }
-              ].map(option => (
-                <label key={option.value} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <input
-                    type="radio"
-                    name="role"
-                    value={option.value}
-                    checked={role === option.value}
-                    onChange={(e) => setRole(e.target.value)}
-                  />
-                  <span style={{ fontSize: 15, fontFamily: BRAND.fonts.body }}>{option.label}</span>
-                </label>
-              ))}
             </div>
           </div>
 
