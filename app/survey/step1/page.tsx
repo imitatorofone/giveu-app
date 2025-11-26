@@ -27,8 +27,6 @@ export default function SurveyStep1() {
   const [phone, setPhone] = useState('');
   const [availability, setAvailability] = useState<string[]>([]);
   const [churches, setChurches] = useState<any[]>([]);
-  const [selectedChurch, setSelectedChurch] = useState('');
-  const [role, setRole] = useState('member');
   const [error, setError] = useState('');
   const [user, setUser] = useState<any>(null);
   const router = useRouter();
