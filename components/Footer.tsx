@@ -11,21 +11,17 @@ export default function Footer() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   
-  // Initialize isLeader state from cache immediately to prevent flashing
-  const [isLeader, setIsLeader] = useState(() => {
-    if (typeof window !== 'undefined') {
-      const cachedRole = sessionStorage.getItem('user_role');
-      return cachedRole === 'leader' || cachedRole === 'admin';
-    }
-    return false;
-  });
+  // Initialize isLeader state with safe default (no sessionStorage during SSR)
+  const [isLeader, setIsLeader] = useState(false);
 
   // 🔧 DEBUG: Log every render
   console.log('🔧 Footer render - isLeader:', isLeader);
   console.log('🔧 Footer render - pathname:', pathname);
-  console.log('🔧 Footer render - sessionStorage:', sessionStorage.getItem('user_role'));
 
   useEffect(() => {
+    // Guard: only run in browser
+    if (typeof window === 'undefined') return;
+    
     console.log('🔧 Footer component mounted/updated');
     console.log('🔧 isLeader value:', isLeader);
     console.log('🔧 Current pathname:', pathname);
@@ -55,7 +51,9 @@ export default function Footer() {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) {
           setIsLeader(prev => prev !== false ? false : prev);
-          sessionStorage.setItem('user_role', 'member');
+          if (typeof window !== 'undefined') {
+            sessionStorage.setItem('user_role', 'member');
+          }
           return;
         }
         
@@ -72,10 +70,12 @@ export default function Footer() {
         console.log('🔧 Footer useEffect: Fresh profile data:', { role, isLeaderResult, profile: prof });
         
         // 🚀 PERFORMANCE: Cache the results
-        sessionStorage.setItem('user_role', role || 'member');
-        sessionStorage.setItem('user_is_leader', String(isLeaderResult));
-        if (prof?.church_code) {
-          sessionStorage.setItem('user_church_code', prof.church_code);
+        if (typeof window !== 'undefined') {
+          sessionStorage.setItem('user_role', role || 'member');
+          sessionStorage.setItem('user_is_leader', String(isLeaderResult));
+          if (prof?.church_code) {
+            sessionStorage.setItem('user_church_code', prof.church_code);
+          }
         }
         
         setIsLeader(prev => {
@@ -148,7 +148,9 @@ export default function Footer() {
         onClick={() => {
           console.log('🔧 TOOLS TAB CLICKED');
           console.log('🔧 Current isLeader state:', isLeader);
-          console.log('🔧 SessionStorage role:', sessionStorage.getItem('user_role'));
+          if (typeof window !== 'undefined') {
+            console.log('🔧 SessionStorage role:', sessionStorage.getItem('user_role'));
+          }
           console.log('🔧 About to navigate to:', tab.path);
           console.log('🔧 Tab name:', tab.name);
           router.push(tab.path);
